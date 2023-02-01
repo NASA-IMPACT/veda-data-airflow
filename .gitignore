@@ -1,0 +1,46 @@
+# Ignore files downloaded when installing HDF4 libraries
+HDF-4.2.15-Darwin/
+hdf-4.2.15-osx1013_64-clang.tar.gz
+pyhdf*
+# Ignore pyCharm
+.idea
+# Ignore MacOSX desktop services store
+*.DS_Store
+
+# Ignore pycache
+__pycache__
+
+
+# Ignore Terraform
+.terraform
+.env
+terraform.tf
+terraform.tfvars
+# Ignore data files which are downloaded for local testing
+*.xml
+*.vrt
+*.he5
+*.img
+*.img.hdr
+*.hdf
+*.hdf5
+*.tif
+*.nc
+*.HDF5
+*.h5
+sample-files/
+cdk.out/
+cdk.context.json
+
+# Vim
+*.swo
+*cdk.context.json
+
+# Virtual Environments
+*env/
+
+# Avoid checking in filled out env file
+env.sh
+
+.hypothesis
+Makefile

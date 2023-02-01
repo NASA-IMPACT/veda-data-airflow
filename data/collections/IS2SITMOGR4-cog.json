@@ -1,0 +1,42 @@
+{
+    "id": "IS2SITMOGR4-cog",
+    "type": "Collection",
+    "links": [],
+    "title": "ICESat-2 L4 Monthly Gridded Sea Ice Thickness (COGs)",
+    "extent": {
+        "spatial": {
+            "bbox": [
+                [
+                    -180,
+                    30,
+                    180,
+                    89
+                ]
+            ]
+        },
+        "temporal": {
+            "interval": [
+                [
+                    "2018-11-01T00:00:00Z",
+                    "2021-04-30T23:59:59Z"
+                ]
+            ]
+        }
+    },
+    "license": "MIT",
+    "description": "ICESat-2 L4 Monthly Gridded Sea Ice Thickness (COGs)",
+    "stac_version": "1.0.0",
+    "dashboard:is_periodic": true,
+    "dashboard:time_density": "month",
+    "item_assets": {
+        "cog_default": {
+            "type": "image/tiff; application=geotiff; profile=cloud-optimized",
+            "roles": [
+                "data",
+                "layer"
+            ],
+            "title": "Default COG Layer",
+            "description": "Cloud optimized default layer to display on map"
+        }
+    }
+}

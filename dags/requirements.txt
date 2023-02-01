@@ -1,0 +1,9 @@
+affine==2.3.1
+airflow-provider-great-expectations==0.1.1
+netCDF4==1.6.2
+pydantic==1.8.2
+requests==2.26.0
+rio-cogeo==3.4.1
+smart-open==6.3.0
+typing-extensions==3.10.0.2
+airflow_multi_dagrun==2.2.0

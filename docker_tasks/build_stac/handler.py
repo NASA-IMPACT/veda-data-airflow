@@ -135,4 +135,5 @@ if __name__ == "__main__":
         **payload_event,
         **building_stac_response
     })
+
     print(response)

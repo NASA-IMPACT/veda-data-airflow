@@ -14,9 +14,6 @@ import boto3
 import requests
 
 
-MWAA_STAC_CONF = Variable.get("MWAA_STACK_CONF", deserialize_json=True)
-
-
 class InputBase(TypedDict):
     dry_run: Optional[Any]
 
@@ -98,10 +95,7 @@ class IngestionApi:
         return response.json()
 
 
-ingestor = IngestionApi.from_veda_auth_secret(
-    secret_id=MWAA_STAC_CONF.get("COGNITO_APP_SECRET"),
-    base_url=MWAA_STAC_CONF.get("STAC_INGESTOR_API_URL"),
-)
+
 
 
 def submission_handler(event: Union[S3LinkInput, StacItemInput]) -> None:
@@ -112,7 +106,10 @@ def submission_handler(event: Union[S3LinkInput, StacItemInput]) -> None:
         print("Dry run, not inserting, would have inserted:")
         print(json.dumps(stac_item, indent=2))
         return
-
+    ingestor = IngestionApi.from_veda_auth_secret(
+        secret_id=Variable.get("COGNITO_APP_SECRET"),
+        base_url=Variable.get("STAC_INGESTOR_API_URL"),
+    )
     ingestor.submit(stac_item)
     print(f"Successfully submitted STAC item")
 

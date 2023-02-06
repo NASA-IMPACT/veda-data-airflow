@@ -16,14 +16,14 @@ variable "iam_role_permissions_boundary" {
 }
 
 variable "assume_role_arns" {
-  type = list(string)
+  type        = list(string)
   description = "Assume role ARNs (MCP)"
 }
 # Optional variables
 
 variable "aws_profile" {
   description = "AWS profile"
-  default = null
+  default     = null
 }
 variable "aws_region" {
   default = "us-west-2"
@@ -31,4 +31,11 @@ variable "aws_region" {
 
 variable "stage" {
   default = "dev"
+}
+variable "cognito_app_secret" {
+  type = string
+}
+
+variable "stac_ingestor_api_url" {
+  type = string
 }

@@ -1,3 +1,3 @@
 [submodule "dags/veda_data_pipeline/veda_pipeline_tasks"]
 	path = dags/veda_data_pipeline/veda_pipeline_tasks
-	url = git@github.com:NASA-IMPACT/veda-pipeline-tasks.git
+	url = https://github.com/NASA-IMPACT/veda-pipeline-tasks.git

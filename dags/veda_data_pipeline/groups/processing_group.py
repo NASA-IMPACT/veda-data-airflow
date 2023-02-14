@@ -2,7 +2,9 @@ import json
 import logging
 
 from airflow.utils.task_group import TaskGroup
-from airflow.providers.amazon.aws.operators.ecs import ECSOperator
+from airflow.providers.amazon.aws.operators.ecs import EcsRunTaskOperator
+
+
 from airflow.operators.python import PythonOperator, BranchPythonOperator
 from airflow.models.variable import Variable
 import smart_open
@@ -18,7 +20,6 @@ def log_task(text: str):
 
 
 def submit_to_stac_ingestor_task(ti):
-
     print("Submit STAC ingestor")
     event = json.loads(ti.xcom_pull(task_ids=f"{group_kwgs['group_id']}.build_stac"))
     success_file = event["payload"]["success_event_key"]
@@ -52,7 +53,7 @@ def subdag_process():
             python_callable=cogify_choice,
         )
         mwaa_stack_conf = Variable.get("MWAA_STACK_CONF", deserialize_json=True)
-        build_stac = ECSOperator(
+        build_stac = EcsRunTaskOperator(
             task_id="build_stac",
             trigger_rule="none_failed",
             cluster=f"{mwaa_stack_conf.get('PREFIX')}-cluster",

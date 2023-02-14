@@ -4,6 +4,7 @@ from airflow.utils.trigger_rule import TriggerRule
 import pendulum
 
 from veda_data_pipeline.groups.processing_group import subdag_process
+
 dag_doc_md = """
 ### Build and submit stac
 #### Purpose
@@ -32,7 +33,7 @@ dag_args = {
     "start_date": pendulum.today("UTC").add(days=-1),
     "schedule_interval": None,
     "catchup": False,
-    "doc_md": dag_doc_md
+    "doc_md": dag_doc_md,
 }
 
 with DAG("veda_ingest", **dag_args) as dag:

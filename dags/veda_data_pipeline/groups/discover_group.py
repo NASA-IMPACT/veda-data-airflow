@@ -1,7 +1,4 @@
-import json
-import os
 import time
-
 from airflow.utils.task_group import TaskGroup
 from airflow.operators.python import PythonOperator, BranchPythonOperator
 from airflow.utils.trigger_rule import TriggerRule
@@ -36,6 +33,7 @@ def get_files_to_process(ti):
     for payload_xcom in payloads_xcom:
         time.sleep(2)
         yield {**payload, "payload": payload_xcom}
+
 
 def discover_choice(ti):
     config = ti.dag_run.conf

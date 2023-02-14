@@ -30,7 +30,7 @@ dag_args = {
     "start_date": pendulum.today("UTC").add(days=-1),
     "schedule_interval": None,
     "catchup": False,
-    "doc_md": dag_doc_md
+    "doc_md": dag_doc_md,
 }
 
 with DAG("veda_discover", **dag_args) as dag:

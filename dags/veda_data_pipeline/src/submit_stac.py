@@ -95,9 +95,6 @@ class IngestionApi:
         return response.json()
 
 
-
-
-
 def submission_handler(event: Union[S3LinkInput, StacItemInput]) -> None:
     print(f"SUBMISSION EVENT {event}")
     stac_item = event

@@ -7,4 +7,5 @@ rio-cogeo==3.5.0
 smart-open==6.3.0
 typing-extensions==4.4.0
 airflow_multi_dagrun==2.3.1
-
+apache-airflow-providers-docker==3.2.0
+python-dotenv==0.21.1

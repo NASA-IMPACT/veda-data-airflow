@@ -6,9 +6,6 @@ variable "cluster_name" {}
 
 variable "account_id" {}
 
-variable "aws_log_group_name" {}
-
-variable "aws_log_stream_name" {}
 
 
 

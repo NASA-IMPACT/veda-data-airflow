@@ -39,3 +39,7 @@ variable "cognito_app_secret" {
 variable "stac_ingestor_api_url" {
   type = string
 }
+variable "min_workers" {
+  type = number
+  default = 1
+}

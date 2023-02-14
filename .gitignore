@@ -44,3 +44,4 @@ env.sh
 
 .hypothesis
 Makefile
+.env_sit

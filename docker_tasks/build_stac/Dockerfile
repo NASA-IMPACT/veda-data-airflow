@@ -1,4 +1,4 @@
-FROM python:3.9-slim-bullseye as production
+FROM --platform=linux/amd64 python:3.9-slim-bullseye as production
 WORKDIR /app
 # Install Python dependencies
 RUN pip install --upgrade pip

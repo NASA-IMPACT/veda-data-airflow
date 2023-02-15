@@ -10,7 +10,9 @@ on:
       stage:
         type: string
         required: true
-
+      env-file:
+        type: string
+        required: true
 jobs:
   deploy:
     runs-on: ubuntu-latest

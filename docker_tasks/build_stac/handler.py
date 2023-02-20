@@ -97,7 +97,11 @@ def stac_handler(payload_event):
         s3_event_read = _file.read()
     event_received = json.loads(s3_event_read)
     objects = event_received["objects"]
-    payloads = using_pool(objects, workers_count=workers_count) if use_multiprocessing else sequential_processing(objects)
+    payloads = (
+        using_pool(objects, workers_count=workers_count)
+        if use_multiprocessing
+        else sequential_processing(objects)
+    )
     for payload in payloads:
         stac_item = payload["stac_item"]
         if "error" in stac_item:
@@ -131,9 +135,6 @@ if __name__ == "__main__":
 
     payload_event = ast.literal_eval(args.payload)
     building_stac_response = stac_handler(payload_event)
-    response = json.dumps({
-        **payload_event,
-        **building_stac_response
-    })
+    response = json.dumps({**payload_event, **building_stac_response})
 
     print(response)

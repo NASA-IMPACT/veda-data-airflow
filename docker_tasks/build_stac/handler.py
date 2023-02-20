@@ -59,8 +59,8 @@ def using_pool(objects, workers_count: int):
         for result in results:
             try:
                 returned_results.append(result)
-            except:
-                print("Error")
+            except Exception as nex:
+                print(f"Error {nex}")
     return returned_results
 
 

@@ -1,7 +1,7 @@
 from affine import Affine
 import os
 import requests
-
+from botocore.exceptions import ClientError
 import boto3
 from netCDF4 import Dataset
 import numpy as np
@@ -56,9 +56,10 @@ def upload_file(outfilename, collection):
         )
         print("File uploaded to s3")
         return f"s3://{output_bucket}/{collection}/{filename}"
-    except:
-        print("Failed to copy to S3 bucket")
-        raise
+    except ClientError as ce:
+        print(f"Failed to copy to S3 bucket client error {ce}")
+    finally:
+        raise "Upload file failed"
 
 
 def download_file(file_uri: str):
@@ -140,8 +141,8 @@ def to_cog(upload, **config):
     # https://github.com/NASA-IMPACT/cloud-optimized-data-pipelines/blob/rwegener2-envi-to-cog/docker/omno2-to-cog/OMNO2d.003/handler.py
     affine_transformation = config.get("affine_transformation")
     if affine_transformation:
-        xres = (xmax - xmin) / float(src_width)
-        yres = (ymax - ymin) / float(src_height)
+        # xres = (xmax - xmin) / float(src_width)
+        # yres = (ymax - ymin) / float(src_height)
         geotransform = eval(affine_transformation)
         dst_transform = Affine.from_gdal(*geotransform)
 

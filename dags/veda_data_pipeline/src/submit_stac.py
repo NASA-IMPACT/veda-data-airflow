@@ -1,6 +1,5 @@
 from dataclasses import dataclass
 import json
-from urllib.parse import urlparse
 import sys
 
 if sys.version_info >= (3, 8):
@@ -74,9 +73,9 @@ class IngestionApi:
         )
         try:
             response.raise_for_status()
-        except:
+        except Exception as ex:
             print(response.text)
-            raise
+            raise f"Error, {ex}"
         return response.json()
 
     def submit(self, stac_item: Dict[str, Any]):
@@ -108,7 +107,7 @@ def submission_handler(event: Union[S3LinkInput, StacItemInput]) -> None:
         base_url=Variable.get("STAC_INGESTOR_API_URL"),
     )
     ingestor.submit(stac_item)
-    print(f"Successfully submitted STAC item")
+    print("Successfully submitted STAC item")
 
 
 if __name__ == "__main__":

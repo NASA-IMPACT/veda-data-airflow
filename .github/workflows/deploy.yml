@@ -28,5 +28,5 @@ jobs:
           lfs: "true"
           submodules: "recursive"
       - run: |
-          ls -al dags/veda_data_pipeline/veda_pipeline_tasks
+          cat dags/veda_data_pipeline/veda_pipeline_tasks/README
           echo $STAGE

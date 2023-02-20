@@ -58,8 +58,7 @@ $bash ./scripts/deploy.sh .env <<< deploy
 **Note:** Be careful not to check in `.env` (or whatever you called your env file) when committing work.
 
 # Gitflow Model
-Please refer to this document: 
-[gitflow](./GITFLOW.md) 
+[VEDA pipeline gitflow](./GITFLOW.md) 
 # License
 This project is licensed under **Apache 2**, see the [LICENSE](LICENSE) file for more details.
 

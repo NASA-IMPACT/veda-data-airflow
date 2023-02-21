@@ -3,7 +3,6 @@ import logging
 import os
 
 from airflow.utils.task_group import TaskGroup
-from airflow.providers.amazon.aws.operators.ecs import EcsRunTaskOperator
 from airflow.operators.python import PythonOperator, BranchPythonOperator
 from airflow.models.variable import Variable
 import smart_open

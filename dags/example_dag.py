@@ -1,9 +1,10 @@
-from airflow import DAG
-from airflow.operators.dummy_operator import DummyOperator as EmptyOperator
-from airflow.operators.python import PythonOperator
 import pendulum
 import logging
 import time
+
+from airflow import DAG
+from airflow.operators.dummy_operator import DummyOperator as EmptyOperator
+from airflow.operators.python import PythonOperator
 
 
 def log_task(text: str):

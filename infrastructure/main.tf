@@ -18,17 +18,16 @@ module "mwaa" {
       ecs_container_folder_path = "${path.module}/../docker_tasks/build_stac"
       ecr_repo_name             = "${var.prefix}-veda-build_stac"
     }
-
   ]
 }
 
 module "custom_policy" {
-  source              = "./custom_policies"
-  prefix              = var.prefix
-  account_id          = data.aws_caller_identity.current.account_id
-  cluster_name        = module.mwaa.cluster_name
-  assume_role_arns    = var.assume_role_arns
-  region              = local.aws_region
+  source           = "./custom_policies"
+  prefix           = var.prefix
+  account_id       = data.aws_caller_identity.current.account_id
+  cluster_name     = module.mwaa.cluster_name
+  assume_role_arns = var.assume_role_arns
+  region           = local.aws_region
 }
 
 resource "local_file" "mwaa_variables" {
@@ -42,12 +41,13 @@ resource "local_file" "mwaa_variables" {
       stage                   = var.stage
       ecs_cluster_name        = module.mwaa.cluster_name
       log_group_name          = module.mwaa.log_group_name
-      mwaa_execution_rule_arn = module.mwaa.mwaa_role_arn
-      account_id = local.account_id
-      aws_region = local.aws_region
-      cognito_app_secret = var.cognito_app_secret
-      stac_ingestor_api_url = var.stac_ingestor_api_url
-
+      mwaa_execution_role_arn = module.mwaa.mwaa_role_arn
+      account_id              = local.account_id
+      aws_region              = local.aws_region
+      cognito_app_secret      = var.cognito_app_secret
+      stac_ingestor_api_url   = var.stac_ingestor_api_url
+      assume_role_read_arn    = var.assume_role_arns[0]
+      assume_role_write_arn   = var.assume_role_arns[1]
   })
   filename = "/tmp/mwaa_vars.json"
 }

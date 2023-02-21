@@ -22,7 +22,7 @@ class StacItemOutput(TypedDict):
 
 def handler(event: Dict[str, Any]) -> Union[S3LinkOutput, StacItemOutput]:
     """
-    Lambda handler for STAC Collection Item generation
+    Handler for STAC Collection Item generation
 
     Arguments:
     event - object with event parameters to be provided in one of 2 formats.

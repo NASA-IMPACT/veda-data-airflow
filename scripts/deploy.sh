@@ -13,7 +13,6 @@ else
   exit 1
 fi
 
-
 function create_state_bucket {
   # $1 region
   # $2 bucket_name
@@ -73,24 +72,24 @@ function check_create_remote_state {
   fi
 
   if echo "${bucketstatus}" | grep 'Not Found';
-then
-      echo "Creating TF remote state"
-      create_state_bucket $AWS_REGION $STATE_BUCKET_NAME $AWS_PROFILE
-      create_dynamo_db $AWS_REGION $STATE_DYNAMO_TABLE $AWS_PROFILE
-elif echo "${bucketstatus}" | grep 'Forbidden';
-then
-  echo "Bucket $STATE_BUCKET_NAME exists but not owned"
-  exit 1
-elif echo "${bucketstatus}" | grep 'Bad Request';
-then
-  echo "Bucket $STATE_BUCKET_NAME specified is less than 3 or greater than 63 characters"
-  exit 1
-else
-  echo "State Bucket $STATE_BUCKET_NAME owned and exists. Continue...";
-  echo "State Dynamo table $STATE_DYNAMO_TABLE owned and exists. Continue...";
-fi
-
+  then
+        echo "Creating TF remote state"
+        create_state_bucket $AWS_REGION $STATE_BUCKET_NAME $AWS_PROFILE
+        create_dynamo_db $AWS_REGION $STATE_DYNAMO_TABLE $AWS_PROFILE
+  elif echo "${bucketstatus}" | grep 'Forbidden';
+  then
+    echo "Bucket $STATE_BUCKET_NAME exists but not owned"
+    exit 1
+  elif echo "${bucketstatus}" | grep 'Bad Request';
+  then
+    echo "Bucket $STATE_BUCKET_NAME specified is less than 3 or greater than 63 characters"
+    exit 1
+  else
+    echo "State Bucket $STATE_BUCKET_NAME owned and exists. Continue...";
+    echo "State Dynamo table $STATE_DYNAMO_TABLE owned and exists. Continue...";
+  fi
 }
+
 
 cd ./infrastructure
 generate_terraform_variables

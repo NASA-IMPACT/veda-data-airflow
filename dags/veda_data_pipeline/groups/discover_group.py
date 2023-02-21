@@ -1,9 +1,22 @@
+import os
 import time
-from airflow.utils.task_group import TaskGroup
+
+from airflow.models.variable import Variable
 from airflow.operators.python import PythonOperator, BranchPythonOperator
+from airflow.utils.task_group import TaskGroup
 from airflow.utils.trigger_rule import TriggerRule
 from airflow_multi_dagrun.operators import TriggerMultiDagRunOperator
-from veda_data_pipeline.src.s3_discovery import s3_discovery_handler
+
+from veda_data_pipeline.veda_pipeline_tasks.s3_discovery.handler import (
+    s3_discovery_handler,
+)
+
+
+def load_discovery_env():
+    MWAA_STAC_CONF = Variable.get("MWAA_STACK_CONF", deserialize_json=True)
+    os.environ["ASSUME_ROLE_ARN"] = Variable.get("ASSUME_ROLE_READ_ARN")
+    os.environ["EVENT_BUCKET"] = MWAA_STAC_CONF["EVENT_BUCKET"]
+
 
 group_kwgs = {"group_id": "Discover", "tooltip": "Discover"}
 
@@ -19,10 +32,12 @@ def get_payload(ti_xcom_pull):
 
 
 def discover_from_cmr_task(text):
+    load_discovery_env()
     return {"place_holder": text}
 
 
 def discover_from_s3_task(ti):
+    load_discovery_env()
     config = ti.dag_run.conf
     return s3_discovery_handler(config)
 

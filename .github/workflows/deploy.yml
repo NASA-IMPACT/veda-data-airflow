@@ -54,7 +54,14 @@ jobs:
           role-to-assume: ${{ secrets.DEPLOYMENT_ROLE_ARN }}
           role-session-name: ${{ inputs.role-session-name }}
           aws-region: ${{ inputs.aws-region }}
-      - run: |
+          
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v1
+        with:
+          terraform_version: 1.3.3
+
+      - name: Deploy
+        run: |
           ./scripts/deploy.sh ${{ inputs.env-file }} <<< init
           ./scripts/deploy.sh ${{ inputs.env-file }} <<< plan
 

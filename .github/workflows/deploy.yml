@@ -71,5 +71,5 @@ jobs:
       - name: Deploy
         run: |
           ./scripts/deploy.sh ${{ inputs.env-file }} <<< init
-          ./scripts/deploy.sh ${{ inputs.env-file }} <<< plan
+          ./scripts/deploy.sh ${{ inputs.env-file }} <<< deploy
 

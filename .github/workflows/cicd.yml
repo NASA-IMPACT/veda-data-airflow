@@ -31,7 +31,7 @@ jobs:
 
   deploy-to-dev:
     needs: run-linters
-    if: github.ref_name == 'dev'
+    if: github.ref_name == 'mydev'
     concurrency: development
     uses: "./.github/workflows/deploy.yml"
     with:

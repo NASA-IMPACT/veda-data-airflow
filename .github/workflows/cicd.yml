@@ -39,6 +39,6 @@ jobs:
       env-file: ".env_staging"
       stage: "dev"
       role-session-name: "veda-data-airflow-github-development-deployment"
-      region: "us-west-2"
+      aws-region: "us-west-2"
     secrets: inherit
 

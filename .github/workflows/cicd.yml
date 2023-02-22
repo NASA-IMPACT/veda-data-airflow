@@ -32,7 +32,7 @@ jobs:
   deploy-to-staging:
     needs: run-linters
     if: github.ref_name == 'mydev'
-    concurrency: staging
+    concurrency: development
     uses: "./.github/workflows/deploy.yml"
     with:
       environment: development

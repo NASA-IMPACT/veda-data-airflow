@@ -6,7 +6,6 @@ from airflow.providers.amazon.aws.operators.ecs import (
     EcsRunTaskOperator,
 )
 from airflow.hooks.base import BaseHook
-from airflow.models.variable import Variable
 import json
 
 

@@ -16,8 +16,21 @@ on:
       environment:
         type: string
         required: true
+      aws-region:
+        type: string
+        required: true
+      role-session-name:
+        required: false
+        type: string
+        default: github-actions-deployment
     secrets:
       DEPLOYMENT_ROLE_ARN:
+        required: true
+      AWS_ACCOUNT_ID:
+        required: true
+      VPC_ID:
+        required: true
+      ASSUME_ROLE_ARNS:
         required: true
 jobs:
   deploy:
@@ -25,6 +38,9 @@ jobs:
     environment: ${{ inputs.environment }}
     env:
       STAGE: ${{ inputs.stage }}
+      AWS_REGION: ${{ inputs.aws-region }}
+      VPC_ID: ${{ secrets.VPC_ID }}
+      AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
 
     steps:
       - name: Checkout
@@ -36,8 +52,9 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v1
         with:
           role-to-assume: ${{ secrets.DEPLOYMENT_ROLE_ARN }}
-          aws-region: us-west-2
+          role-session-name: ${{ inputs.role-session-name }}
+          aws-region: ${{ inputs.aws-region }}
       - run: |
-          ls -al dags/veda_data_pipeline/veda_pipeline_tasks
-          echo $STAGE
-          aws s3 ls
+          ./scripts/deploy.sh ${{ inputs.env-file }} <<< init
+          ./scripts/deploy.sh ${{ inputs.env-file }} <<< plan
+

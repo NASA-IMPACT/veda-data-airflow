@@ -48,6 +48,14 @@ jobs:
         with:
           lfs: "true"
           submodules: "recursive"
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+          cache: "pip"
+
+      - run: pip install -r deploy_requirements.txt
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
         with:

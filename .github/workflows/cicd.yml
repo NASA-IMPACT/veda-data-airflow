@@ -36,7 +36,7 @@ jobs:
     uses: "./.github/workflows/deploy.yml"
     with:
       environment: development
-      env-file: ".env_staging"
+      env-file: ".env_dev"
       stage: "dev"
       role-session-name: "veda-data-airflow-github-development-deployment"
       aws-region: "us-west-2"

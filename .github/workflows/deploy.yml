@@ -40,7 +40,7 @@ jobs:
       STAGE: ${{ inputs.stage }}
       AWS_REGION: ${{ inputs.aws-region }}
       VPC_ID: ${{ secrets.VPC_ID }}
-      AWS_ACCOUNT_ID: ${{ secrets.ACCOUNT_ID }}
+      AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
 
     steps:
       - name: Checkout

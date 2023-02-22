@@ -13,11 +13,16 @@ on:
       env-file:
         type: string
         required: true
+      environment:
+        type: string
+        required: true
+    secrets:
+      DEPLOYMENT_ROLE_ARN:
+        required: true
 jobs:
   deploy:
     runs-on: ubuntu-latest
-
-
+    environment: ${{ inputs.environment }}
     env:
       STAGE: ${{ inputs.stage }}
 
@@ -27,6 +32,12 @@ jobs:
         with:
           lfs: "true"
           submodules: "recursive"
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          role-to-assume: ${{ secrets.DEPLOYMENT_ROLE_ARN }}
+          aws-region: us-west-2
       - run: |
           ls -al dags/veda_data_pipeline/veda_pipeline_tasks
           echo $STAGE
+          aws s3 ls

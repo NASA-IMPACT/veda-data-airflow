@@ -62,7 +62,8 @@ function check_create_remote_state {
 
   bucketstatus=$(aws s3api head-bucket --bucket $STATE_BUCKET_NAME --profile $AWS_PROFILE 2>&1)
   table_exists=$(aws dynamodb describe-table --table-name  $STATE_DYNAMO_TABLE --region $AWS_REGION --profile $AWS_PROFILE 2>&1)
-
+  echo $bucketstatus
+  echo $table_exists
   if echo "${table_exists}" | grep "An error";
   then
     echo "Creating dynamodb table for TF state"
@@ -93,6 +94,7 @@ function check_create_remote_state {
 
 cd ./infrastructure
 generate_terraform_variables
+cat terraform.tf
 check_create_remote_state $AWS_REGION $STATE_BUCKET_NAME $STATE_DYNAMO_TABLE $AWS_PROFILE
 
 read -rp 'action [init|plan|deploy]: ' ACTION

@@ -87,7 +87,6 @@ function check_create_remote_state {
 
 cd ./infrastructure
 generate_terraform_variables
-cat terraform.tf
 check_create_remote_state $AWS_REGION $STATE_BUCKET_NAME $STATE_DYNAMO_TABLE
 
 read -rp 'action [init|plan|deploy]: ' ACTION

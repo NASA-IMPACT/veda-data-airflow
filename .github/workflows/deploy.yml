@@ -70,5 +70,6 @@ jobs:
 
       - name: Deploy
         run: |
-          aws s3 ls
+          ./scripts/deploy.sh ${{ inputs.env-file }} <<< init
+          ./scripts/deploy.sh ${{ inputs.env-file }} <<< plan
 

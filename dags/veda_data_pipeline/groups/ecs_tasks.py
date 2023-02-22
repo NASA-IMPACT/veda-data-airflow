@@ -27,17 +27,17 @@ def subdag_ecs_task(
     task_definition_family,
     container_name,
     docker_image,
-    cmd,
+    cmd: str,
     mwaa_stack_conf,
     aws_region="us-west-2",
     cpu="256",
     memory="512",
     stage="dev",
-    working_directory="/usr/bin",
-    environment_vars=list(),
+    environment_vars=None,
 ):
+    if environment_vars is None:
+        environment_vars = list()
     with TaskGroup(**group_kwgs) as ecs_task_grp:
-        mwaa_stack_conf = Variable.get("MWAA_STACK_CONF", deserialize_json=True)
         if stage == "dev":
             from airflow.providers.docker.operators.docker import DockerOperator
 
@@ -62,7 +62,6 @@ def subdag_ecs_task(
                 {
                     "name": container_name,
                     "image": docker_image,
-                    "workingDirectory": working_directory,
                     "entryPoint": ["sh", "-c"],
                     "command": ["ls"],
                     "logConfiguration": {
@@ -94,7 +93,7 @@ def subdag_ecs_task(
                 "containerOverrides": [
                     {
                         "name": container_name,
-                        "command": cmd,
+                        "command": [cmd],
                         "environment": environment_vars,
                     },
                 ],

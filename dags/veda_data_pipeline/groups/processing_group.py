@@ -35,7 +35,7 @@ def submit_to_stac_ingestor_task(ti):
     stac_ingestor_api_url = Variable.get("STAC_INGESTOR_API_URL")
     for item in stac_items:
         submission_handler(
-            event=item,
+            event={ "stac_item": item },
             cognito_app_secret=cognito_app_secret,
             stac_ingestor_api_url=stac_ingestor_api_url,
         )

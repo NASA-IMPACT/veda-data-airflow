@@ -23,8 +23,9 @@ on:
         required: false
         type: string
         default: github-actions-deployment
-      STAC_INGESTOR_API_URL:
-        
+      stac_ingestor_api_url:
+        required: true
+        type: string
     secrets:
       DEPLOYMENT_ROLE_ARN:
         required: true
@@ -47,7 +48,7 @@ jobs:
       AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
       ASSUME_ROLE_ARNS: ${{ secrets.ASSUME_ROLE_ARNS }}
       COGNITO_APP_SECRET: ${{ secrets.COGNITO_APP_SECRET }}
-      STAC_INGESTOR_API_URL: ${{ vars.STAC_INGESTOR_API_URL }}
+      STAC_INGESTOR_API_URL: ${{ inputs.stac_ingestor_api_url }}
 
     steps:
       - name: Checkout

@@ -52,6 +52,7 @@ jobs:
       stage: "staging"
       role-session-name: "veda-data-airflow-github-staging-deployment"
       aws-region: "us-west-2"
+      stac_ingestor_api_url: ${{ vars.STAC_INGESTOR_API_URL }}
     secrets: inherit
 
 

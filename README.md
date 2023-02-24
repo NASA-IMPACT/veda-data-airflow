@@ -12,6 +12,13 @@ data products and STAC metadata for interfaces such as https://github.com/NASA-I
 - [infrastructure](./infrastructure/) contains the terraform necessary to deploy all resources to AWS
 - [scripts](./scripts/) contains bash and python scripts useful for deploying and for running ingests
 
+### Fetching Submodules
+
+First time setting up the repo:
+`git submodule update --init --recursive`
+
+Afterwards:
+`git submodule update --recursive --remote`
 
 ## Requirements
 

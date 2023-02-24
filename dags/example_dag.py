@@ -76,6 +76,7 @@ with DAG(
         op_kwargs={"text": "Push to CMR"},
         dag=dag,
     )
+
     end = EmptyOperator(task_id="end", dag=dag)
     start >> discover_from_cmr
     start >> discover_from_s3 >> move_files_to_maap_store

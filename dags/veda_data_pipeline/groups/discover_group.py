@@ -1,6 +1,4 @@
-import os
 import time
-
 from airflow.models.variable import Variable
 from airflow.operators.python import PythonOperator, BranchPythonOperator
 from airflow.utils.task_group import TaskGroup
@@ -10,12 +8,6 @@ from airflow_multi_dagrun.operators import TriggerMultiDagRunOperator
 from veda_data_pipeline.veda_pipeline_tasks.s3_discovery.handler import (
     s3_discovery_handler,
 )
-
-
-def load_discovery_env():
-    MWAA_STAC_CONF = Variable.get("MWAA_STACK_CONF", deserialize_json=True)
-    os.environ["ASSUME_ROLE_ARN"] = Variable.get("ASSUME_ROLE_READ_ARN")
-    os.environ["EVENT_BUCKET"] = MWAA_STAC_CONF["EVENT_BUCKET"]
 
 
 group_kwgs = {"group_id": "Discover", "tooltip": "Discover"}
@@ -32,22 +24,28 @@ def get_payload(ti_xcom_pull):
 
 
 def discover_from_cmr_task(text):
-    load_discovery_env()
     return {"place_holder": text}
 
 
 def discover_from_s3_task(ti):
-    load_discovery_env()
     config = ti.dag_run.conf
-    return s3_discovery_handler(config)
+    # (event, chunk_size=2800, role_arn=None, bucket_output=None):
+    MWAA_STAC_CONF = Variable.get("MWAA_STACK_CONF", deserialize_json=True)
+    read_assume_arn = Variable.get("ASSUME_ROLE_READ_ARN")
+    return s3_discovery_handler(
+        event=config,
+        role_arn=read_assume_arn,
+        bucket_output=MWAA_STAC_CONF["EVENT_BUCKET"],
+    )
 
 
 def get_files_to_process(ti):
     payload = get_payload(ti.xcom_pull)
     payloads_xcom = payload.pop("payload", [])
-    for payload_xcom in payloads_xcom:
+    dag_run_id = ti.dag_run.run_id
+    for indx, payload_xcom in enumerate(payloads_xcom):
         time.sleep(2)
-        yield {**payload, "payload": payload_xcom}
+        yield {"run_id": f"{dag_run_id}_{indx}", **payload, "payload": payload_xcom}
 
 
 def discover_choice(ti):

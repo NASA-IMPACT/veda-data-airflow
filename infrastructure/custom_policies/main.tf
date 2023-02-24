@@ -58,7 +58,7 @@ data "aws_iam_policy_document" "docker_images_policies" {
       "secretsmanager:DescribeSecret"
     ]
     resources = [
-      "arn:aws:secretsmanager:${var.region}:${var.account_id}:secret:veda-auth-stack-alukach/veda-workflows-??????"
+      "arn:aws:secretsmanager:${var.region}:${var.account_id}:secret:${var.cognito_app_secret}-??????"
     ]
   }
 

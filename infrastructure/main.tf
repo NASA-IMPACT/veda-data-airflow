@@ -1,5 +1,5 @@
 module "mwaa" {
-  source                           = "https://github.com/amarouane-ABDELHAK/mwaa_tf_module/releases/download/v1.4.4/mwaa_tf_module.zip"
+  source                           = "/Users/abdelhakmarouane/workstation/github/mwaa_tf_module"
   prefix                           = var.prefix
   vpc_id                           = var.vpc_id
   iam_role_additional_arn_policies = merge(module.custom_policy.custom_policy_arns_map)
@@ -28,6 +28,7 @@ module "custom_policy" {
   cluster_name     = module.mwaa.cluster_name
   assume_role_arns = var.assume_role_arns
   region           = local.aws_region
+  cognito_app_secret = var.cognito_app_secret
 }
 
 resource "local_file" "mwaa_variables" {

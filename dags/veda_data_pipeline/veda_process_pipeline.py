@@ -29,14 +29,27 @@ This DAG is supposed to be triggered by `veda_discover`. But you still can trigg
 - [Supports linking to external content](https://github.com/NASA-IMPACT/veda-data-pipelines)
 """
 
+templat_dag_run_conf = {
+
+        "collection": "<collection_name>",
+        "prefix": "<prefix>/",
+        "bucket": "<bucket>",
+        "filename_regex": "<filename_regex>",
+        "discovery": "<s3>|cmr",
+        "datetime_range": "<month>|<day>",
+        "upload": "<false> | true",
+        "cogify": "false | true",
+        "payload": "<s3_uri_event_payload"
+    }
 dag_args = {
     "start_date": pendulum.today("UTC").add(days=-1),
     "schedule_interval": None,
     "catchup": False,
     "doc_md": dag_doc_md,
+
 }
 
-with DAG("veda_ingest", **dag_args) as dag:
+with DAG("veda_ingest",params=templat_dag_run_conf, **dag_args) as dag:
     start = DummyOperator(task_id="Start", dag=dag)
     end = DummyOperator(task_id="End", trigger_rule=TriggerRule.ONE_SUCCESS, dag=dag)
 

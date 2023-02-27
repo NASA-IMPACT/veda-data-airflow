@@ -4,7 +4,7 @@ from airflow.operators.python import PythonOperator, BranchPythonOperator
 from airflow.utils.task_group import TaskGroup
 from airflow.utils.trigger_rule import TriggerRule
 from airflow_multi_dagrun.operators import TriggerMultiDagRunOperator
-
+import uuid
 from veda_data_pipeline.veda_pipeline_tasks.s3_discovery.handler import (
     s3_discovery_handler,
 )
@@ -45,7 +45,7 @@ def get_files_to_process(ti):
     dag_run_id = ti.dag_run.run_id
     for indx, payload_xcom in enumerate(payloads_xcom):
         time.sleep(2)
-        yield {"run_id": f"{dag_run_id}_{indx}", **payload, "payload": payload_xcom}
+        yield {"run_id": f"{dag_run_id}_{uuid.uuid4()}_{indx}", **payload, "payload": payload_xcom}
 
 
 def discover_choice(ti):

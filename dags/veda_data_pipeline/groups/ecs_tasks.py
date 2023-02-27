@@ -8,7 +8,6 @@ from airflow.providers.amazon.aws.operators.ecs import (
 from airflow.hooks.base import BaseHook
 import json
 
-
 def get_aws_keys_from_connection(connection_id="aws_default"):
     conn = BaseHook.get_connection(connection_id)
     return {
@@ -37,7 +36,7 @@ def subdag_ecs_task(
     if environment_vars is None:
         environment_vars = list()
     with TaskGroup(**group_kwgs) as ecs_task_grp:
-        if stage == "dev":
+        if stage == "local":
             from airflow.providers.docker.operators.docker import DockerOperator
 
             return DockerOperator(

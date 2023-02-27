@@ -32,8 +32,18 @@ dag_args = {
     "catchup": False,
     "doc_md": dag_doc_md,
 }
+templat_dag_run_conf = {
+    "collection": "<coll_name>",
+    "prefix": "<prefix>/",
+    "bucket": "<bucket>",
+    "filename_regex": "<file_regex>",
+    "discovery": "<s3>|<cmr>",
+    "datetime_range": "<month>|<day>",
+    "upload": "<false>|<true>",
+    "cogify": "<false>|<true>",
+}
 
-with DAG("veda_discover", **dag_args) as dag:
+with DAG("veda_discover", params=templat_dag_run_conf, **dag_args) as dag:
     start = DummyOperator(task_id="Start", dag=dag)
     end = DummyOperator(task_id="End", trigger_rule=TriggerRule.ONE_SUCCESS, dag=dag)
 

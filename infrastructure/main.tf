@@ -1,5 +1,5 @@
 module "mwaa" {
-  source                           = "/Users/abdelhakmarouane/workstation/github/mwaa_tf_module"
+  source                           = "https://github.com/amarouane-ABDELHAK/mwaa_tf_module/releases/download/v1.4.5/mwaa_tf_module.zip"
   prefix                           = var.prefix
   vpc_id                           = var.vpc_id
   iam_role_additional_arn_policies = merge(module.custom_policy.custom_policy_arns_map)

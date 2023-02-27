@@ -9,3 +9,4 @@ output "mwaa_s3_name" {
 output "mwaa_subnets" {
   value = module.mwaa.subnets
 }
+

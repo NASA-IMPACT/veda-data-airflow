@@ -26,7 +26,7 @@
     "license": "MIT",
     "description": "ICESat-2 L4 Monthly Gridded Sea Ice Thickness (COGs)",
     "stac_version": "1.0.0",
-    "dashboard:is_periodic": true,
+    "dashboard:is_periodic": false,
     "dashboard:time_density": "month",
     "item_assets": {
         "cog_default": {

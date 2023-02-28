@@ -1,13 +1,15 @@
 import os
-from pathlib import Path
 from functools import singledispatch
+from pathlib import Path
+
 import pystac
 import rasterio
 from cmr import GranuleQuery
 from pystac.utils import str_to_datetime
-from rio_stac import stac
 from rasterio.session import AWSSession
-from . import regex, events, role
+from rio_stac import stac
+
+from . import events, regex, role
 
 
 def create_item(

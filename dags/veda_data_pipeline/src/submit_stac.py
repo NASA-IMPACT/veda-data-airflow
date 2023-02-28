@@ -1,16 +1,17 @@
-from dataclasses import dataclass
 import json
 import sys
+from dataclasses import dataclass
 
 if sys.version_info >= (3, 8):
     from typing import TypedDict
 else:
     from typing_extensions import TypedDict
+
 from typing import Any, Dict, Optional, Union
 
-from airflow.models.variable import Variable
 import boto3
 import requests
+from airflow.models.variable import Variable
 
 
 class InputBase(TypedDict):

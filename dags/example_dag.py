@@ -1,7 +1,7 @@
-import pendulum
 import logging
 import time
 
+import pendulum
 from airflow import DAG
 from airflow.operators.dummy_operator import DummyOperator as EmptyOperator
 from airflow.operators.python import PythonOperator

@@ -1,11 +1,9 @@
 import os
 import sys
 
-from pypgstac.load import Loader, Methods
 from pypgstac.db import PgstacDB
-
-from utils import data_files, DATA_PATH, get_secret
-
+from pypgstac.load import Loader, Methods
+from utils import DATA_PATH, data_files, get_secret
 
 collections_path = os.path.join(DATA_PATH, "collections")
 

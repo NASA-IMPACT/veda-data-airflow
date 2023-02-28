@@ -1,7 +1,6 @@
-import pytest
-
 from datetime import datetime
 
+import pytest
 from utils import regex
 
 

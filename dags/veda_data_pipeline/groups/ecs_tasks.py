@@ -1,12 +1,13 @@
-from airflow.utils.task_group import TaskGroup
-from airflow.utils.trigger_rule import TriggerRule
+import json
+
+from airflow.hooks.base import BaseHook
 from airflow.providers.amazon.aws.operators.ecs import (
     EcsDeregisterTaskDefinitionOperator,
     EcsRegisterTaskDefinitionOperator,
     EcsRunTaskOperator,
 )
-from airflow.hooks.base import BaseHook
-import json
+from airflow.utils.task_group import TaskGroup
+from airflow.utils.trigger_rule import TriggerRule
 
 
 def get_aws_keys_from_connection(connection_id="aws_default"):
@@ -37,7 +38,7 @@ def subdag_ecs_task(
     if environment_vars is None:
         environment_vars = list()
     with TaskGroup(**group_kwgs) as ecs_task_grp:
-        if stage == "dev":
+        if stage == "local":
             from airflow.providers.docker.operators.docker import DockerOperator
 
             return DockerOperator(

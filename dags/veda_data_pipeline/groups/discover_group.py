@@ -6,8 +6,9 @@ from airflow.operators.python import BranchPythonOperator, PythonOperator
 from airflow.utils.task_group import TaskGroup
 from airflow.utils.trigger_rule import TriggerRule
 from airflow_multi_dagrun.operators import TriggerMultiDagRunOperator
-from veda_data_pipeline.veda_pipeline_tasks.s3_discovery.handler import \
-    s3_discovery_handler
+from veda_data_pipeline.veda_pipeline_tasks.s3_discovery.handler import (
+    s3_discovery_handler,
+)
 
 group_kwgs = {"group_id": "Discover", "tooltip": "Discover"}
 

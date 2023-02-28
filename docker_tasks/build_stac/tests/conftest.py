@@ -1,11 +1,10 @@
 import os
 from unittest import mock
 
-import pytest
 import boto3
+import pytest
 from moto import mock_s3
-
-from mypy_boto3_s3.service_resource import S3ServiceResource, Bucket
+from mypy_boto3_s3.service_resource import Bucket, S3ServiceResource
 
 
 @pytest.fixture(scope="session", autouse=True)

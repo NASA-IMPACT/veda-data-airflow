@@ -1,16 +1,13 @@
 import json
 import logging
 
-from airflow.utils.task_group import TaskGroup
-from airflow.providers.amazon.aws.operators.ecs import EcsRunTaskOperator
-
-
-from airflow.operators.python import PythonOperator, BranchPythonOperator
-from airflow.models.variable import Variable
 import smart_open
-
-from veda_data_pipeline.src.submit_stac import submission_handler
+from airflow.models.variable import Variable
+from airflow.operators.python import BranchPythonOperator, PythonOperator
+from airflow.providers.amazon.aws.operators.ecs import EcsRunTaskOperator
+from airflow.utils.task_group import TaskGroup
 from veda_data_pipeline.src.cogify import cogify_handler
+from veda_data_pipeline.src.submit_stac import submission_handler
 
 group_kwgs = {"group_id": "Process", "tooltip": "Process"}
 

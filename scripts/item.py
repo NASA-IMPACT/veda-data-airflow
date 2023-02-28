@@ -5,8 +5,7 @@ import sys
 
 import boto3
 import requests
-
-from utils import data_files, DATA_PATH, MWAA_NAME
+from utils import DATA_PATH, MWAA_NAME, data_files
 
 dag_name = "veda_discover"
 airflow_client = boto3.client("mwaa")

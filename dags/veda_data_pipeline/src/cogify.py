@@ -1,16 +1,16 @@
-from affine import Affine
 import os
-import requests
-from botocore.exceptions import ClientError
+
 import boto3
-from netCDF4 import Dataset
 import numpy as np
+import requests
+from affine import Affine
+from botocore.exceptions import ClientError
+from netCDF4 import Dataset
 from rasterio.crs import CRS
 from rasterio.io import MemoryFile
 from rasterio.warp import calculate_default_transform
 from rio_cogeo.cogeo import cog_translate
 from rio_cogeo.profiles import cog_profiles
-
 
 config = {
     "DEFAULT": {"output_bucket": "climatedashboard-data", "output_dir": "OMDOAO3e_003"},

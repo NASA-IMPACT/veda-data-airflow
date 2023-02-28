@@ -1,8 +1,7 @@
+import pendulum
 from airflow import DAG
 from airflow.operators.dummy_operator import DummyOperator
 from airflow.utils.trigger_rule import TriggerRule
-import pendulum
-
 from veda_data_pipeline.groups.discover_group import subdag_discover
 
 dag_doc_md = """

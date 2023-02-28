@@ -1,15 +1,16 @@
-from argparse import ArgumentParser
 import ast
-from contextlib import closing
 import json
-from multiprocessing import Pool, cpu_count
 import os
+from argparse import ArgumentParser
+from contextlib import closing
+from multiprocessing import Pool, cpu_count
+from time import sleep, time
 from typing import Any, Dict, TypedDict, Union
 from uuid import uuid4
-from time import time, sleep
-import smart_open
 
-from utils import stac as stac, events
+import smart_open
+from utils import events
+from utils import stac as stac
 
 
 class S3LinkOutput(TypedDict):

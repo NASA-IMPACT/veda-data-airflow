@@ -1,13 +1,16 @@
 import json
 import logging
+from datetime import timedelta
 
 import smart_open
 from airflow.models.variable import Variable
 from airflow.operators.python import BranchPythonOperator, PythonOperator
 from airflow.providers.amazon.aws.operators.ecs import EcsRunTaskOperator
 from airflow.utils.task_group import TaskGroup
-from veda_data_pipeline.src.cogify import cogify_handler
-from veda_data_pipeline.src.submit_stac import submission_handler
+from veda_data_pipeline.veda_pipeline_tasks.cogify.handler.py import \
+    cogify_handler
+from veda_data_pipeline.veda_pipeline_tasks.submit_stac.handler.py import \
+    submission_handler
 
 group_kwgs = {"group_id": "Process", "tooltip": "Process"}
 
@@ -57,6 +60,7 @@ def subdag_process():
             task_definition=f"{mwaa_stack_conf.get('PREFIX')}-tasks",
             launch_type="FARGATE",
             do_xcom_push=True,
+            execution_timeout=timedelta(minutes=60),
             overrides={
                 "containerOverrides": [
                     {

@@ -55,5 +55,3 @@ jobs:
       aws-region: "us-west-2"
 
     secrets: inherit
-
-

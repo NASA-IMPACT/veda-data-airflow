@@ -1,13 +1,12 @@
 import contextlib
 from typing import TYPE_CHECKING, Any, Dict, Type
 from unittest.mock import MagicMock, Mock
-from pydantic import ValidationError
-
-import pytest
-from pystac import Item
 
 import handler
-from utils import stac, events
+import pytest
+from pydantic import ValidationError
+from pystac import Item
+from utils import events, stac
 
 if TYPE_CHECKING:
     from functools import _SingleDispatchCallable

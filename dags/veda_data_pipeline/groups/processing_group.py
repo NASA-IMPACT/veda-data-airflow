@@ -1,14 +1,18 @@
 import json
 import logging
+from datetime import timedelta
 
-from airflow.utils.task_group import TaskGroup
-from airflow.providers.amazon.aws.operators.ecs import ECSOperator
-from airflow.operators.python import PythonOperator, BranchPythonOperator
-from airflow.models.variable import Variable
 import smart_open
-
-from veda_data_pipeline.src.submit_stac import submission_handler
-from veda_data_pipeline.src.cogify import cogify_handler
+from airflow.models.variable import Variable
+from airflow.operators.python import BranchPythonOperator, PythonOperator
+from airflow.providers.amazon.aws.operators.ecs import EcsRunTaskOperator
+from airflow.utils.task_group import TaskGroup
+from veda_data_pipeline.veda_pipeline_tasks.cogify.handler import (
+    cogify_handler,
+)
+from veda_data_pipeline.veda_pipeline_tasks.submit_stac.handler import (
+    submission_handler,
+)
 
 group_kwgs = {"group_id": "Process", "tooltip": "Process"}
 
@@ -18,7 +22,6 @@ def log_task(text: str):
 
 
 def submit_to_stac_ingestor_task(ti):
-
     print("Submit STAC ingestor")
     event = json.loads(ti.xcom_pull(task_ids=f"{group_kwgs['group_id']}.build_stac"))
     success_file = event["payload"]["success_event_key"]
@@ -26,7 +29,11 @@ def submit_to_stac_ingestor_task(ti):
         stac_items = json.loads(_file.read())
 
     for item in stac_items:
-        submission_handler(item)
+        submission_handler(
+            event=item,
+            cognito_app_secret=Variable.get("COGNITO_APP_SECRET"),
+            stac_ingestor_api_url=Variable.get("STAC_INGESTOR_API_URL"),
+        )
     return event
 
 
@@ -52,13 +59,14 @@ def subdag_process():
             python_callable=cogify_choice,
         )
         mwaa_stack_conf = Variable.get("MWAA_STACK_CONF", deserialize_json=True)
-        build_stac = ECSOperator(
+        build_stac = EcsRunTaskOperator(
             task_id="build_stac",
             trigger_rule="none_failed",
             cluster=f"{mwaa_stack_conf.get('PREFIX')}-cluster",
-            task_definition=f"{mwaa_stack_conf.get('PREFIX')}-veda-tasks",
+            task_definition=f"{mwaa_stack_conf.get('PREFIX')}-tasks",
             launch_type="FARGATE",
             do_xcom_push=True,
+            execution_timeout=timedelta(minutes=60),
             overrides={
                 "containerOverrides": [
                     {
@@ -72,7 +80,7 @@ def subdag_process():
                         "environment": [
                             {
                                 "name": "EXTERNAL_ROLE_ARN",
-                                "value": mwaa_stack_conf.get("ASSUME_ROLE_ARN"),
+                                "value": Variable.get("ASSUME_ROLE_READ_ARN"),
                             },
                             {
                                 "name": "BUCKET",
@@ -94,7 +102,7 @@ def subdag_process():
                     "subnets": mwaa_stack_conf.get("SUBNETS"),
                 },
             },
-            awslogs_group=f"{mwaa_stack_conf.get('PREFIX')}-stac_tasks",
+            awslogs_group=mwaa_stack_conf.get("LOG_GROUP_NAME"),
             awslogs_stream_prefix=f"ecs/{mwaa_stack_conf.get('PREFIX')}-veda-stac-build",  # prefix with container name
         )
         cogify = PythonOperator(task_id="cogify", python_callable=cogify_task)

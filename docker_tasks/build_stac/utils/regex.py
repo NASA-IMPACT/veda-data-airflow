@@ -1,10 +1,10 @@
 import re
-from typing import Callable, Dict, Tuple, Union
 from datetime import datetime
+from typing import Callable, Dict, Tuple, Union
+
 from dateutil.relativedelta import relativedelta
 
 from . import events
-
 
 DATERANGE = Tuple[datetime, datetime]
 
@@ -50,7 +50,7 @@ def extract_dates(
 
     # Find dates in filename
     dates = []
-    for (pattern, dateformat) in DATE_REGEX_STRATEGIES:
+    for pattern, dateformat in DATE_REGEX_STRATEGIES:
         dates_found = re.compile(pattern).findall(filename)
         if not dates_found:
             continue

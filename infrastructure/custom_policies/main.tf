@@ -3,15 +3,18 @@ data "aws_iam_policy_document" "docker_images_policies" {
   statement {
     effect = "Allow"
     actions = [
-        "ecs:RunTask",
-        "ecs:DescribeTasks"
+      "ecs:RunTask",
+      "ecs:StopTask",
+      "ecs:DescribeTasks",
+      "ecs:RegisterTaskDefinition",
+      "ecs:DescribeTaskDefinition",
+      "ecs:DeregisterTaskDefinition"
     ]
     resources = [
-      "arn:aws:ecs:${var.region}:${var.account_id}:cluster/${var.cluster_name}",
-      "arn:aws:ecs:${var.region}:${var.account_id}:task-definition/*",
-      "arn:aws:ecs:${var.region}:${var.account_id}:task/*"
+      "*"
     ]
   }
+
 
   statement {
     effect = "Allow"
@@ -55,7 +58,7 @@ data "aws_iam_policy_document" "docker_images_policies" {
       "secretsmanager:DescribeSecret"
     ]
     resources = [
-      "arn:aws:secretsmanager:${var.region}:${var.account_id}:secret:veda-auth-stack-alukach/veda-workflows-??????"
+      "arn:aws:secretsmanager:${var.region}:${var.account_id}:secret:${var.cognito_app_secret}-??????"
     ]
   }
 

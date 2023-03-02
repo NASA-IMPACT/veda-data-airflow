@@ -1,15 +1,16 @@
-from argparse import ArgumentParser
 import ast
-from contextlib import closing
 import json
-from multiprocessing import Pool, cpu_count
 import os
+from argparse import ArgumentParser
+from contextlib import closing
+from multiprocessing import Pool, cpu_count
+from time import sleep, time
 from typing import Any, Dict, TypedDict, Union
 from uuid import uuid4
 
 import smart_open
-
-from utils import stac as stac, events
+from utils import events
+from utils import stac as stac
 
 
 class S3LinkOutput(TypedDict):
@@ -22,7 +23,7 @@ class StacItemOutput(TypedDict):
 
 def handler(event: Dict[str, Any]) -> Union[S3LinkOutput, StacItemOutput]:
     """
-    Lambda handler for STAC Collection Item generation
+    Handler for STAC Collection Item generation
 
     Arguments:
     event - object with event parameters to be provided in one of 2 formats.
@@ -59,8 +60,8 @@ def using_pool(objects, workers_count: int):
         for result in results:
             try:
                 returned_results.append(result)
-            except:
-                print("Error")
+            except Exception as nex:
+                print(f"Error {nex}")
     return returned_results
 
 
@@ -97,7 +98,11 @@ def stac_handler(payload_event):
         s3_event_read = _file.read()
     event_received = json.loads(s3_event_read)
     objects = event_received["objects"]
-    payloads = using_pool(objects, workers_count=workers_count) if use_multiprocessing else sequential_processing(objects)
+    payloads = (
+        using_pool(objects, workers_count=workers_count)
+        if use_multiprocessing
+        else sequential_processing(objects)
+    )
     for payload in payloads:
         stac_item = payload["stac_item"]
         if "error" in stac_item:
@@ -126,14 +131,20 @@ if __name__ == "__main__":
         description="Build STAC",
         epilog="Contact Abdelhak Marouane for extra help",
     )
-    parser.add_argument("--payload", dest="payload", help="Events to pass to ")
+    parser.add_argument(
+        "--payload", dest="payload", help="event passed to stac_handler function"
+    )
     args = parser.parse_args()
+    # For cloud watch log to work the task should stay alife for at least 30 s
+    start = time()
+    print(f"Start at {start}")
 
     payload_event = ast.literal_eval(args.payload)
     building_stac_response = stac_handler(payload_event)
-    response = json.dumps({
-        **payload_event,
-        **building_stac_response
-    })
-
+    response = json.dumps({**payload_event, **building_stac_response})
+    end = time() - start
+    print(f"Actual processing took {end:.2f} seconds")
+    # Check if it took less than 50 seconds
+    if end - start < 50:
+        sleep(50)
     print(response)

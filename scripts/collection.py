@@ -1,11 +1,9 @@
 import os
 import sys
 
-from pypgstac.load import Loader, Methods
 from pypgstac.db import PgstacDB
-
-from utils import args_handler, data_files, DATA_PATH, get_secret
-
+from pypgstac.load import Loader, Methods
+from utils import DATA_PATH, data_files, get_secret
 
 collections_path = os.path.join(DATA_PATH, "collections")
 
@@ -46,8 +44,8 @@ def insert_collections(files):
         try:
             insert_collection(file)
             print("Inserted")
-        except:
-            print("Error inserting collection.")
+        except Exception as ex:
+            print(f"Error inserting collection. {ex}")
             raise
 
 

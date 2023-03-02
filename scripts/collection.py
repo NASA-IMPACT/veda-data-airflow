@@ -4,8 +4,6 @@ import sys
 
 import requests
 
-from pypgstac.db import PgstacDB
-from pypgstac.load import Loader, Methods
 from utils import get_collections, get_secret
 
 
@@ -26,7 +24,7 @@ def get_app_credentials(
     )
     try:
         response.raise_for_status()
-    except:
+    except Exception:
         print(response.text)
         raise
     return response.json()
@@ -52,7 +50,7 @@ def insert_collections(files):
                     )
                     response.raise_for_status()
                     print(response.text)
-            except:
+            except Exception:
                 print("Error inserting collection.")
                 raise
 

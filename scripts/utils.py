@@ -25,7 +25,9 @@ def arguments():
         return
     return argv[1:]
 
+
 DATA_PATH = os.path.join(os.path.dirname(os.path.realpath(__file__)), "..", "data")
+
 
 def data_files(data, data_path):
     files = []

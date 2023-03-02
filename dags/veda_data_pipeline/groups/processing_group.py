@@ -7,8 +7,10 @@ from airflow.models.variable import Variable
 from airflow.operators.python import BranchPythonOperator, PythonOperator
 from airflow.providers.amazon.aws.operators.ecs import EcsRunTaskOperator
 from airflow.utils.task_group import TaskGroup
-from veda_data_pipeline.veda_pipeline_tasks.cogify.handler.py import cogify_handler
-from veda_data_pipeline.veda_pipeline_tasks.submit_stac.handler.py import (
+from veda_data_pipeline.veda_pipeline_tasks.cogify.handler import (
+    cogify_handler,
+)
+from veda_data_pipeline.veda_pipeline_tasks.submit_stac.handler import (
     submission_handler,
 )
 

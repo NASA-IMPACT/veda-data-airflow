@@ -10,7 +10,7 @@ module "mwaa" {
   mwaa_variables_json_file_id_path = { file_path = local_file.mwaa_variables.filename, file_id = local_file.mwaa_variables.id }
   stage                            = var.stage
   airflow_version                  = "2.4.3"
-  min_workers                      = var.stage == "production" ? 2 : var.min_workers
+  min_workers                      = lookup(var.min_workers, var.stage, 1)
   ecs_containers = [
     {
       handler_file_path         = "${path.module}/../docker_tasks/build_stac/handler.py"

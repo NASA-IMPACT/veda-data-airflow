@@ -52,11 +52,16 @@ def get_files_to_process(ti):
         }
 
 
+def vector_raster_choice(ti):
+    payload = ti.dag_run.conf
+    if payload["vector"]:
+        return f"{group_kwgs['group_id']}.parallel_run_process_vector"
+    return f"{group_kwgs['group_id']}.parallel_run_process_raster"
+
 def discover_choice(ti):
     config = ti.dag_run.conf
     supported_discoveries = {"s3": "discover_from_s3", "cmr": "discover_from_cmr"}
     return f"{group_kwgs['group_id']}.{supported_discoveries[config['discovery']]}"
-
 
 def subdag_discover():
     with TaskGroup(**group_kwgs) as discover_grp:
@@ -74,12 +79,25 @@ def subdag_discover():
             python_callable=discover_from_s3_task,
             op_kwargs={"text": "Discover from S3"},
         )
-        run_process = TriggerMultiDagRunOperator(
-            task_id="parallel_run_process_tasks",
-            trigger_dag_id="veda_ingest",
+
+        raster_vector_branching = BranchPythonOperator(
+            task_id="raster_vector_branching", python_callable=vector_raster_choice
+        )
+
+        run_process_raster = TriggerMultiDagRunOperator(
+            task_id="parallel_run_process_rasters",
+            trigger_dag_id="veda_ingest_raster",
             trigger_rule=TriggerRule.ONE_SUCCESS,
             python_callable=get_files_to_process,
         )
 
-        discover_branching >> [discover_from_cmr, discover_from_s3] >> run_process
+        run_process_vector = TriggerMultiDagRunOperator(
+            task_id="parallel_run_process_vectors",
+            trigger_dag_id="veda_ingest_vector",
+            trigger_rule=TriggerRule.ONE_SUCCESS,
+            python_callable=get_files_to_process,
+        )
+
+
+        discover_branching >> [discover_from_cmr, discover_from_s3] >> raster_vector_branching >> [run_process_raster,run_process_vector]
         return discover_grp

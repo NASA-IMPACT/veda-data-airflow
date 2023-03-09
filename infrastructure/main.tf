@@ -17,6 +17,12 @@ module "mwaa" {
       docker_file_path          = "${path.module}/../docker_tasks/build_stac/Dockerfile"
       ecs_container_folder_path = "${path.module}/../docker_tasks/build_stac"
       ecr_repo_name             = "${var.prefix}-veda-build_stac"
+    },
+    {
+      handler_file_path         = "${path.module}/../docker_tasks/vector_ingest/handler.py"
+      docker_file_path          = "${path.module}/../docker_tasks/vector_ingest/Dockerfile"
+      ecs_container_folder_path = "${path.module}/../docker_tasks/vector_ingest"
+      ecr_repo_name             = "${var.prefix}-veda-vector_ingest"
     }
   ]
 }

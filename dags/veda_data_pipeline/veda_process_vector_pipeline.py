@@ -78,12 +78,8 @@ with DAG(dag_id="veda_ingest_vector", params=templat_dag_run_conf, **dag_args) a
                                 "value": Variable.get("ASSUME_ROLE_READ_ARN"),
                             },
                             {
-                                "name": "BUCKET",
-                                "value": "veda-data-pipelines-staging-lambda-ndjson-bucket",
-                            },
-                            {
-                                "name": "EVENT_BUCKET",
-                                "value": mwaa_stack_conf.get("EVENT_BUCKET"),
+                                "name": "VECTOR_SECRET_NAME",
+                                "value": Variable.get("VECTOR_SECRET_NAME"),
                             },
                         ],
                         "memory": 2048,

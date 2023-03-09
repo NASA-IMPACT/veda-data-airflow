@@ -1,9 +1,9 @@
 name: CI/CD
 
 on:
-  - push
-  - pull_request:
-      types: [ opened, reopened, edited, synchronize ]
+  push:
+  pull_request:
+    types: [ opened, reopened, edited, synchronize ]
 
 jobs:
   gitflow-enforcer:
@@ -14,7 +14,7 @@ jobs:
           run: |
             echo "ERROR: You can only merge to main from dev and to production from main"
             exit 1
-            
+
   run-linters:
     name: Run linters
     runs-on: ubuntu-latest

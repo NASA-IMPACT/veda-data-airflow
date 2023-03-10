@@ -60,17 +60,17 @@ with DAG(dag_id="veda_ingest_vector", params=templat_dag_run_conf, **dag_args) a
             task_id="ingest_vector",
             trigger_rule="none_failed",
             cluster=f"{mwaa_stack_conf.get('PREFIX')}-cluster",
-            task_definition=f"{mwaa_stack_conf.get('PREFIX')}-tasks",
+            task_definition=f"{mwaa_stack_conf.get('PREFIX')}-vector-tasks",
             launch_type="FARGATE",
             do_xcom_push=True,
             execution_timeout=timedelta(minutes=60),
             overrides={
                 "containerOverrides": [
                     {
-                        "name": f"{mwaa_stack_conf.get('PREFIX')}-vector-ingest",
+                        "name": f"{mwaa_stack_conf.get('PREFIX')}-veda-vector_ingest",
                         "command": [
                             "/usr/local/bin/python",
-                            "handler.py",
+                            "handler.py"
                         ],
                         "environment": [
                             {
@@ -94,7 +94,7 @@ with DAG(dag_id="veda_ingest_vector", params=templat_dag_run_conf, **dag_args) a
                 },
             },
             awslogs_group=mwaa_stack_conf.get("LOG_GROUP_NAME"),
-            awslogs_stream_prefix=f"ecs/{mwaa_stack_conf.get('PREFIX')}-vector-ingest",  # prefix with container name
+            awslogs_stream_prefix=f"ecs/{mwaa_stack_conf.get('PREFIX')}-veda-vector_ingest",  # prefix with container name
         )
 
     start >> ingest_vector >> end

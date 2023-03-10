@@ -54,9 +54,10 @@ def get_files_to_process(ti):
 
 def vector_raster_choice(ti):
     payload = ti.dag_run.conf
+
     if payload["vector"]:
-        return f"{group_kwgs['group_id']}.parallel_run_process_vector"
-    return f"{group_kwgs['group_id']}.parallel_run_process_raster"
+        return f"{group_kwgs['group_id']}.parallel_run_process_vectors"
+    return f"{group_kwgs['group_id']}.parallel_run_process_rasters"
 
 def discover_choice(ti):
     config = ti.dag_run.conf
@@ -81,7 +82,9 @@ def subdag_discover():
         )
 
         raster_vector_branching = BranchPythonOperator(
-            task_id="raster_vector_branching", python_callable=vector_raster_choice
+            task_id="raster_vector_branching",
+            trigger_rule=TriggerRule.ONE_SUCCESS,
+            python_callable=vector_raster_choice
         )
 
         run_process_raster = TriggerMultiDagRunOperator(

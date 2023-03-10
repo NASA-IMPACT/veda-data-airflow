@@ -14,5 +14,7 @@
     "ASSUME_ROLE_READ_ARN": "${assume_role_read_arn}",
     "ASSUME_ROLE_WRITE_ARN": "${assume_role_write_arn}",
     "COGNITO_APP_SECRET": "${cognito_app_secret}",
-    "STAC_INGESTOR_API_URL": "${stac_ingestor_api_url}"
+    "STAC_INGESTOR_API_URL": "${stac_ingestor_api_url}",
+    "VECTOR_SECRET_NAME": "staging/tifeatures-timvt/Features_DB_for_EIS_Fires/36C48138"
+
 }

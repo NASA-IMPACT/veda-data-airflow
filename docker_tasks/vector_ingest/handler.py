@@ -1,3 +1,5 @@
+import time
+
 import boto3
 import os
 import subprocess
@@ -85,7 +87,11 @@ def load_to_featuresdb(filename: str, collection: str):
 
 
 def handler(event, context):
+    print("Statr vector")
+    time.sleep(30)
+    print("wakeup vector")
     href = event["s3_filename"]
+
     collection = event["collection"]
 
     downloaded_filepath = download_file(href)

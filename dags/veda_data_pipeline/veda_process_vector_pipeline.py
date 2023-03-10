@@ -58,7 +58,7 @@ with DAG(dag_id="veda_ingest_vector", params=templat_dag_run_conf, **dag_args) a
 
     ingest_vector = EcsRunTaskOperator(
             task_id="ingest_vector",
-            trigger_rule="none_failed",
+            trigger_rule=TriggerRule.NONE_FAILED,
             cluster=f"{mwaa_stack_conf.get('PREFIX')}-cluster",
             task_definition=f"{mwaa_stack_conf.get('PREFIX')}-vector-tasks",
             launch_type="FARGATE",

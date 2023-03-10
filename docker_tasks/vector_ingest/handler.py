@@ -1,3 +1,4 @@
+import base64
 import time
 
 import boto3
@@ -87,9 +88,8 @@ def load_to_featuresdb(filename: str, collection: str):
 
 
 def handler(event, context):
-    print("Statr vector")
-    time.sleep(30)
-    print("wakeup vector")
+    print("Vector ingest started")
+
     href = event["s3_filename"]
 
     collection = event["collection"]

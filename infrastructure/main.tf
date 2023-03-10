@@ -1,5 +1,5 @@
 module "mwaa" {
-  source                           = "https://github.com/amarouane-ABDELHAK/mwaa_tf_module/releases/download/v1.4.4/mwaa_tf_module.zip"
+  source                           = "https://github.com/amarouane-ABDELHAK/mwaa_tf_module/releases/download/v1.4.5/mwaa_tf_module.zip"
   prefix                           = var.prefix
   vpc_id                           = var.vpc_id
   iam_role_additional_arn_policies = merge(module.custom_policy.custom_policy_arns_map)
@@ -10,7 +10,7 @@ module "mwaa" {
   mwaa_variables_json_file_id_path = { file_path = local_file.mwaa_variables.filename, file_id = local_file.mwaa_variables.id }
   stage                            = var.stage
   airflow_version                  = "2.4.3"
-  min_workers                      = var.stage == "production" ? 2 : var.min_workers
+  min_workers                      = lookup(var.min_workers, var.stage, 1)
   ecs_containers = [
     {
       handler_file_path         = "${path.module}/../docker_tasks/build_stac/handler.py"
@@ -18,17 +18,17 @@ module "mwaa" {
       ecs_container_folder_path = "${path.module}/../docker_tasks/build_stac"
       ecr_repo_name             = "${var.prefix}-veda-build_stac"
     }
-
   ]
 }
 
 module "custom_policy" {
-  source              = "./custom_policies"
-  prefix              = var.prefix
-  account_id          = data.aws_caller_identity.current.account_id
-  cluster_name        = module.mwaa.cluster_name
-  assume_role_arns    = var.assume_role_arns
-  region              = local.aws_region
+  source           = "./custom_policies"
+  prefix           = var.prefix
+  account_id       = data.aws_caller_identity.current.account_id
+  cluster_name     = module.mwaa.cluster_name
+  assume_role_arns = var.assume_role_arns
+  region           = local.aws_region
+  cognito_app_secret = var.cognito_app_secret
 }
 
 resource "local_file" "mwaa_variables" {
@@ -42,12 +42,13 @@ resource "local_file" "mwaa_variables" {
       stage                   = var.stage
       ecs_cluster_name        = module.mwaa.cluster_name
       log_group_name          = module.mwaa.log_group_name
-      mwaa_execution_rule_arn = module.mwaa.mwaa_role_arn
-      account_id = local.account_id
-      aws_region = local.aws_region
-      cognito_app_secret = var.cognito_app_secret
-      stac_ingestor_api_url = var.stac_ingestor_api_url
-
+      mwaa_execution_role_arn = module.mwaa.mwaa_role_arn
+      account_id              = local.account_id
+      aws_region              = local.aws_region
+      cognito_app_secret      = var.cognito_app_secret
+      stac_ingestor_api_url   = var.stac_ingestor_api_url
+      assume_role_read_arn    = var.assume_role_arns[0]
+      assume_role_write_arn   = var.assume_role_arns[1]
   })
   filename = "/tmp/mwaa_vars.json"
 }

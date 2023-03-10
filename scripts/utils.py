@@ -1,7 +1,7 @@
 import base64
-import json
 import functools
 import glob
+import json
 import os
 from sys import argv
 
@@ -26,10 +26,23 @@ def arguments():
     return argv[1:]
 
 
+DATA_PATH = os.path.join(os.path.dirname(os.path.realpath(__file__)), "..", "data")
+
+
 def data_files(data, data_path):
     files = []
     files.extend(glob.glob(os.path.join(data_path, f"{data}*.json")))
     return files
+
+
+def get_items(query):
+    items_path = os.path.join(DATA_PATH, "step_function_inputs")
+    return data_files(query, items_path)
+
+
+def get_collections(query):
+    collections_path = os.path.join(DATA_PATH, "collections")
+    return data_files(query, collections_path)
 
 
 def args_handler(func):
@@ -68,3 +81,8 @@ def get_secret(secret_name: str) -> None:
         return json.loads(get_secret_value_response["SecretString"])
     else:
         return json.loads(base64.b64decode(get_secret_value_response["SecretBinary"]))
+
+
+def get_mwaa_cli_token():
+    airflow_client = boto3.client("mwaa")
+    return airflow_client.create_cli_token(Name=MWAA_NAME)

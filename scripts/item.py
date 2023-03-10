@@ -1,26 +1,14 @@
 import base64
 import json
-import os
 import sys
 
-import boto3
 import requests
-from utils import DATA_PATH, MWAA_NAME, data_files
-
-dag_name = "veda_discover"
-airflow_client = boto3.client("mwaa")
-print(MWAA_NAME)
-mwaa_cli_token = airflow_client.create_cli_token(Name=MWAA_NAME)
-mwaa_auth_token = "Bearer " + mwaa_cli_token["CliToken"]
-mwaa_webserver_hostname = "https://{0}/aws_mwaa/cli".format(
-    mwaa_cli_token["WebServerHostname"]
-)
-
-
-items_path = os.path.join(DATA_PATH, "items")
+from utils import get_items, get_mwaa_cli_token
 
 
 def insert_items(files):
+    mwaa_cli_token = get_mwaa_cli_token()
+    mwaa_auth_token = "Bearer " + mwaa_cli_token["CliToken"]
     print("Inserting items:")
     for filename in files:
         print(filename)
@@ -28,11 +16,9 @@ def insert_items(files):
         if type(events) != list:
             events = [events]
         for event in events:
-            raw_data = "dags trigger {0} --conf '{1}'".format(
-                dag_name, json.dumps(event)
-            )
+            raw_data = f"dags trigger veda_discover --conf '{json.dumps(event)}'"
             mwaa_response = requests.post(
-                mwaa_webserver_hostname,
+                f"https://{mwaa_cli_token['WebServerHostname']}/aws_mwaa/cli",
                 headers={
                     "Authorization": mwaa_auth_token,
                     "Content-Type": "application/json",
@@ -52,6 +38,6 @@ def insert_items(files):
 
 if __name__ == "__main__":
     file_regex = sys.argv[1]
-    files = data_files(file_regex, items_path)
+    files = get_items(file_regex)
     print(file_regex, files)
     insert_items(files)

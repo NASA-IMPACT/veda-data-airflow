@@ -1,4 +1,5 @@
-FROM --platform=linux/amd64 python:3.9
+FROM --platform=linux/amd64 osgeo/gdal:alpine-normal-latest
+RUN apk add py3-pip
 
 WORKDIR /app
 

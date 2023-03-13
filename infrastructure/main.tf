@@ -35,6 +35,7 @@ module "custom_policy" {
   assume_role_arns = var.assume_role_arns
   region           = local.aws_region
   cognito_app_secret = var.cognito_app_secret
+  vector_secret_name = var.vector_secret_name
 }
 
 resource "local_file" "mwaa_variables" {
@@ -55,6 +56,7 @@ resource "local_file" "mwaa_variables" {
       stac_ingestor_api_url   = var.stac_ingestor_api_url
       assume_role_read_arn    = var.assume_role_arns[0]
       assume_role_write_arn   = var.assume_role_arns[1]
+      vector_secret_name = var.vector_secret_name
   })
   filename = "/tmp/mwaa_vars.json"
 }

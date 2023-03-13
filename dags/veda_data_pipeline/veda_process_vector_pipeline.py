@@ -70,7 +70,9 @@ with DAG(dag_id="veda_ingest_vector", params=templat_dag_run_conf, **dag_args) a
                         "name": f"{mwaa_stack_conf.get('PREFIX')}-veda-vector_ingest",
                         "command": [
                             "/usr/bin/python",
-                            "handler.py"
+                            "handler.py",
+                            "--payload",
+                            "{}".format("{{ task_instance.dag_run.conf }}"),
                         ],
                         "environment": [
                             {

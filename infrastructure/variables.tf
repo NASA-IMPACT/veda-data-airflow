@@ -48,3 +48,6 @@ variable "min_workers" {
     production = 3
   }
 }
+variable "vector_secret_name" {
+  type = string
+}

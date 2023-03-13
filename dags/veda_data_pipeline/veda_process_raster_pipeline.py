@@ -46,7 +46,7 @@ dag_args = {
     "doc_md": dag_doc_md,
 }
 
-with DAG(dag_id="veda_ingest", params=templat_dag_run_conf, **dag_args) as dag:
+with DAG(dag_id="veda_ingest_raster", params=templat_dag_run_conf, **dag_args) as dag:
     start = DummyOperator(task_id="Start", dag=dag)
     end = DummyOperator(task_id="End", trigger_rule=TriggerRule.ONE_SUCCESS, dag=dag)
 

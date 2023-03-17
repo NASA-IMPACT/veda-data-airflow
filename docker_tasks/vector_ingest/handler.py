@@ -70,22 +70,28 @@ def load_to_featuresdb(filename: str, collection: str):
 
     print(f"running ogr2ogr import for collection: {collection}")
 
-    subprocess.run(
-        [
-            "ogr2ogr",
-            "-f",
-            "PostgreSQL",
-            connection,
-            "-t_srs",
-            "EPSG:4326",
-            filename,
-            "-nln",
-            collection,
-            "-append",
-            "-update",
-            "-progress",
-        ]
-    )
+    try:
+        subprocess.run(
+            [
+                "ogr2ogr",
+                "-f",
+                "PostgreSQL",
+                connection,
+                "-t_srs",
+                "EPSG:4326",
+                filename,
+                "-nln",
+                collection,
+                "-append",
+                "-update",
+                "-progress",
+            ],
+            check=True,
+            capture_output=True
+        )
+    except subprocess.CalledProcessError as e:
+        print(e.stderr)
+
     return {"status": "success"}
 
 
@@ -114,15 +120,6 @@ def handler(event, context):
         downloaded_filepath = download_file(href)
         status.append(load_to_featuresdb(downloaded_filepath, collection))
     print(status)
-
-    # href = event["s3_filename"]
-    #
-    # collection = event["collection"]
-    #
-    # downloaded_filepath = download_file(href)
-    #
-    # load_to_featuresdb(downloaded_filepath, collection)
-    #
 
 if __name__ == "__main__":
     sample_event = {

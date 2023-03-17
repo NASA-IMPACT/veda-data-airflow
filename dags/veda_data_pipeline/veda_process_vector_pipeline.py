@@ -4,7 +4,6 @@ from airflow.models.variable import Variable
 from airflow.providers.amazon.aws.operators.ecs import EcsRunTaskOperator
 from airflow.operators.dummy_operator import DummyOperator
 from airflow.utils.trigger_rule import TriggerRule
-from veda_data_pipeline.groups.processing_group import subdag_process
 
 from datetime import timedelta
 
@@ -55,6 +54,7 @@ with DAG(dag_id="veda_ingest_vector", params=templat_dag_run_conf, **dag_args) a
     end = DummyOperator(task_id="End", trigger_rule=TriggerRule.ONE_SUCCESS, dag=dag)
 
     mwaa_stack_conf = Variable.get("MWAA_STACK_CONF", deserialize_json=True)
+    vector_ecs_conf =  Variable.get("VECTOR_ECS_CONF", deserialize_json=True)
 
     ingest_vector = EcsRunTaskOperator(
             task_id="ingest_vector",
@@ -91,8 +91,8 @@ with DAG(dag_id="veda_ingest_vector", params=templat_dag_run_conf, **dag_args) a
             },
             network_configuration={
                 "awsvpcConfiguration": {
-                    "securityGroups": mwaa_stack_conf.get("SECURITYGROUPS"),
-                    "subnets": mwaa_stack_conf.get("SUBNETS"),
+                    "securityGroups":  vector_ecs_conf.get("VECTOR_SECURITY_GROUP"),
+                    "subnets": vector_ecs_conf.get("VECTOR_SUBNETS")
                 },
             },
             awslogs_group=mwaa_stack_conf.get("LOG_GROUP_NAME"),

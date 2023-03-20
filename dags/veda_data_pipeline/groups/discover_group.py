@@ -59,10 +59,12 @@ def vector_raster_choice(ti):
         return f"{group_kwgs['group_id']}.parallel_run_process_vectors"
     return f"{group_kwgs['group_id']}.parallel_run_process_rasters"
 
+
 def discover_choice(ti):
     config = ti.dag_run.conf
     supported_discoveries = {"s3": "discover_from_s3", "cmr": "discover_from_cmr"}
     return f"{group_kwgs['group_id']}.{supported_discoveries[config['discovery']]}"
+
 
 def subdag_discover():
     with TaskGroup(**group_kwgs) as discover_grp:
@@ -84,7 +86,7 @@ def subdag_discover():
         raster_vector_branching = BranchPythonOperator(
             task_id="raster_vector_branching",
             trigger_rule=TriggerRule.ONE_SUCCESS,
-            python_callable=vector_raster_choice
+            python_callable=vector_raster_choice,
         )
 
         run_process_raster = TriggerMultiDagRunOperator(
@@ -101,6 +103,10 @@ def subdag_discover():
             python_callable=get_files_to_process,
         )
 
-
-        discover_branching >> [discover_from_cmr, discover_from_s3] >> raster_vector_branching >> [run_process_raster,run_process_vector]
+        (
+            discover_branching
+            >> [discover_from_cmr, discover_from_s3]
+            >> raster_vector_branching
+            >> [run_process_raster, run_process_vector]
+        )
         return discover_grp

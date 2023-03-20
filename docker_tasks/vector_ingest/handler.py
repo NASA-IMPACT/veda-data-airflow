@@ -8,12 +8,19 @@ import json
 import smart_open
 from urllib.parse import urlparse
 
-s3 = boto3.client(
-    "s3",
-)
-
 
 def download_file(file_uri: str):
+    sts = boto3.client("sts")
+    response = sts.assume_role(
+        RoleArn=os.environ.get("EXTERNAL_ROLE_ARN"),
+        RoleSessionName="sts-assume-114506680961",
+    )
+    new_session = boto3.Session(
+        aws_access_key_id=response["Credentials"]["AccessKeyId"],
+        aws_secret_access_key=response["Credentials"]["SecretAccessKey"],
+        aws_session_token=response["Credentials"]["SessionToken"],
+    )
+    s3 = new_session.client("s3")
 
     url_parse = urlparse(file_uri)
 
@@ -26,11 +33,15 @@ def download_file(file_uri: str):
 
     print(f"downloaded {target_filepath}")
 
+    sts.close()
     return target_filepath
 
 
-def get_connection_string(secret: dict) -> str:
-    return f"PG:host={secret['host']} dbname={secret['dbname']} user={secret['username']} password={secret['password']}"
+def get_connection_string(secret: dict, as_uri: bool = False) -> str:
+    if as_uri:
+        return f"postgresql://{secret['username']}:{secret['password']}@{secret['host']}:5432/{secret['dbname']}"
+    else:
+        return f"PG:host={secret['host']} dbname={secret['dbname']} user={secret['username']} password={secret['password']}"
 
 
 def get_secret(secret_name: str) -> None:
@@ -38,14 +49,13 @@ def get_secret(secret_name: str) -> None:
 
     Args:
         secret_name (str): name of aws secrets manager secret containing database connection secrets
-        profile_name (str, optional): optional name of aws profile for use in debugger only
 
     Returns:
         secrets (dict): decrypted secrets in dict
     """
 
     # Create a Secrets Manager client
-    session = boto3.session.Session(region_name="us-west-2")
+    session = boto3.session.Session(region_name=os.environ.get("AWS_REGION"))
     client = session.client(service_name="secretsmanager")
 
     # In this sample we only handle the specific exceptions for the 'GetSecretValue' API.
@@ -71,26 +81,66 @@ def load_to_featuresdb(filename: str, collection: str):
     print(f"running ogr2ogr import for collection: {collection}")
 
     try:
-        subprocess.run(
-            [
-                "ogr2ogr",
-                "-f",
-                "PostgreSQL",
-                connection,
-                "-t_srs",
-                "EPSG:4326",
-                filename,
-                "-nln",
-                collection,
-                "-append",
-                "-update",
-                "-progress",
-            ],
-            check=True,
-            capture_output=True
-        )
+        if collection in ["fireline", "newfirepix"]:
+            subprocess.run(
+                [
+                    "ogr2ogr",
+                    "-f",
+                    "PostgreSQL",
+                    connection,
+                    "-t_srs",
+                    "EPSG:4326",
+                    filename,
+                    "-nln",
+                    f"eis_fire_{collection}",
+                    "-overwrite",
+                    "-progress",
+                ],
+                check=True,
+                capture_output=True,
+                shell=True,
+            )
+        elif collection == "perimeter":
+            subprocess.run(
+                [
+                    "ogr2ogr",
+                    "-f",
+                    "PostgreSQL",
+                    connection,
+                    "-t_srs",
+                    "EPSG:4326",
+                    filename,
+                    "-nln",
+                    f"eis_fire_{collection}",
+                    "-overwrite",
+                    "-sql",
+                    "SELECT n_pixels, n_newpixels, farea, fperim, flinelen, duration, pixden, meanFRP, isactive, t_ed as t, fireID from perimeter",
+                    "-progress",
+                ],
+                check=True,
+                capture_output=True,
+                shell=True,
+            )
     except subprocess.CalledProcessError as e:
         print(e.stderr)
+
+    return {"status": "success"}
+
+
+def alter_datetime_add_indexes(collection: str):
+    secret_name = os.environ.get("VECTOR_SECRET_NAME")
+
+    con_secrets = get_secret(secret_name)
+    connection = get_connection_string(secret=con_secrets, as_uri=True)
+
+    subprocess.run(
+        [
+            "psql",
+            connection,
+            "-c",
+            f"ALTER table eis_fire_{collection} ALTER COLUMN t TYPE TIMESTAMP without time zone;CREATE INDEX IF NOT EXISTS idx_eis_fire_{collection}_datetime ON eis_fire_{collection}(t);",
+        ]
+    )
 
     return {"status": "success"}
 
@@ -112,14 +162,24 @@ def handler(event, context):
     with smart_open.open(s3_event, "r") as _file:
         s3_event_read = _file.read()
     event_received = json.loads(s3_event_read)
-    s3_objects = event_received['objects']
+    s3_objects = event_received["objects"]
     status = list()
     for s3_object in s3_objects:
         href = s3_object["s3_filename"]
         collection = s3_object["collection"]
         downloaded_filepath = download_file(href)
+
+        print(f"[ DOWNLOAD FILEPATH ]: {downloaded_filepath}")
+        print(f"[ COLLECTION ]: {collection}")
+
         status.append(load_to_featuresdb(downloaded_filepath, collection))
+        alter_datetime_add_indexes(downloaded_filepath, collection)
+
     print(status)
+    # resp = requests.get(url="https://firenrt.delta-backend.com/refresh")
+    # print(f"[ REFRESH STATUS CODE ]: {resp.status_code}")
+    # print(f"[ REFRESH JSON ]: {resp.json()}")
+
 
 if __name__ == "__main__":
     sample_event = {

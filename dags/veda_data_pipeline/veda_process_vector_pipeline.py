@@ -54,49 +54,53 @@ with DAG(dag_id="veda_ingest_vector", params=templat_dag_run_conf, **dag_args) a
     end = DummyOperator(task_id="End", trigger_rule=TriggerRule.ONE_SUCCESS, dag=dag)
 
     mwaa_stack_conf = Variable.get("MWAA_STACK_CONF", deserialize_json=True)
-    vector_ecs_conf =  Variable.get("VECTOR_ECS_CONF", deserialize_json=True)
+    vector_ecs_conf = Variable.get("VECTOR_ECS_CONF", deserialize_json=True)
 
     ingest_vector = EcsRunTaskOperator(
-            task_id="ingest_vector",
-            trigger_rule=TriggerRule.NONE_FAILED,
-            cluster=f"{mwaa_stack_conf.get('PREFIX')}-cluster",
-            task_definition=f"{mwaa_stack_conf.get('PREFIX')}-vector-tasks",
-            launch_type="FARGATE",
-            do_xcom_push=True,
-            execution_timeout=timedelta(minutes=60),
-            overrides={
-                "containerOverrides": [
-                    {
-                        "name": f"{mwaa_stack_conf.get('PREFIX')}-veda-vector_ingest",
-                        "command": [
-                            "/usr/bin/python",
-                            "handler.py",
-                            "--payload",
-                            "{}".format("{{ task_instance.dag_run.conf }}"),
-                        ],
-                        "environment": [
-                            {
-                                "name": "EXTERNAL_ROLE_ARN",
-                                "value": Variable.get("ASSUME_ROLE_READ_ARN"),
-                            },
-                            {
-                                "name": "VECTOR_SECRET_NAME",
-                                "value": Variable.get("VECTOR_SECRET_NAME"),
-                            },
-                        ],
-                        "memory": 2048,
-                        "cpu": 1024,
-                    },
-                ],
-            },
-            network_configuration={
-                "awsvpcConfiguration": {
-                    "securityGroups":  vector_ecs_conf.get("VECTOR_SECURITY_GROUP"),
-                    "subnets": vector_ecs_conf.get("VECTOR_SUBNETS")
+        task_id="ingest_vector",
+        trigger_rule=TriggerRule.NONE_FAILED,
+        cluster=f"{mwaa_stack_conf.get('PREFIX')}-cluster",
+        task_definition=f"{mwaa_stack_conf.get('PREFIX')}-vector-tasks",
+        launch_type="FARGATE",
+        do_xcom_push=True,
+        execution_timeout=timedelta(minutes=60),
+        overrides={
+            "containerOverrides": [
+                {
+                    "name": f"{mwaa_stack_conf.get('PREFIX')}-veda-vector_ingest",
+                    "command": [
+                        "/usr/bin/python",
+                        "handler.py",
+                        "--payload",
+                        "{}".format("{{ task_instance.dag_run.conf }}"),
+                    ],
+                    "environment": [
+                        {
+                            "name": "EXTERNAL_ROLE_ARN",
+                            "value": Variable.get("ASSUME_ROLE_READ_ARN"),
+                        },
+                        {
+                            "name": "AWS_REGION",
+                            "value": Variable.get("AWS_REGION"),
+                        },
+                        {
+                            "name": "VECTOR_SECRET_NAME",
+                            "value": Variable.get("VECTOR_SECRET_NAME"),
+                        },
+                    ],
+                    "memory": 2048,
+                    "cpu": 1024,
                 },
+            ],
+        },
+        network_configuration={
+            "awsvpcConfiguration": {
+                "securityGroups": vector_ecs_conf.get("VECTOR_SECURITY_GROUP"),
+                "subnets": vector_ecs_conf.get("VECTOR_SUBNETS"),
             },
-            awslogs_group=mwaa_stack_conf.get("LOG_GROUP_NAME"),
-            awslogs_stream_prefix=f"ecs/{mwaa_stack_conf.get('PREFIX')}-veda-vector_ingest",  # prefix with container name
-        )
+        },
+        awslogs_group=mwaa_stack_conf.get("LOG_GROUP_NAME"),
+        awslogs_stream_prefix=f"ecs/{mwaa_stack_conf.get('PREFIX')}-veda-vector_ingest",  # prefix with container name
+    )
 
     start >> ingest_vector >> end

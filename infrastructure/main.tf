@@ -46,7 +46,7 @@ data "aws_subnets" "private" {
   }
 
   tags = {
-    "aws-cdk:subnet-type" = "Private"
+    "Scope" = "private"
   }
 }
 

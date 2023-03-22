@@ -74,6 +74,27 @@ def get_secret(secret_name: str) -> None:
         return json.loads(base64.b64decode(get_secret_value_response["SecretBinary"]))
 
 
+def alter_datetime_add_indexes(collection: str):
+    secret_name = os.environ.get("VECTOR_SECRET_NAME")
+
+    con_secrets = get_secret(secret_name)
+
+    conn = psycopg2.connect(
+        host=con_secrets["host"],
+        dbname=con_secrets["dbname"],
+        user=con_secrets["username"],
+        password=con_secrets["password"],
+    )
+
+    cur = conn.cursor()
+    cur.execute(
+        f"ALTER table eis_fire_{collection} "
+        f"ALTER COLUMN t TYPE TIMESTAMP USING t::timestamp without time zone; "
+        f"CREATE INDEX IF NOT EXISTS idx_eis_fire_{collection}_datetime ON eis_fire_{collection}(t);"
+    )
+    conn.commit()
+
+
 def load_to_featuresdb(filename: str, collection: str):
     secret_name = os.environ.get("VECTOR_SECRET_NAME")
 
@@ -101,6 +122,7 @@ def load_to_featuresdb(filename: str, collection: str):
                 check=True,
                 capture_output=True,
             )
+            alter_datetime_add_indexes(collection)
         elif collection == "perimeter":
             subprocess.run(
                 [
@@ -121,34 +143,16 @@ def load_to_featuresdb(filename: str, collection: str):
                 check=True,
                 capture_output=True,
             )
-
-        alter_datetime_add_indexes(collection)
+            alter_datetime_add_indexes(collection)
+        else:
+            print("Not a valid fireline collection")
+            return {"status": "failure"}
 
     except subprocess.CalledProcessError as e:
         print(e.stderr)
         return {"status": "failure"}
 
     return {"status": "success"}
-
-
-def alter_datetime_add_indexes(collection: str):
-    secret_name = os.environ.get("VECTOR_SECRET_NAME")
-
-    con_secrets = get_secret(secret_name)
-
-    conn = psycopg2.connect(
-        host=con_secrets["host"],
-        dbname=con_secrets["dbname"],
-        user=con_secrets["username"],
-        password=con_secrets["password"],
-    )
-
-    cur = conn.cursor()
-    cur.execute(
-        f"ALTER table eis_fire_{collection} "
-        f"ALTER COLUMN t TYPE TIMESTAMP USING t::timestamp without time zone; "
-        f"CREATE INDEX IF NOT EXISTS idx_eis_fire_{collection}_datetime ON eis_fire_{collection}(t);"
-    )
 
 
 def handler(event, context):
@@ -182,7 +186,9 @@ def handler(event, context):
 
     print(status)
 
-    resp = requests.get(url="https://firenrt.delta-backend.com/refresh")
+    resp = requests.get(
+        url="http://tf-veda-wfs3-west2-staging-alb-126292748.us-west-2.elb.amazonaws.com/refresh"
+    )
     print(f"[ REFRESH STATUS CODE ]: {resp.status_code}")
     print(f"[ REFRESH JSON ]: {resp.json()}")
 

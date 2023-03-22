@@ -7,6 +7,8 @@ import subprocess
 import json
 import smart_open
 from urllib.parse import urlparse
+import psycopg2
+import requests
 
 
 def download_file(file_uri: str):
@@ -98,7 +100,6 @@ def load_to_featuresdb(filename: str, collection: str):
                 ],
                 check=True,
                 capture_output=True,
-                shell=True,
             )
         elif collection == "perimeter":
             subprocess.run(
@@ -119,10 +120,13 @@ def load_to_featuresdb(filename: str, collection: str):
                 ],
                 check=True,
                 capture_output=True,
-                shell=True,
             )
+
+        alter_datetime_add_indexes(collection)
+
     except subprocess.CalledProcessError as e:
         print(e.stderr)
+        return {"status": "failure"}
 
     return {"status": "success"}
 
@@ -131,18 +135,20 @@ def alter_datetime_add_indexes(collection: str):
     secret_name = os.environ.get("VECTOR_SECRET_NAME")
 
     con_secrets = get_secret(secret_name)
-    connection = get_connection_string(secret=con_secrets, as_uri=True)
 
-    subprocess.run(
-        [
-            "psql",
-            connection,
-            "-c",
-            f"ALTER table eis_fire_{collection} ALTER COLUMN t TYPE TIMESTAMP without time zone;CREATE INDEX IF NOT EXISTS idx_eis_fire_{collection}_datetime ON eis_fire_{collection}(t);",
-        ]
+    conn = psycopg2.connect(
+        host=con_secrets["host"],
+        dbname=con_secrets["dbname"],
+        user=con_secrets["username"],
+        password=con_secrets["password"],
     )
 
-    return {"status": "success"}
+    cur = conn.cursor()
+    cur.execute(
+        f"ALTER table eis_fire_{collection} "
+        f"ALTER COLUMN t TYPE TIMESTAMP USING t::timestamp without time zone; "
+        f"CREATE INDEX IF NOT EXISTS idx_eis_fire_{collection}_datetime ON eis_fire_{collection}(t);"
+    )
 
 
 def handler(event, context):
@@ -173,12 +179,12 @@ def handler(event, context):
         print(f"[ COLLECTION ]: {collection}")
 
         status.append(load_to_featuresdb(downloaded_filepath, collection))
-        alter_datetime_add_indexes(downloaded_filepath, collection)
 
     print(status)
-    # resp = requests.get(url="https://firenrt.delta-backend.com/refresh")
-    # print(f"[ REFRESH STATUS CODE ]: {resp.status_code}")
-    # print(f"[ REFRESH JSON ]: {resp.json()}")
+
+    resp = requests.get(url="https://firenrt.delta-backend.com/refresh")
+    print(f"[ REFRESH STATUS CODE ]: {resp.status_code}")
+    print(f"[ REFRESH JSON ]: {resp.json()}")
 
 
 if __name__ == "__main__":

@@ -81,7 +81,7 @@ with DAG(dag_id="veda_ingest_vector", params=templat_dag_run_conf, **dag_args) a
                         },
                         {
                             "name": "AWS_REGION",
-                            "value": Variable.get("AWS_REGION"),
+                            "value": mwaa_stack_conf.get("AWS_REGION"),
                         },
                         {
                             "name": "VECTOR_SECRET_NAME",

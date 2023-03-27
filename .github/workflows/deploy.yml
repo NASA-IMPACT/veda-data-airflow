@@ -32,6 +32,13 @@ on:
         required: true
       ASSUME_ROLE_ARNS:
         required: true
+      VECTOR_VPC:
+        required: true
+      VECTOR_SECURITY_GROUP:
+        required: true
+      VECTOR_SECRET_NAME:
+        required: true
+
 
 
 jobs:
@@ -45,6 +52,9 @@ jobs:
       AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
       ASSUME_ROLE_ARNS: ${{ secrets.ASSUME_ROLE_ARNS }}
       COGNITO_APP_SECRET: ${{ secrets.COGNITO_APP_SECRET }}
+      VECTOR_VPC: ${{ secrets.VECTOR_VPC }}
+      VECTOR_SECURITY_GROUP: ${{ secrets.VECTOR_SECURITY_GROUP }}
+      VECTOR_SECRET_NAME: ${{ secrets.VECTOR_SECRET_NAME }}
       STAC_INGESTOR_API_URL: ${{ vars.STAC_INGESTOR_API_URL }}
 
     steps:

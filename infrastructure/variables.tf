@@ -48,3 +48,12 @@ variable "min_workers" {
     production = 3
   }
 }
+variable "vector_secret_name" {
+  type = string
+}
+variable "vector_security_group" {
+  type = string
+}
+variable "vector_vpc" {
+  type = string
+}

@@ -1,5 +1,5 @@
 module "mwaa" {
-  source                           = "https://github.com/amarouane-ABDELHAK/mwaa_tf_module/releases/download/v1.4.5/mwaa_tf_module.zip"
+  source                           = "https://github.com/NASA-IMPACT/mwaa_tf_module/releases/download/v1.1.0/mwaa_tf_module.zip"
   prefix                           = var.prefix
   vpc_id                           = var.vpc_id
   iam_role_additional_arn_policies = merge(module.custom_policy.custom_policy_arns_map)
@@ -17,6 +17,12 @@ module "mwaa" {
       docker_file_path          = "${path.module}/../docker_tasks/build_stac/Dockerfile"
       ecs_container_folder_path = "${path.module}/../docker_tasks/build_stac"
       ecr_repo_name             = "${var.prefix}-veda-build_stac"
+    },
+    {
+      handler_file_path         = "${path.module}/../docker_tasks/vector_ingest/handler.py"
+      docker_file_path          = "${path.module}/../docker_tasks/vector_ingest/Dockerfile"
+      ecs_container_folder_path = "${path.module}/../docker_tasks/vector_ingest"
+      ecr_repo_name             = "${var.prefix}-veda-vector_ingest"
     }
   ]
 }
@@ -29,6 +35,41 @@ module "custom_policy" {
   assume_role_arns = var.assume_role_arns
   region           = local.aws_region
   cognito_app_secret = var.cognito_app_secret
+  vector_secret_name = var.vector_secret_name
+}
+
+
+data "aws_subnets" "private" {
+  filter {
+    name   = "vpc-id"
+    values = [var.vector_vpc]
+  }
+
+  tags = {
+    "Scope" = "private"
+  }
+}
+
+resource "aws_security_group" "vector_sg" {
+  name        = "${var.prefix}_veda_vector_sg"
+  vpc_id      = var.vector_vpc
+
+  egress {
+    from_port        = 0
+    to_port          = 0
+    protocol         = "-1"
+    cidr_blocks      = ["0.0.0.0/0"]
+    ipv6_cidr_blocks = ["::/0"]
+  }
+}
+
+resource "aws_vpc_security_group_ingress_rule" "vector_rds_ingress" {
+  security_group_id = var.vector_security_group
+
+  from_port   = 5432
+  to_port   = 5432
+  ip_protocol = "tcp"
+  referenced_security_group_id = aws_security_group.vector_sg.id
 }
 
 resource "local_file" "mwaa_variables" {
@@ -49,9 +90,17 @@ resource "local_file" "mwaa_variables" {
       stac_ingestor_api_url   = var.stac_ingestor_api_url
       assume_role_read_arn    = var.assume_role_arns[0]
       assume_role_write_arn   = var.assume_role_arns[1]
+      vector_secret_name = var.vector_secret_name
+      vector_subnet_1 = data.aws_subnets.private.ids[0]
+      vector_subnet_2 = data.aws_subnets.private.ids[1]
+      vector_security_group = aws_security_group.vector_sg.id
+      vector_vpc = var.vector_vpc
   })
   filename = "/tmp/mwaa_vars.json"
 }
+
+
+
 
 
 #module "mwaa" {

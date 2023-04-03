@@ -187,7 +187,7 @@ def handler(event, context):
     print(status)
 
     resp = requests.get(
-        url="http://tf-veda-wfs3-west2-staging-alb-126292748.us-west-2.elb.amazonaws.com/refresh"
+        url="https://firenrt.delta-backend.com/refresh"
     )
     print(f"[ REFRESH STATUS CODE ]: {resp.status_code}")
     print(f"[ REFRESH JSON ]: {resp.json()}")

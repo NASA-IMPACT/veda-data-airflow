@@ -19,16 +19,16 @@ data "aws_iam_policy_document" "mwaa_executor_policies" {
   statement {
     effect = "Allow"
     actions = [
-     "logs:CreateLogStream",
-        "logs:CreateLogGroup",
-        "logs:PutLogEvents",
-        "logs:GetLogEvents",
-        "logs:GetLogRecord",
-        "logs:GetLogGroupFields",
-        "logs:GetQueryResults"
+      "logs:CreateLogStream",
+      "logs:CreateLogGroup",
+      "logs:PutLogEvents",
+      "logs:GetLogEvents",
+      "logs:GetLogRecord",
+      "logs:GetLogGroupFields",
+      "logs:GetQueryResults"
     ]
     resources = [
-     "*"
+      "*"
     ]
   }
 
@@ -70,7 +70,7 @@ data "aws_iam_policy_document" "mwaa_executor_policies" {
     ]
     resources = var.assume_role_arns
   }
-    statement {
+  statement {
     effect = "Allow"
     actions = [
       "s3:GetObject*",
@@ -117,10 +117,10 @@ data "aws_iam_policy_document" "mwaa_executor_policies" {
   }
 
   statement {
-    effect = "Allow"
-    actions = ["airflow:CreateCliToken"]
-    resources = [{var.mwaa_arn}]
-    
+    effect    = "Allow"
+    actions   = ["airflow:CreateCliToken"]
+    resources = [var.mwaa_arn]
+
   }
 
 }

@@ -182,7 +182,9 @@ def handler(event, context):
         print(f"[ COLLECTION ]: {collection}")
         status.append(load_to_featuresdb(downloaded_filepath, collection))
     print(status)
-    resp = requests.get(url="http://tf-veda-wfs3-west2-staging-alb-126292748.us-west-2.elb.amazonaws.com/refresh")
+    resp = requests.get(
+        url="http://tf-veda-wfs3-west2-staging-alb-126292748.us-west-2.elb.amazonaws.com/refresh"
+    )
     print(f"[ REFRESH STATUS CODE ]: {resp.status_code}")
     print(f"[ REFRESH JSON ]: {resp.json()}")
 

@@ -119,7 +119,7 @@ data "aws_iam_policy_document" "mwaa_executor_policies" {
   statement {
     effect = "Allow"
     actions = ["airflow:CreateCliToken"]
-    resources = ["{var.mwaa_arn}"]
+    resources = [{var.mwaa_arn}]
     
   }
 

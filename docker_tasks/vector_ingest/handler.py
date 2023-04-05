@@ -178,14 +178,10 @@ def handler(event, context):
         href = s3_object["s3_filename"]
         collection = s3_object["collection"]
         downloaded_filepath = download_file(href)
-
         print(f"[ DOWNLOAD FILEPATH ]: {downloaded_filepath}")
         print(f"[ COLLECTION ]: {collection}")
-
         status.append(load_to_featuresdb(downloaded_filepath, collection))
-
     print(status)
-
     resp = requests.get(
         url="http://tf-veda-wfs3-west2-staging-alb-126292748.us-west-2.elb.amazonaws.com/refresh"
     )

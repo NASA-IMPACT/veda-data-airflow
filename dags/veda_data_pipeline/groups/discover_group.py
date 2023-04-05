@@ -55,7 +55,7 @@ def get_files_to_process(ti):
 def vector_raster_choice(ti):
     payload = ti.dag_run.conf
 
-    if payload["vector"]:
+    if payload.get("vector"):
         return f"{group_kwgs['group_id']}.parallel_run_process_vectors"
     return f"{group_kwgs['group_id']}.parallel_run_process_rasters"
 

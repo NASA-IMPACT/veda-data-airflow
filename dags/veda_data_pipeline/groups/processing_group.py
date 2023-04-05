@@ -45,7 +45,7 @@ def cogify_task(ti):
 def cogify_choice(ti, **kwargs):
     # Only get the payload from the successful task
     payload = ti.dag_run.conf
-    if payload["cogify"]:
+    if payload.get("cogify"):
         return f"{group_kwgs['group_id']}.cogify"
 
     return f"{group_kwgs['group_id']}.build_stac"

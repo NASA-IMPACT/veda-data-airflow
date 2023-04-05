@@ -1,5 +1,5 @@
 module "mwaa" {
-  source                           = "https://github.com/NASA-IMPACT/mwaa_tf_module/releases/download/v1.1.0/mwaa_tf_module.zip"
+  source                           = "https://github.com/NASA-IMPACT/mwaa_tf_module/releases/download/v1.1.1/mwaa_tf_module.zip"
   prefix                           = var.prefix
   vpc_id                           = var.vpc_id
   iam_role_additional_arn_policies = merge(module.custom_policy.custom_policy_arns_map)
@@ -32,6 +32,7 @@ module "custom_policy" {
   prefix           = var.prefix
   account_id       = data.aws_caller_identity.current.account_id
   cluster_name     = module.mwaa.cluster_name
+  mwaa_arn = module.mwaa.mwaa_arn
   assume_role_arns = var.assume_role_arns
   region           = local.aws_region
   cognito_app_secret = var.cognito_app_secret

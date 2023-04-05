@@ -4,6 +4,8 @@ variable "region" {}
 
 variable "cluster_name" {}
 
+variable "mwaa_arn" {}
+
 variable "account_id" {}
 
 variable "assume_role_arns" {

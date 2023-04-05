@@ -10,6 +10,7 @@ data products and STAC metadata for interfaces such as https://github.com/NASA-I
 - [data](./data/): Contains JSON files which define ingests of collections and items
 - [docker_tasks](./docker_tasks/): Contains definitions tasks which we want to run in docker containers either because these tasks have special, unique dependencies or for the sake of performance (e.g. using multiprocessing)
 - [infrastructure](./infrastructure/): Contains the terraform modules necessary to deploy all resources to AWS
+- [custom policies](./infrastructure/custom_policies/): Contains custom policies for the mwaa environment execution role
 - [scripts](./scripts/): Contains bash and python scripts useful for deploying and for running ingests
 
 ### Fetching Submodules

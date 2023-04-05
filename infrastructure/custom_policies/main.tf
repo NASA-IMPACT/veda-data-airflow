@@ -1,5 +1,5 @@
 
-data "aws_iam_policy_document" "docker_images_policies" {
+data "aws_iam_policy_document" "mwaa_executor_policies" {
   statement {
     effect = "Allow"
     actions = [
@@ -116,6 +116,12 @@ data "aws_iam_policy_document" "docker_images_policies" {
     ]
   }
 
+  statement {
+    effect = "Allow"
+    actions = ["airflow:CreateCliToken"]
+    resources = ["{var.mwaa_arn}"]
+    
+  }
 
 }
 
@@ -124,7 +130,7 @@ resource "aws_iam_policy" "read_data" {
   name        = "${var.prefix}_task_executor"
   path        = "/"
   description = "Use docker images as airflow tasks"
-  policy      = data.aws_iam_policy_document.docker_images_policies.json
+  policy      = data.aws_iam_policy_document.mwaa_executor_policies.json
 }
 
 

@@ -182,9 +182,7 @@ def handler(event, context):
         print(f"[ COLLECTION ]: {collection}")
         status.append(load_to_featuresdb(downloaded_filepath, collection))
     print(status)
-    resp = requests.get(
-        url="https://firenrt.delta-backend.com/refresh"
-    )
+    resp = requests.get(url="https://firenrt.delta-backend.com/refresh")
     print(f"[ REFRESH STATUS CODE ]: {resp.status_code}")
     print(f"[ REFRESH JSON ]: {resp.json()}")
 

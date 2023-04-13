@@ -117,6 +117,8 @@ def load_to_featuresdb(filename: str, collection: str):
                     "-nln",
                     f"eis_fire_{collection}",
                     "-overwrite",
+                    "-sql",
+                    f"SELECT fireID, mergeid, t_ed as t from {collection}",
                     "-progress",
                 ],
                 check=True,

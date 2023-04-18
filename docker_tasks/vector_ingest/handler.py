@@ -186,9 +186,7 @@ def handler(event, context):
 
     print(status)
 
-    resp = requests.get(
-        url="https://firenrt.delta-backend.com/refresh"
-    )
+    resp = requests.get(url="https://firenrt.delta-backend.com/refresh")
     print(f"[ REFRESH STATUS CODE ]: {resp.status_code}")
     print(f"[ REFRESH JSON ]: {resp.json()}")
 

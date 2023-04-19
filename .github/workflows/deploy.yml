@@ -86,4 +86,5 @@ jobs:
       - name: Deploy
         run: |
           ./scripts/deploy.sh ${{ inputs.env-file }} <<< init
+          cat ./infrastructure/terraform.tfvars
           ./scripts/deploy.sh ${{ inputs.env-file }} <<< deploy

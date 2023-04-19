@@ -42,6 +42,8 @@ def create_item(
                 asset_media_type
                 or "image/tiff; application=geotiff; profile=cloud-optimized"
             ),
+            geom_densify_pts=10,
+            geom_precision=5,
         )
         return create_stac_item_respose
 

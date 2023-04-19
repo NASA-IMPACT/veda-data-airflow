@@ -35,7 +35,7 @@ jobs:
       - name: Run linters
         uses: wearerequired/lint-action@v2
         with:
-          continue_on_error: true
+          continue_on_error: false
           black: true
           flake8: true
           flake8_args: "--ignore E1,E2,E3,E5,W1,W2,W3,W5" # black already handles formatting, this prevents conflicts
@@ -64,6 +64,19 @@ jobs:
       env-file: ".env_staging"
       stage: "staging"
       role-session-name: "veda-data-airflow-github-staging-deployment"
+      aws-region: "us-west-2"
+    secrets: inherit
+
+  deploy-to-production:
+    needs: run-linters
+    if: github.ref_name == 'production'
+    concurrency: production
+    uses: "./.github/workflows/deploy.yml"
+    with:
+      environment: production
+      env-file: ".env_prod"
+      stage: "production"
+      role-session-name: "veda-data-airflow-github-production-deployment"
       aws-region: "us-west-2"
 
     secrets: inherit

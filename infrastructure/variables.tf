@@ -41,10 +41,10 @@ variable "stac_ingestor_api_url" {
   type = string
 }
 variable "min_workers" {
-  type    = map(number)
+  type = map(number)
   default = {
-    dev = 2
-    staging = 3
+    dev        = 2
+    staging    = 3
     production = 3
   }
 }

@@ -117,6 +117,8 @@ def load_to_featuresdb(filename: str, collection: str):
                     "-nln",
                     f"eis_fire_{collection}",
                     "-overwrite",
+                    "-sql",
+                    f"SELECT fireID, mergeid, t_ed as t from {collection}",
                     "-progress",
                 ],
                 check=True,
@@ -178,14 +180,10 @@ def handler(event, context):
         href = s3_object["s3_filename"]
         collection = s3_object["collection"]
         downloaded_filepath = download_file(href)
-
         print(f"[ DOWNLOAD FILEPATH ]: {downloaded_filepath}")
         print(f"[ COLLECTION ]: {collection}")
-
         status.append(load_to_featuresdb(downloaded_filepath, collection))
-
     print(status)
-
     resp = requests.get(url="https://firenrt.delta-backend.com/refresh")
     print(f"[ REFRESH STATUS CODE ]: {resp.status_code}")
     print(f"[ REFRESH JSON ]: {resp.json()}")

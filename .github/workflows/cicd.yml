@@ -65,5 +65,18 @@ jobs:
       stage: "staging"
       role-session-name: "veda-data-airflow-github-staging-deployment"
       aws-region: "us-west-2"
+    secrets: inherit
+
+  deploy-to-production:
+    needs: run-linters
+    if: github.ref_name == 'production'
+    concurrency: production
+    uses: "./.github/workflows/deploy.yml"
+    with:
+      environment: production
+      env-file: ".env_prod"
+      stage: "production"
+      role-session-name: "veda-data-airflow-github-production-deployment"
+      aws-region: "us-west-2"
 
     secrets: inherit

@@ -124,7 +124,6 @@ def load_to_featuresdb(filename: str, collection: str):
                 check=True,
                 capture_output=True,
             )
-            alter_datetime_add_indexes(collection)
         elif collection == "perimeter":
             subprocess.run(
                 [
@@ -145,10 +144,34 @@ def load_to_featuresdb(filename: str, collection: str):
                 check=True,
                 capture_output=True,
             )
-            alter_datetime_add_indexes(collection)
+        elif collection in [
+            "lf_nfplist",
+            "lf_newfirepix",
+            "lf_fireline",
+            "lf_perimeter",
+        ]:
+            subprocess.run(
+                [
+                    "ogr2ogr",
+                    "-f",
+                    "PostgreSQL",
+                    connection,
+                    "-t_srs",
+                    "EPSG:4326",
+                    filename,
+                    "-nln",
+                    f"eis_fire_{collection}",
+                    "-overwrite",
+                    "-progress",
+                ],
+                check=True,
+                capture_output=True,
+            )
         else:
             print("Not a valid fireline collection")
             return {"status": "failure"}
+
+        alter_datetime_add_indexes(collection)
 
     except subprocess.CalledProcessError as e:
         print(e.stderr)

@@ -63,7 +63,7 @@ with DAG(dag_id="veda_ingest_vector", params=templat_dag_run_conf, **dag_args) a
         task_definition=f"{mwaa_stack_conf.get('PREFIX')}-vector-tasks",
         launch_type="FARGATE",
         do_xcom_push=True,
-        execution_timeout=timedelta(minutes=60),
+        execution_timeout=timedelta(minutes=120),
         overrides={
             "containerOverrides": [
                 {

@@ -5,13 +5,21 @@ data products and STAC metadata for interfaces such as https://github.com/NASA-I
 
 ## Project layout
 
-- [dags](./dags/) contains the Directed Acyclic Graphs which constitute Airflow state machines. This includes the python for running each task as well as the python definitions of the structure of these DAGs
-- [pipeline_tasks](./dags/veda_data_pipeline/veda_pipeline_tasks) containes a git submodule reference to veda pipeline tasks
-- [data](./data/) contains JSON files which define ingests of collections and items
-- [docker_tasks](./docker_tasks/) contains definitions tasks which we want to run in docker containers either because these tasks have special, unique dependencies or for the sake of performance (e.g. using multiprocessing)
-- [infrastructure](./infrastructure/) contains the terraform necessary to deploy all resources to AWS
-- [scripts](./scripts/) contains bash and python scripts useful for deploying and for running ingests
+- [dags](./dags/): Contains the Directed Acyclic Graphs which constitute Airflow state machines. This includes the python for running each task as well as the python definitions of the structure of these DAGs
+- [pipeline_tasks](./dags/veda_data_pipeline/veda_pipeline_tasks): Contains a git submodule reference to veda pipeline tasks
+- [data](./data/): Contains JSON files which define ingests of collections and items
+- [docker_tasks](./docker_tasks/): Contains definitions tasks which we want to run in docker containers either because these tasks have special, unique dependencies or for the sake of performance (e.g. using multiprocessing)
+- [infrastructure](./infrastructure/): Contains the terraform modules necessary to deploy all resources to AWS
+- [custom policies](./infrastructure/custom_policies/): Contains custom policies for the mwaa environment execution role
+- [scripts](./scripts/): Contains bash and python scripts useful for deploying and for running ingests
 
+### Fetching Submodules
+
+First time setting up the repo:
+`git submodule update --init --recursive`
+
+Afterwards:
+`git submodule update --recursive --remote`
 
 ## Requirements
 
@@ -58,8 +66,7 @@ $bash ./scripts/deploy.sh .env <<< deploy
 **Note:** Be careful not to check in `.env` (or whatever you called your env file) when committing work.
 
 # Gitflow Model
-Please refer to this document: 
-[gitflow](./GITFLOW.md) 
+[VEDA pipeline gitflow](./GITFLOW.md) 
 # License
 This project is licensed under **Apache 2**, see the [LICENSE](LICENSE) file for more details.
 

@@ -1,31 +1,34 @@
 
-data "aws_iam_policy_document" "docker_images_policies" {
+data "aws_iam_policy_document" "mwaa_executor_policies" {
   statement {
     effect = "Allow"
     actions = [
-        "ecs:RunTask",
-        "ecs:DescribeTasks"
+      "ecs:RunTask",
+      "ecs:StopTask",
+      "ecs:DescribeTasks",
+      "ecs:RegisterTaskDefinition",
+      "ecs:DescribeTaskDefinition",
+      "ecs:DeregisterTaskDefinition"
     ]
     resources = [
-      "arn:aws:ecs:${var.region}:${var.account_id}:cluster/${var.cluster_name}",
-      "arn:aws:ecs:${var.region}:${var.account_id}:task-definition/*",
-      "arn:aws:ecs:${var.region}:${var.account_id}:task/*"
+      "*"
     ]
   }
+
 
   statement {
     effect = "Allow"
     actions = [
-     "logs:CreateLogStream",
-        "logs:CreateLogGroup",
-        "logs:PutLogEvents",
-        "logs:GetLogEvents",
-        "logs:GetLogRecord",
-        "logs:GetLogGroupFields",
-        "logs:GetQueryResults"
+      "logs:CreateLogStream",
+      "logs:CreateLogGroup",
+      "logs:PutLogEvents",
+      "logs:GetLogEvents",
+      "logs:GetLogRecord",
+      "logs:GetLogGroupFields",
+      "logs:GetQueryResults"
     ]
     resources = [
-     "*"
+      "*"
     ]
   }
 
@@ -55,7 +58,8 @@ data "aws_iam_policy_document" "docker_images_policies" {
       "secretsmanager:DescribeSecret"
     ]
     resources = [
-      "arn:aws:secretsmanager:${var.region}:${var.account_id}:secret:veda-auth-stack-alukach/veda-workflows-??????"
+      "arn:aws:secretsmanager:${var.region}:${var.account_id}:secret:${var.cognito_app_secret}-??????",
+      "arn:aws:secretsmanager:${var.region}:${var.account_id}:secret:${var.vector_secret_name}-??????"
     ]
   }
 
@@ -66,7 +70,7 @@ data "aws_iam_policy_document" "docker_images_policies" {
     ]
     resources = var.assume_role_arns
   }
-    statement {
+  statement {
     effect = "Allow"
     actions = [
       "s3:GetObject*",
@@ -112,6 +116,12 @@ data "aws_iam_policy_document" "docker_images_policies" {
     ]
   }
 
+  statement {
+    effect    = "Allow"
+    actions   = ["airflow:CreateCliToken"]
+    resources = [var.mwaa_arn]
+
+  }
 
 }
 
@@ -120,7 +130,7 @@ resource "aws_iam_policy" "read_data" {
   name        = "${var.prefix}_task_executor"
   path        = "/"
   description = "Use docker images as airflow tasks"
-  policy      = data.aws_iam_policy_document.docker_images_policies.json
+  policy      = data.aws_iam_policy_document.mwaa_executor_policies.json
 }
 
 

@@ -1,13 +1,24 @@
 name: CI/CD
 
 on:
-  - push
+  push:
+  pull_request:
+    types: [ opened, reopened, edited, synchronize ]
 
 jobs:
+  gitflow-enforcer:
+      runs-on: ubuntu-latest
+      steps:
+        - name: Check branch
+          if: github.base_ref == 'main' && github.head_ref != 'dev' || github.base_ref == 'production' && github.head_ref != 'main'
+          run: |
+            echo "ERROR: You can only merge to main from dev and to production from main"
+            exit 1
+
   run-linters:
     name: Run linters
     runs-on: ubuntu-latest
-
+    needs: gitflow-enforcer
 
     steps:
       - name: Check out Git repository
@@ -29,13 +40,43 @@ jobs:
           flake8: true
           flake8_args: "--ignore E1,E2,E3,E5,W1,W2,W3,W5" # black already handles formatting, this prevents conflicts
 
-  deploy-to-staging:
+  deploy-to-dev:
     needs: run-linters
     if: github.ref_name == 'dev'
+    concurrency: development
+    uses: "./.github/workflows/deploy.yml"
+    with:
+      environment: development
+      env-file: ".env_dev"
+      stage: "dev"
+      role-session-name: "veda-data-airflow-github-development-deployment"
+      aws-region: "us-west-2"
+
+    secrets: inherit
+
+  deploy-to-staging:
+    needs: run-linters
+    if: github.ref_name == 'main'
     concurrency: staging
     uses: "./.github/workflows/deploy.yml"
     with:
+      environment: staging
       env-file: ".env_staging"
-      stage: "sit"
+      stage: "staging"
+      role-session-name: "veda-data-airflow-github-staging-deployment"
+      aws-region: "us-west-2"
     secrets: inherit
 
+  deploy-to-production:
+    needs: run-linters
+    if: github.ref_name == 'production'
+    concurrency: production
+    uses: "./.github/workflows/deploy.yml"
+    with:
+      environment: production
+      env-file: ".env_prod"
+      stage: "production"
+      role-session-name: "veda-data-airflow-github-production-deployment"
+      aws-region: "us-west-2"
+
+    secrets: inherit

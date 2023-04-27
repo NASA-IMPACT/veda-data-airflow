@@ -32,6 +32,7 @@ variable "aws_region" {
 variable "stage" {
   default = "dev"
 }
+
 variable "cognito_app_secret" {
   type = string
 }
@@ -40,6 +41,19 @@ variable "stac_ingestor_api_url" {
   type = string
 }
 variable "min_workers" {
-  type = number
-  default = 1
+  type = map(number)
+  default = {
+    dev        = 2
+    staging    = 3
+    production = 3
+  }
+}
+variable "vector_secret_name" {
+  type = string
+}
+variable "vector_security_group" {
+  type = string
+}
+variable "vector_vpc" {
+  type = string
 }

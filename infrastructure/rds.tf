@@ -2,7 +2,7 @@
 module "rds_cluster" {
   source         = "terraform-aws-modules/rds-aurora/aws"
   version        = "7.7.1"
-  #count          = var.stage == "dev" ? 1: 0 # Only provision RDS in dev env
+  count          = var.stage == "dev" ? 1: 0 # Only provision RDS in dev env
   name           = "${var.prefix}-aurora-rds"
   engine         = "aurora-postgresql"
   engine_version = var.rds_engine_version

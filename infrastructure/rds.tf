@@ -2,6 +2,7 @@
 module "rds_cluster" {
   source         = "terraform-aws-modules/rds-aurora/aws"
   version        = "7.7.1"
+  #count          = var.stage == "dev" ? 1: 0 # Only provision RDS in dev env
   name           = "${var.prefix}-aurora-rds"
   engine         = "aurora-postgresql"
   engine_version = var.rds_engine_version
@@ -27,7 +28,7 @@ module "rds_cluster" {
   vpc_security_group_ids = module.mwaa.mwaa_security_groups
 
   database_name       = var.rds_database_name
-  deletion_protection = true
+  deletion_protection = false
   master_username     = var.rds_username
 
   apply_immediately   = true

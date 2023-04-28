@@ -10,10 +10,17 @@ jobs:
       runs-on: ubuntu-latest
       steps:
         - name: Check branch
-          if: github.base_ref == 'main' && github.head_ref != 'dev' || github.base_ref == 'production' && github.head_ref != 'main'
           run: |
-            echo "ERROR: You can only merge to main from dev and to production from main"
-            exit 1
+            if [[ $GITHUB_BASE_REF == "main" && ($GITHUB_HEAD_REF != "dev" || $GITHUB_HEAD_REF != "revert-"*) ]];then
+              echo "ERROR: You can only merge to 'main' from 'dev' or a 'revert-*' branch"
+              exit 1
+            fi
+
+            if [[ $GITHUB_BASE_REF == "production" && ($GITHUB_HEAD_REF != "main" || $GITHUB_HEAD_REF != "revert-"*) ]];then
+              echo "ERROR: You can only merge to 'production' from 'main' or a 'revert-*' branch"
+              exit 1
+            fi
+
 
   run-linters:
     name: Run linters

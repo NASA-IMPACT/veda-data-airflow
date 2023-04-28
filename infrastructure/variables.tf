@@ -57,22 +57,3 @@ variable "vector_security_group" {
 variable "vector_vpc" {
   type = string
 }
-
-variable "rds_engine_version" {
-  default = "14.6"
-}
-
-variable "read_rds_instance_class" {
-  default = "db.t3.medium"
-}
-
-variable "write_rds_instance_class" {
-  default = "db.t3.medium"
-}
-
-variable "rds_database_name" {
-  default = "veda_dev_db"
-}
-variable "rds_username" {
-  default = "veda_dev"
-}

@@ -165,7 +165,6 @@ def load_to_featuresdb(filename: str, collection: str):
                     "-progress",
                 ],
                 check=True,
-                capture_output=True,
             )
         else:
             print("Not a valid fireline collection")

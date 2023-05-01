@@ -88,8 +88,6 @@ with DAG(dag_id="veda_ingest_vector", params=templat_dag_run_conf, **dag_args) a
                             "value": Variable.get("VECTOR_SECRET_NAME"),
                         },
                     ],
-                    "memory": 4096,
-                    "cpu": 2048,
                 },
             ],
         },

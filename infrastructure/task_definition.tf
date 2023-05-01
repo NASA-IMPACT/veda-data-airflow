@@ -53,6 +53,6 @@ resource "aws_ecs_task_definition" "veda_vector_task_definition" {
   network_mode             = "awsvpc"
   execution_role_arn       = module.mwaa.mwaa_role_arn
   task_role_arn            = module.mwaa.mwaa_role_arn
-  cpu                      = 1024
-  memory                   = 2048
+  cpu                      = 2048
+  memory                   = 4096
 }

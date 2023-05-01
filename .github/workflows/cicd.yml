@@ -11,14 +11,16 @@ jobs:
       steps:
         - name: Check branch
           run: |
-            if [[ $GITHUB_BASE_REF == "main" && ($GITHUB_HEAD_REF != "dev" || $GITHUB_HEAD_REF != "revert-"*) ]];then
-              echo "ERROR: You can only merge to 'main' from 'dev' or a 'revert-*' branch"
-              exit 1
-            fi
-
-            if [[ $GITHUB_BASE_REF == "production" && ($GITHUB_HEAD_REF != "main" || $GITHUB_HEAD_REF != "revert-"*) ]];then
-              echo "ERROR: You can only merge to 'production' from 'main' or a 'revert-*' branch"
-              exit 1
+            if [[ $GITHUB_BASE_REF == "main" ]]; then
+               if [[ $GITHUB_HEAD_REF != "dev" && $GITHUB_HEAD_REF != "revert-"* ]]; then
+                  echo "ERROR: You can only merge to 'main' from 'dev' or a 'revert-*' branch"
+                  exit 1
+               fi
+            elif [[ $GITHUB_BASE_REF == "production" ]]; then
+               if [[ $GITHUB_HEAD_REF != "main" && $GITHUB_HEAD_REF != "revert-"* ]]; then
+                  echo "ERROR: You can only merge to 'production' from 'main' or a 'revert-*' branch"
+                  exit 1
+               fi
             fi
 
 

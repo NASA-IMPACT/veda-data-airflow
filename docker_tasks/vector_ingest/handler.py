@@ -102,79 +102,76 @@ def load_to_featuresdb(filename: str, collection: str):
     connection = get_connection_string(con_secrets)
 
     print(f"running ogr2ogr import for collection: {collection}")
+    if collection in ["fireline", "newfirepix"]:
+        out = subprocess.run(
+            [
+                "ogr2ogr",
+                "-f",
+                "PostgreSQL",
+                connection,
+                "-t_srs",
+                "EPSG:4326",
+                filename,
+                "-nln",
+                f"eis_fire_{collection}",
+                "-overwrite",
+                "-sql",
+                f"SELECT fireID, mergeid, t_ed as t from {collection}",
+                "-progress",
+            ],
+            check=False,
+            capture_output=True,
+        )
+    elif collection == "perimeter":
+        out = subprocess.run(
+            [
+                "ogr2ogr",
+                "-f",
+                "PostgreSQL",
+                connection,
+                "-t_srs",
+                "EPSG:4326",
+                filename,
+                "-nln",
+                f"eis_fire_{collection}",
+                "-overwrite",
+                "-sql",
+                "SELECT n_pixels, n_newpixels, farea, fperim, flinelen, duration, pixden, meanFRP, isactive, t_ed as t, fireID from perimeter",
+                "-progress",
+            ],
+            check=False,
+            capture_output=True,
+        )
+    elif collection in [
+        "lf_nfplist",
+        "lf_newfirepix",
+        "lf_fireline",
+        "lf_perimeter",
+    ]:
+        out = subprocess.run(
+            [
+                "ogr2ogr",
+                "-f",
+                "PostgreSQL",
+                connection,
+                "-t_srs",
+                "EPSG:4326",
+                filename,
+                "-nln",
+                f"eis_fire_{collection}",
+                "-overwrite",
+                "-progress",
+            ],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=False,
+        )
+    else:
+        print("Not a valid fireline collection")
+        return {"status": "failure"}
 
-    try:
-        if collection in ["fireline", "newfirepix"]:
-            subprocess.run(
-                [
-                    "ogr2ogr",
-                    "-f",
-                    "PostgreSQL",
-                    connection,
-                    "-t_srs",
-                    "EPSG:4326",
-                    filename,
-                    "-nln",
-                    f"eis_fire_{collection}",
-                    "-overwrite",
-                    "-sql",
-                    f"SELECT fireID, mergeid, t_ed as t from {collection}",
-                    "-progress",
-                ],
-                check=True,
-                capture_output=True,
-            )
-        elif collection == "perimeter":
-            subprocess.run(
-                [
-                    "ogr2ogr",
-                    "-f",
-                    "PostgreSQL",
-                    connection,
-                    "-t_srs",
-                    "EPSG:4326",
-                    filename,
-                    "-nln",
-                    f"eis_fire_{collection}",
-                    "-overwrite",
-                    "-sql",
-                    "SELECT n_pixels, n_newpixels, farea, fperim, flinelen, duration, pixden, meanFRP, isactive, t_ed as t, fireID from perimeter",
-                    "-progress",
-                ],
-                check=True,
-                capture_output=True,
-            )
-        elif collection in [
-            "lf_nfplist",
-            "lf_newfirepix",
-            "lf_fireline",
-            "lf_perimeter",
-        ]:
-            subprocess.run(
-                [
-                    "ogr2ogr",
-                    "-f",
-                    "PostgreSQL",
-                    connection,
-                    "-t_srs",
-                    "EPSG:4326",
-                    filename,
-                    "-nln",
-                    f"eis_fire_{collection}",
-                    "-overwrite",
-                    "-progress",
-                ],
-                check=True,
-                capture_output=True,
-            )
-        else:
-            print("Not a valid fireline collection")
-            return {"status": "failure"}
-
-        alter_datetime_add_indexes(collection)
-
-    except subprocess.CalledProcessError as e:
-        print(e.stderr)
+    if out.stderr:
+        print(f"Error: {out.stderr}")
         return {"status": "failure"}
 
     return {"status": "success"}
@@ -205,9 +202,14 @@ def handler(event, context):
         downloaded_filepath = download_file(href)
         print(f"[ DOWNLOAD FILEPATH ]: {downloaded_filepath}")
         print(f"[ COLLECTION ]: {collection}")
-        status.append(load_to_featuresdb(downloaded_filepath, collection))
+        coll_status = load_to_featuresdb(downloaded_filepath, collection)
+        if coll_status["status"] == "success":
+            alter_datetime_add_indexes(collection)
+        status.append(coll_status)
+        # delete file after ingest
+        os.remove(downloaded_filepath)
     print(status)
-    resp = requests.get(url="https://firenrt.delta-backend.com/refresh")
+    resp = requests.get(url="https://firenrt.delta-backend.com/refresh", timeout=60)
     print(f"[ REFRESH STATUS CODE ]: {resp.status_code}")
     print(f"[ REFRESH JSON ]: {resp.json()}")
 

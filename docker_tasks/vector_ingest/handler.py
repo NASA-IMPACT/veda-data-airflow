@@ -164,7 +164,7 @@ def load_to_featuresdb(filename: str, collection: str):
             ],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
-            check=False
+            check=False,
         )
     else:
         print("Not a valid fireline collection")
@@ -220,4 +220,3 @@ if __name__ == "__main__":
         "href": "s3://covid-eo-data/fireline/newfirepix.fgb",
     }
     handler(sample_event, {})
-

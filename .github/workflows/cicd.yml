@@ -1,82 +1,77 @@
-name: CI/CD
+name: CICD 🚀
+
+permissions:
+  id-token: write
+  contents: read
 
 on:
   push:
+    branches:
+      - main
+      - dev
+      - production
   pull_request:
+    branches:
+      - main
+      - dev
+      - production
     types: [ opened, reopened, edited, synchronize ]
 
 jobs:
   gitflow-enforcer:
-      runs-on: ubuntu-latest
-      steps:
-        - name: Check branch
-          if: github.base_ref == 'main' && github.head_ref != 'dev' || github.base_ref == 'production' && github.head_ref != 'main'
-          run: |
-            echo "ERROR: You can only merge to main from dev and to production from main"
-            exit 1
-
-  run-linters:
-    name: Run linters
     runs-on: ubuntu-latest
+    steps:
+      - name: Check branch
+        if: github.base_ref == 'main' && github.head_ref != 'dev' || github.base_ref == 'production' && github.head_ref != 'main'
+        run: |
+          echo "ERROR: You can only merge to main from dev and to production from main"
+          exit 1
+
+  define-environment:
+    name: Set ✨ environment ✨
     needs: gitflow-enforcer
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set the environment based on the branch
+        id: define_environment
+        run: |
+          if [ "${{ github.ref }}" = "refs/heads/main" ]; then
+            echo "env_name=staging" >> $GITHUB_OUTPUT
+          elif [ "${{ github.ref }}" = "refs/heads/dev" ]; then
+            echo "env_name=development" >> $GITHUB_OUTPUT
+          elif [ "${{ github.ref }}" = "refs/heads/production" ]; then
+            echo "env_name=production" >> $GITHUB_OUTPUT
+          fi
+      - name: Print the environment
+        run: echo "The environment is ${{ steps.define_environment.outputs.env_name }}"
+
+    outputs:
+      env_name: ${{ steps.define_environment.outputs.env_name }}
+
+  deploy:
+    name: Deploy to ${{ needs.define-environment.outputs.env_name }} 🚀
+    runs-on: ubuntu-latest
+    if: ${{ needs.define-environment.outputs.env_name }}
+    needs: [gitflow-enforcer, define-environment]
+    environment: ${{ needs.define-environment.outputs.env_name }}
+    concurrency: ${{ needs.define-environment.outputs.env_name }}
 
     steps:
-      - name: Check out Git repository
-        uses: actions/checkout@v2
-
-      - name: Set up Python
-        uses: actions/setup-python@v4
+      - name: Checkout
+        uses: actions/checkout@v3
         with:
-          python-version: "3.10"
-
-      - name: Install Python dependencies
-        run: pip install black flake8
-
-      - name: Run linters
-        uses: wearerequired/lint-action@v2
+          lfs: "true"
+          submodules: "recursive"
+        
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
         with:
-          continue_on_error: false
-          black: true
-          flake8: true
-          flake8_args: "--ignore E1,E2,E3,E5,W1,W2,W3,W5" # black already handles formatting, this prevents conflicts
+          role-to-assume: ${{ secrets.DEPLOYMENT_ROLE_ARN }}
+          role-session-name: "ghgc-airflow-github-${{ needs.define-environment.outputs.env_name }}-deployment"
+          aws-region: "us-west-2"
 
-  deploy-to-dev:
-    needs: run-linters
-    if: github.ref_name == 'dev'
-    concurrency: development
-    uses: "./.github/workflows/deploy.yml"
-    with:
-      environment: development
-      env-file: ".env_dev"
-      stage: "dev"
-      role-session-name: "veda-data-airflow-github-development-deployment"
-      aws-region: "us-west-2"
-
-    secrets: inherit
-
-  deploy-to-staging:
-    needs: run-linters
-    if: github.ref_name == 'main'
-    concurrency: staging
-    uses: "./.github/workflows/deploy.yml"
-    with:
-      environment: staging
-      env-file: ".env_staging"
-      stage: "staging"
-      role-session-name: "veda-data-airflow-github-staging-deployment"
-      aws-region: "us-west-2"
-    secrets: inherit
-
-  deploy-to-production:
-    needs: run-linters
-    if: github.ref_name == 'production'
-    concurrency: production
-    uses: "./.github/workflows/deploy.yml"
-    with:
-      environment: production
-      env-file: ".env_prod"
-      stage: "production"
-      role-session-name: "veda-data-airflow-github-production-deployment"
-      aws-region: "us-west-2"
-
-    secrets: inherit
+      - name: Run deployment
+        uses: "./.github/actions/terraform-deploy"
+        with:
+          env_aws_secret_name: ${{ secrets.ENV_AWS_SECRET_NAME }}
+          env-file: ".env_${{ needs.define-environment.outputs.env_name }}"

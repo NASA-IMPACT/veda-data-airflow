@@ -39,7 +39,6 @@ module "custom_policy" {
   vector_secret_name = var.vector_secret_name
 }
 
-
 data "aws_subnets" "private" {
   filter {
     name   = "vpc-id"

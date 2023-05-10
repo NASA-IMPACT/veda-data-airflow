@@ -58,22 +58,3 @@ variable "vector_vpc" {
   type = string
   default = null
 }
-
-variable "rds_engine_version" {
-  default = "14.6"
-}
-
-variable "read_rds_instance_class" {
-  default = "db.t3.medium"
-}
-
-variable "write_rds_instance_class" {
-  default = "db.t3.medium"
-}
-
-variable "rds_database_name" {
-  default = "ghgc_dev_db"
-}
-variable "rds_username" {
-  default = "ghgc_dev"
-}

@@ -43,7 +43,7 @@ module "custom_policy" {
 data "aws_subnets" "private" {
   filter {
     name   = "vpc-id"
-    values = [var.vector_vpc]
+    values = [var.vector_vpc == null ? "": var.vector_vpc]
   }
 
   tags = {

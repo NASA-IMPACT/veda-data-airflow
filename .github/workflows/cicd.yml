@@ -18,10 +18,10 @@ on:
     types: [ opened, reopened, edited, synchronize ]
 
 jobs:
-  gitflow-enforcer 💪:
+  gitflow-enforcer:
     runs-on: ubuntu-latest
     steps:
-      - name: Check branch
+      - name: Check branch 💪
         if: github.base_ref == 'main' && github.head_ref != 'dev' || github.base_ref == 'production' && github.head_ref != 'main'
         run: |
           echo "ERROR: You can only merge to main from dev and to production from main"

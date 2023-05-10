@@ -18,7 +18,7 @@ on:
     types: [ opened, reopened, edited, synchronize ]
 
 jobs:
-  gitflow-enforcer:
+  gitflow-enforcer 💪:
     runs-on: ubuntu-latest
     steps:
       - name: Check branch

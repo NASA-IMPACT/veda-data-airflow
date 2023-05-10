@@ -97,9 +97,6 @@ resource "local_file" "mwaa_variables" {
 }
 
 
-
-
-
 #module "mwaa" {
 #  source                           = "https://github.com/amarouane-ABDELHAK/mwaa_tf_module/releases/download/v1.2.4/mwaa_tf_module.zip"
 #  prefix                           = var.prefix

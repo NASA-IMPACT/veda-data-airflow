@@ -52,6 +52,7 @@ data "aws_subnets" "private" {
 }
 
 resource "aws_security_group" "vector_sg" {
+  count = var.vector_vpc == null ? 0: 1
   name   = "${var.prefix}_veda_vector_sg"
   vpc_id = var.vector_vpc
 
@@ -65,6 +66,7 @@ resource "aws_security_group" "vector_sg" {
 }
 
 resource "aws_vpc_security_group_ingress_rule" "vector_rds_ingress" {
+  count = var.vector_vpc == null ? 0: 1
   security_group_id = var.vector_security_group
 
   from_port                    = 5432
@@ -89,13 +91,7 @@ resource "local_file" "mwaa_variables" {
       aws_region              = local.aws_region
       cognito_app_secret      = var.cognito_app_secret
       stac_ingestor_api_url   = var.stac_ingestor_api_url
-      assume_role_read_arn    = var.assume_role_arns[0]
-      assume_role_write_arn   = var.assume_role_arns[1]
-      vector_secret_name      = var.vector_secret_name
-      vector_subnet_1         = data.aws_subnets.private.ids[0]
-      vector_subnet_2         = data.aws_subnets.private.ids[1]
-      vector_security_group   = aws_security_group.vector_sg.id
-      vector_vpc              = var.vector_vpc
+
   })
   filename = "/tmp/mwaa_vars.json"
 }

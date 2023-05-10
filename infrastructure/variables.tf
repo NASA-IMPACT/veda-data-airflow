@@ -56,6 +56,7 @@ variable "vector_security_group" {
 }
 variable "vector_vpc" {
   type = string
+  default = null
 }
 
 variable "rds_engine_version" {

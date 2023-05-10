@@ -64,11 +64,11 @@ data "aws_iam_policy_document" "mwaa_executor_policies" {
   }
 
   statement {
-    effect = "Allow"
+    effect = length(var.assume_role_arns) > 0 ? "Allow" : "Deny"
     actions = [
       "sts:AssumeRole"
     ]
-    resources = var.assume_role_arns
+    resources = length(var.assume_role_arns) > 0 ? var.assume_role_arns: ["*"]
   }
 
   statement {

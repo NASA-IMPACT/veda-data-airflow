@@ -7,3 +7,6 @@ output "mwaa_s3_name" {
 output "mwaa_subnets" {
   value = module.mwaa.subnets
 }
+output "airflow_env" {
+  value = module.mwaa.mwaa_environment_name
+}

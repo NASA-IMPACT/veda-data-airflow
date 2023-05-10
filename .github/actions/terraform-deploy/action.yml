@@ -1,0 +1,46 @@
+name: Deploy
+
+inputs:
+  env_aws_secret_name:
+    required: true
+    type: string
+  env-file:
+    required: true
+    type: string
+  dir:
+    required: false
+    type: string
+    default: "."
+
+runs:
+  using: "composite"
+
+  steps:
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.10"
+        cache: "pip"
+
+    - name: Install python dependencies
+      shell: bash
+      working-directory: ${{ inputs.dir }}
+      run: pip install -r deploy_requirements.txt
+
+    - name: Get relevant environment configuration from aws secrets
+      shell: bash
+      working-directory: ${{ inputs.dir }}
+      run: |
+        ./scripts/sync-env.sh ${{ inputs.env_aws_secret_name }}
+
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v2
+      with:
+        terraform_version: 1.3.3
+
+    - name: Deploy
+      shell: bash
+      working-directory: ${{ inputs.dir }}
+      run: |
+        ./scripts/deploy.sh ${{ inputs.env-file }} <<< init
+        ./scripts/deploy.sh ${{ inputs.env-file }} <<< deploy

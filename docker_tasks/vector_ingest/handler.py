@@ -102,7 +102,7 @@ def load_to_featuresdb(filename: str, collection: str):
     connection = get_connection_string(con_secrets)
 
     print(f"running ogr2ogr import for collection: {collection}")
-    if collection in ["fireline", "newfirepix"]:
+    if collection in ["snapshot_fireline_nrt", "snapshot_newfirepix_nrt"]:
         out = subprocess.run(
             [
                 "ogr2ogr",
@@ -113,7 +113,7 @@ def load_to_featuresdb(filename: str, collection: str):
                 "EPSG:4326",
                 filename,
                 "-nln",
-                f"eis_fire_snapshot_nrt_{collection}",
+                f"eis_fire_{collection}",
                 "-overwrite",
                 "-sql",
                 f"SELECT fireID, mergeid, t_ed as t from {collection}",
@@ -122,7 +122,7 @@ def load_to_featuresdb(filename: str, collection: str):
             check=False,
             capture_output=True,
         )
-    elif collection == "perimeter":
+    elif collection == "snapshot_perimeter_nrt":
         out = subprocess.run(
             [
                 "ogr2ogr",
@@ -133,7 +133,7 @@ def load_to_featuresdb(filename: str, collection: str):
                 "EPSG:4326",
                 filename,
                 "-nln",
-                f"eis_fire_snapshot_nrt_{collection}",
+                f"eis_fire_{collection}",
                 "-overwrite",
                 "-sql",
                 "SELECT n_pixels, n_newpixels, farea, fperim, flinelen, duration, pixden, meanFRP, isactive, t_ed as t, fireID from perimeter",
@@ -143,10 +143,10 @@ def load_to_featuresdb(filename: str, collection: str):
             capture_output=True,
         )
     elif collection in [
-        "lf_nfplist",
-        "lf_newfirepix",
-        "lf_fireline",
-        "lf_perimeter",
+        "lf_nfplist_archive",
+        "lf_newfirepix_archive",
+        "lf_fireline_archive",
+        "lf_perimeter_archive",
     ]:
         out = subprocess.run(
             [
@@ -158,7 +158,7 @@ def load_to_featuresdb(filename: str, collection: str):
                 "EPSG:4326",
                 filename,
                 "-nln",
-                f"eis_fire_lf_archive_{collection}",
+                f"eis_fire_{collection}",
                 "-overwrite",
                 "-progress",
             ],
@@ -182,7 +182,7 @@ def load_to_featuresdb(filename: str, collection: str):
                 "EPSG:4326",
                 filename,
                 "-nln",
-                f"eis_fire_lf_nrt_{collection}",
+                f"eis_fire_{collection}",
                 "-overwrite",
                 "-progress",
             ],

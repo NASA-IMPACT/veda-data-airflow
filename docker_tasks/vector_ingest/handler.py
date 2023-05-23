@@ -8,7 +8,6 @@ import json
 import smart_open
 from urllib.parse import urlparse
 import psycopg2
-import requests
 
 
 def download_file(file_uri: str):
@@ -103,6 +102,10 @@ def load_to_featuresdb(filename: str, collection: str):
 
     print(f"running ogr2ogr import for collection: {collection}")
     if collection in ["snapshot_fireline_nrt", "snapshot_newfirepix_nrt"]:
+        # it seems `.fgb`(s) get encoded with a name when written to disk
+        # since we are changing the name during an `s3.copy` operation from the algorithm
+        # the original name is still needed in `-sql` statements to read the file
+        encoded_filename = collection.split("_")[1]
         out = subprocess.run(
             [
                 "ogr2ogr",
@@ -116,7 +119,7 @@ def load_to_featuresdb(filename: str, collection: str):
                 f"eis_fire_{collection}",
                 "-overwrite",
                 "-sql",
-                f"SELECT fireID, mergeid, t_ed as t from {collection}",
+                f"SELECT fireID, mergeid, t_ed as t from {encoded_filename}",
                 "-progress",
             ],
             check=False,
@@ -195,8 +198,9 @@ def load_to_featuresdb(filename: str, collection: str):
         return {"status": "failure"}
 
     if out.stderr:
-        print(f"Error: {out.stderr}")
-        return {"status": "failure"}
+        error_description = f"Error: {out.stderr}"
+        print(error_description)
+        return {"status": "failure", "reason": error_description}
 
     return {"status": "success"}
 
@@ -227,15 +231,15 @@ def handler(event, context):
         print(f"[ DOWNLOAD FILEPATH ]: {downloaded_filepath}")
         print(f"[ COLLECTION ]: {collection}")
         coll_status = load_to_featuresdb(downloaded_filepath, collection)
-        if coll_status["status"] == "success":
-            alter_datetime_add_indexes(collection)
         status.append(coll_status)
         # delete file after ingest
         os.remove(downloaded_filepath)
+        if coll_status["status"] == "success":
+            alter_datetime_add_indexes(collection)
+        else:
+            # bubble exception so Airflow shows it as a failure
+            raise Exception(coll_status["reason"])
     print(status)
-    resp = requests.get(url="https://firenrt.delta-backend.com/refresh", timeout=60)
-    print(f"[ REFRESH STATUS CODE ]: {resp.status_code}")
-    print(f"[ REFRESH JSON ]: {resp.json()}")
 
 
 if __name__ == "__main__":

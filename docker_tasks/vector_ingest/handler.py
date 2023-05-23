@@ -8,7 +8,6 @@ import json
 import smart_open
 from urllib.parse import urlparse
 import psycopg2
-import requests
 
 
 def download_file(file_uri: str):

@@ -238,7 +238,7 @@ def handler(event, context):
         if coll_status["status"] == "success":
             alter_datetime_add_indexes(collection)
         else:
-            # bumble exception so Airflow shows it as a failure
+            # bubble exception so Airflow shows it as a failure
             raise Exception(coll_status["reason"])
     print(status)
 

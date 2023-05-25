@@ -44,6 +44,7 @@ def handler(event: Dict[str, Any]) -> Union[S3LinkOutput, StacItemOutput]:
     EventType = events.CmrEvent if event.get("granule_id") else events.RegexEvent
     parsed_event = EventType.parse_obj(event)
     # try:
+    print("Building stac")
     stac_item = stac.generate_stac(parsed_event).to_dict()
     # except Exception as ex:
     #     out_err: StacItemOutput = {"stac_item": {"error": f"{ex}", "event": event}}

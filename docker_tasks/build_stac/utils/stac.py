@@ -46,18 +46,16 @@ def create_item(
         return create_stac_item_respose
 
     rasterio_kwargs = {}
-    creds = {}
-    if os.environ.get("AccessKeyId"):
-        creds = os.environ
     if role_arn := os.environ.get("EXTERNAL_ROLE_ARN"):
         creds = role.assume_role(role_arn, "veda-data-pipelines_build-stac")
-    rasterio_kwargs["session"] = AWSSession(
-        aws_access_key_id=creds["AccessKeyId"],
-        aws_secret_access_key=creds["SecretAccessKey"],
-        aws_session_token=creds["SessionToken"],
-    )
+        rasterio_kwargs["session"] = AWSSession(
+            aws_access_key_id=creds["AccessKeyId"],
+            aws_secret_access_key=creds["SecretAccessKey"],
+            aws_session_token=creds["SessionToken"],
+        )
+
     with rasterio.Env(
-        session=rasterio_kwargs["session"],
+        session=rasterio_kwargs.get("session"),
         options={**rasterio_kwargs},
     ):
         create_stac_item_resp = create_stac_item()

@@ -53,8 +53,8 @@ with DAG(dag_id="veda_ingest_vector", params=templat_dag_run_conf, **dag_args) a
     start = DummyOperator(task_id="Start", dag=dag)
     end = DummyOperator(task_id="End", trigger_rule=TriggerRule.ONE_SUCCESS, dag=dag)
 
-    mwaa_stack_conf = Variable.get("MWAA_STACK_CONF", deserialize_json=True)
-    vector_ecs_conf = Variable.get("VECTOR_ECS_CONF", deserialize_json=True)
+    mwaa_stack_conf = Variable.get("MWAA_STACK_CONF", default_var={}, deserialize_json=True)
+    vector_ecs_conf = Variable.get("VECTOR_ECS_CONF", default_var={}, deserialize_json=True)
 
     ingest_vector = EcsRunTaskOperator(
         task_id="ingest_vector",
@@ -77,7 +77,7 @@ with DAG(dag_id="veda_ingest_vector", params=templat_dag_run_conf, **dag_args) a
                     "environment": [
                         {
                             "name": "EXTERNAL_ROLE_ARN",
-                            "value": Variable.get("ASSUME_ROLE_READ_ARN"),
+                            "value": Variable.get("ASSUME_ROLE_READ_ARN", default_var=None),
                         },
                         {
                             "name": "AWS_REGION",

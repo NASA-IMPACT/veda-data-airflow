@@ -31,7 +31,7 @@ def discover_from_s3_task(ti):
     config = ti.dag_run.conf
     # (event, chunk_size=2800, role_arn=None, bucket_output=None):
     MWAA_STAC_CONF = Variable.get("MWAA_STACK_CONF", deserialize_json=True)
-    read_assume_arn = Variable.get("ASSUME_ROLE_READ_ARN")
+    read_assume_arn = Variable.get("ASSUME_ROLE_READ_ARN", default_var=None)
     return s3_discovery_handler(
         event=config,
         role_arn=read_assume_arn,

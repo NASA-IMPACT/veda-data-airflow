@@ -80,8 +80,8 @@ resource "local_file" "mwaa_variables" {
       prefix                  = var.prefix
       event_bucket            = module.mwaa.mwaa_s3_name
       securitygroup_1         = module.mwaa.mwaa_security_groups[0]
-      subnet_1                = "one" #module.mwaa.subnets[0]
-      subnet_2                = "two" # module.mwaa.subnets[1]
+      subnet_1                = module.mwaa.subnets[0]
+      subnet_2                = module.mwaa.subnets[1]
       stage                   = var.stage
       ecs_cluster_name        = module.mwaa.cluster_name
       log_group_name          = module.mwaa.log_group_name

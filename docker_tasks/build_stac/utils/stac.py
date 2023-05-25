@@ -47,13 +47,14 @@ def create_item(
 
     rasterio_kwargs = {}
     if role_arn := os.environ.get("EXTERNAL_ROLE_ARN"):
+        print("We're inside")
         creds = role.assume_role(role_arn, "veda-data-pipelines_build-stac")
         rasterio_kwargs["session"] = AWSSession(
             aws_access_key_id=creds["AccessKeyId"],
             aws_secret_access_key=creds["SecretAccessKey"],
             aws_session_token=creds["SessionToken"],
         )
-
+    print(rasterio_kwargs.get("session"))
     with rasterio.Env(
         session=rasterio_kwargs.get("session"),
         options={**rasterio_kwargs},

@@ -147,9 +147,7 @@ def load_to_featuresdb(filename: str, collection: str):
         )
     elif collection in [
         "lf_nfplist_archive",
-        "lf_newfirepix_archive",
-        "lf_fireline_archive",
-        "lf_perimeter_archive",
+        "lf_nfplist_nrt",
     ]:
         out = subprocess.run(
             [
@@ -163,6 +161,8 @@ def load_to_featuresdb(filename: str, collection: str):
                 "-nln",
                 f"eis_fire_{collection}",
                 "-overwrite",
+                "-sql",
+                "SELECT x, y, frp, DS, DT, ampm, datetime as t, sat, id as fireID from perimeter",
                 "-progress",
             ],
             stdout=subprocess.PIPE,
@@ -170,9 +170,33 @@ def load_to_featuresdb(filename: str, collection: str):
             check=False,
         )
     elif collection in [
-        "lf_nfplist_nrt",
         "lf_newfirepix_nrt",
         "lf_fireline_nrt",
+        "lf_newfirepix_archive",
+        "lf_fireline_archive",
+    ]:
+        out = subprocess.run(
+            [
+                "ogr2ogr",
+                "-f",
+                "PostgreSQL",
+                connection,
+                "-t_srs",
+                "EPSG:4326",
+                filename,
+                "-nln",
+                f"eis_fire_{collection}",
+                "-overwrite",
+                "-sql",
+                f"SELECT id as fireID, t from {collection}",
+                "-progress",
+            ],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=False,
+        )
+    elif collection in [
+        "lf_perimeter_archive",
         "lf_perimeter_nrt",
     ]:
         out = subprocess.run(
@@ -187,6 +211,8 @@ def load_to_featuresdb(filename: str, collection: str):
                 "-nln",
                 f"eis_fire_{collection}",
                 "-overwrite",
+                "-sql",
+                f"SELECT n_pixels, n_newpixels, farea, fperim, flinelen, duration, pixden, meanFRP, t, id as fireID from {collection}",
                 "-progress",
             ],
             stdout=subprocess.PIPE,

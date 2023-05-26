@@ -162,7 +162,7 @@ def load_to_featuresdb(filename: str, collection: str):
                 f"eis_fire_{collection}",
                 "-overwrite",
                 "-sql",
-                "SELECT x, y, frp, DS, DT, ampm, datetime as t, sat, id as fireID from perimeter",
+                f"SELECT x, y, frp, DS, DT, ampm, datetime as t, sat, id as fireID from {collection}",
                 "-progress",
             ],
             stdout=subprocess.PIPE,

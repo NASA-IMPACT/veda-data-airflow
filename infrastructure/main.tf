@@ -1,5 +1,5 @@
 module "mwaa" {
-  source                           = "https://github.com/NASA-IMPACT/mwaa_tf_module/releases/download/v1.1.2/mwaa_tf_module.zip"
+  source                           = "https://github.com/NASA-IMPACT/mwaa_tf_module/releases/download/v1.1.4/mwaa_tf_module.zip"
   prefix                           = var.prefix
   vpc_id                           = var.vpc_id
   iam_role_additional_arn_policies = merge(module.custom_policy.custom_policy_arns_map)
@@ -42,7 +42,7 @@ module "custom_policy" {
 data "aws_subnets" "private" {
   filter {
     name   = "vpc-id"
-    values = [var.vector_vpc == null ? "": var.vector_vpc]
+    values = [var.vector_vpc == null ? "" : var.vector_vpc]
   }
 
   tags = {
@@ -51,7 +51,7 @@ data "aws_subnets" "private" {
 }
 
 resource "aws_security_group" "vector_sg" {
-  count = var.vector_vpc == null ? 0: 1
+  count  = var.vector_vpc == null ? 0 : 1
   name   = "${var.prefix}_veda_vector_sg"
   vpc_id = var.vector_vpc
 
@@ -65,7 +65,7 @@ resource "aws_security_group" "vector_sg" {
 }
 
 resource "aws_vpc_security_group_ingress_rule" "vector_rds_ingress" {
-  count = var.vector_vpc == null ? 0: 1
+  count             = var.vector_vpc == null ? 0 : 1
   security_group_id = var.vector_security_group
 
   from_port                    = 5432

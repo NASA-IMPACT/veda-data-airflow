@@ -55,6 +55,6 @@ variable "vector_security_group" {
   type = string
 }
 variable "vector_vpc" {
-  type = string
+  type    = string
   default = null
 }

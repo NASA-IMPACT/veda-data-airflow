@@ -117,6 +117,19 @@ data "aws_iam_policy_document" "mwaa_executor_policies" {
   }
 
   statement {
+    effect = "Allow"
+    actions = [
+      "s3:GetObject*",
+      "s3:GetBucket*",
+      "s3:List*"
+    ]
+    resources = [
+      "arn:aws:s3:::isayah-veda",
+      "arn:aws:s3:::isayah-veda/*"
+    ]
+  }
+
+  statement {
     effect    = "Allow"
     actions   = ["airflow:CreateCliToken"]
     resources = [var.mwaa_arn]

@@ -22,16 +22,16 @@ def get_notebook_name(**context):
     manifest = { # test data - assume this comes from input
         'datetime_nb': 's3://isayah-veda/my_notebook.ipynb'
     }
-    notebook_name = manifest.get('datetime_nb')
+    notebook_name = 's3://isayah-veda/my_notebook.ipynb' # manifest.get('datetime_nb')
     if notebook_name:
         context['task_instance'].xcom_push(key='notebook_name', value=notebook_name)
 
 
-def execute_notebook_function(**context):
+def execute_notebook_function(ti):
     s3_hook = S3Hook(aws_conn_id='aws_s3_conn')
-    print("this is xcom: ", context['task_instance'].xcom_pull(task_ids='get_notebook_name'))
+    print("this is xcom: ", ti.xcom_pull(task_ids='load_manifest'))
     file_obj = s3_hook.get_key(
-        key=context['task_instance'].xcom_pull(task_ids='get_notebook_name'),
+        key=ti.xcom_pull(key='notebook_name', task_ids='load_manifest'),
         bucket_name='isayah-veda'
     )
     file_obj.download_file('/path/to/local/file')
@@ -39,8 +39,8 @@ def execute_notebook_function(**context):
     result = user_func()
     return result
 
-def log_datetime(**context):
-    result = context['task_instance'].xcom_pull(task_ids='execute_notebook_function')
+def log_datetime(ti):
+    result = ti.xcom_pull(task_ids='execute_notebook_function')
     logging.info(result)
 
 

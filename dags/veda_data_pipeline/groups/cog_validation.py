@@ -13,15 +13,17 @@ import rasterio
 
 group_kwgs = {"group_id": "COGValidation", "tooltip": "COG Validation"}
 def geotiff_to_pandas(s3_input_raster):
-    dataarray = rioxarray.open_rasterio(s3_input_raster, chuncks=True)
-    dataarray.attrs.update({'crs': dataarray.rio.crs.to_proj4()})
-    dataarray.attrs.update({'nodata': dataarray.rio.nodata})
-    with rasterio.open(s3_input_raster, chuncks=True) as _f:
-        data = _f.read()
-    meta_df = pd.json_normalize(dataarray.attrs)
-    _, y, x = dataarray.indexes.values()
+    dataarray = rasterio.open(s3_input_raster, chuncks=True)
+    dataarray_meta = dataarray.meta.copy()
+    data = dataarray.read()
+    dataarray_x_y = rioxarray.open_rasterio(s3_input_raster, chuncks=True)
+    dataarray_meta['crs'] = str(dataarray_meta['crs'])
+    meta_df = pd.json_normalize(dataarray_meta)
+    _, y, x = dataarray_x_y.indexes.values()
     pandas_df = pd.concat([pd.DataFrame(data={'x': x}), pd.DataFrame(data={'y': y}),
                            pd.DataFrame(data={'data': data.ravel()}), meta_df], axis=1)
+    dataarray.close()
+    dataarray_x_y.close()
     return pandas_df
 
 
@@ -160,7 +162,7 @@ def subdag_cog_validation_task(task_id):
                     "expectation": res['expectation_config']['expectation_type'],
                     "kwargs": res['expectation_config']['kwargs'],
                     "status": res['success'],
-                    "result": res['result']
+                    "observed_value": res['result'].get('observed_value')
                 }
                 )
             return results

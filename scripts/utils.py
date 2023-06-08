@@ -36,7 +36,7 @@ def data_files(data, data_path):
 
 
 def get_items(query):
-    items_path = os.path.join(DATA_PATH, "step_function_inputs")
+    items_path = os.path.join(DATA_PATH, "items")
     return data_files(query, items_path)
 
 

@@ -2,7 +2,7 @@
 
 This guide provides information on how VEDA runs data ingest, transformation and metadata (STAC) publication workflows via AWS Services, such as step functions.
 
-NOTE: Since collection ingest still requires calling the database from a local machine, users must add their IP to an inbound rule on the security group attached to the RDS instance.
+NOTE: To run an ingestion from a local machine rather than through the [API](https://github.com/NASA-IMPACT/veda-stac-ingestor), users must add their IP to an inbound rule on the security group attached to the RDS instance.
 
 ## Data
 
@@ -91,7 +91,7 @@ poetry install
 
 ### Ingesting a collection
 
-Create a collection json file in the `data/collections/` directory. For format, check the [data](#data) section.
+Create a collection json file in the `veda-data/collections/` directory. For format, check the [data](#data) section.
 
 ```bash
 ./scripts/collection.sh .env <event-json-start-pattern>
@@ -99,7 +99,7 @@ Create a collection json file in the `data/collections/` directory. For format, 
 
 ### Ingesting items to a collection
 
-Create an input json file in the `data/items/` directory. For format, check the [data](#data) section.
+Create an items json file in the `veda-data/items/` directory. For format, check the [data](#data) section.
 
 ```bash
 ./scripts/item.sh .env <event-json-start-pattern>

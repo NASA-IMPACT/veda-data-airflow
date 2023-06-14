@@ -1,0 +1,3 @@
+[submodule "veda-data"]
+	path = veda-data
+	url = git@github.com:NASA-IMPACT/veda-data.git

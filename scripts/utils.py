@@ -7,7 +7,9 @@ from sys import argv
 
 import boto3
 
-DATA_PATH = os.path.join(os.path.dirname(os.path.realpath(__file__)), "..", "veda-data", "json_data")
+DATA_PATH = os.path.join(
+    os.path.dirname(os.path.realpath(__file__)), "..", "veda-data", "json_data"
+)
 
 
 sts = boto3.client("sts")

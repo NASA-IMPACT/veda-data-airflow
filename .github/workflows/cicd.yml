@@ -16,7 +16,6 @@ on:
       - main
       - dev
       - production
-      - ghc-deploy-dev-mcp
     types: [ opened, reopened, edited, synchronize ]
 
 jobs:
@@ -44,8 +43,6 @@ jobs:
             echo "env_name=development" >> $GITHUB_OUTPUT
           elif [ "${{ github.ref }}" = "refs/heads/production" ]; then
             echo "env_name=production" >> $GITHUB_OUTPUT
-          elif [ "${{ github.ref }}" = "refs/heads/ghc-deploy-dev-mcp" ]; then
-            echo "env_name=mcp-dev" >> $GITHUB_OUTPUT
           fi
       - name: Print the environment
         run: echo "The environment is ${{ steps.define_environment.outputs.env_name }}"

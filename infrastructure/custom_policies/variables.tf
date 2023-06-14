@@ -18,3 +18,7 @@ variable "cognito_app_secret" {
 variable "vector_secret_name" {
   type = string
 }
+
+variable "tags" {
+  type = map(string)
+}

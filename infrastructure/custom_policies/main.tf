@@ -131,6 +131,7 @@ resource "aws_iam_policy" "read_data" {
   path        = "/"
   description = "Use docker images as airflow tasks"
   policy      = data.aws_iam_policy_document.mwaa_executor_policies.json
+  tags=var.tags
 }
 
 

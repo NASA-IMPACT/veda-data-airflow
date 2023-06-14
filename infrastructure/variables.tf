@@ -58,3 +58,8 @@ variable "vector_vpc" {
   type = string
 }
 
+variable "tags" {
+  type = map(string)
+  default = {}
+}
+

@@ -19,8 +19,6 @@ This DAG is supposed to be triggered by `veda_discover`. But you still can trigg
     "filename_regex": "^(.*).tif$",
     "discovery": "s3",
     "datetime_range": "month",
-    "upload": false,
-    "cogify": false,
     "discovered": 33,
     "payload": "s3://veda-uah-sit-mwaa-853558080719/events/geoglam/s3_discover_output_6c46b57a-7474-41fe-977a-19d164531cdc.json"
 }	
@@ -35,8 +33,6 @@ templat_dag_run_conf = {
     "filename_regex": "<filename_regex>",
     "discovery": "<s3>|cmr",
     "datetime_range": "<month>|<day>",
-    "upload": "<false> | true",
-    "cogify": "false | true",
     "payload": "<s3_uri_event_payload",
 }
 dag_args = {

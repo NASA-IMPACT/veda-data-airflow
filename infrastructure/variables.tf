@@ -11,7 +11,7 @@ variable "prefix" {
   description = "Deployment prefix"
 }
 
-variable "iam_role_permissions_boundary" {
+variable "iam_policy_permissions_boundary_name" {
   description = "Permission boundaries"
 }
 

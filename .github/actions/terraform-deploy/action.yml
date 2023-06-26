@@ -30,8 +30,12 @@ runs:
     - name: Get relevant environment configuration from aws secrets
       shell: bash
       working-directory: ${{ inputs.dir }}
+      env:
+        SECRET_SSM_NAME: ${{ inputs.env_aws_secret_name }}
+        AWS_DEFAULT_REGION: us-west-2
       run: |
-        ./scripts/sync-env.sh ${{ inputs.env_aws_secret_name }}
+        python ${{ inputs.script_path }} --secret-id ${{ inputs.env_aws_secret_name }} --stack-name ${{ inputs.auth_stack_name}},${{ inputs.backend_stack_name}}
+
 
     - name: Setup Terraform
       uses: hashicorp/setup-terraform@v2
@@ -43,4 +47,4 @@ runs:
       working-directory: ${{ inputs.dir }}
       run: |
         ./scripts/deploy.sh ${{ inputs.env-file }} <<< init
-        ./scripts/deploy.sh ${{ inputs.env-file }} <<< deploy
+        ./scripts/deploy.sh ${{ inputs.env-file }} <<< plan

@@ -90,6 +90,7 @@ resource "local_file" "mwaa_variables" {
       aws_region              = local.aws_region
       cognito_app_secret      = var.cognito_app_secret
       stac_ingestor_api_url   = var.stac_ingestor_api_url
+      vector_secret_name = var.vector_secret_name
 
   })
   filename = "/tmp/mwaa_vars.json"

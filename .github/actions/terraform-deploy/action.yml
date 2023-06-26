@@ -11,6 +11,15 @@ inputs:
     required: false
     type: string
     default: "."
+  script_path:
+    required: true
+    type: string
+  backend_stack_name:
+    required: true
+    type: string
+  auth_stack_name:
+    required: true
+    type: string
 
 runs:
   using: "composite"

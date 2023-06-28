@@ -12,9 +12,6 @@ from uuid import uuid4
 import boto3
 from rio_cogeo.cogeo import cog_translate
 
-from utils import events
-from utils import stac as stac
-
 
 
 def assume_role(role_arn, session_name="veda-airflow-pipelines_transfer_files"):
@@ -82,7 +79,7 @@ def data_transfer_handler(event, context):
             local_tif_path = local_tif.name
             local_cog_path = local_cog.name
             source_s3.download_file(bucket_name, origin_key, local_tif_path)
-            cog_translate(local_tif_path, local_cog_path, quiet=True, use_cog_driver=True)
+            cog_translate(local_tif_path, local_cog_path, quiet=True)
             filename = origin_key.split('/')[-1]
             destination_key = f"{collection}/{filename}"
             target_s3.upload_file(local_cog_path, destination_bucket, destination_key)

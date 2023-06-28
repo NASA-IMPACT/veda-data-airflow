@@ -30,10 +30,10 @@ def transfer_data(ti):
 
 def cogify_and_transfer(ti):
     config = ti.dag_run.conf
-    return cogify_and_transfer(event=config,)
+    return cogify_and_transfer(event=config)
 
 
-def subdag_discover():
+def subdag_transfer():
     with TaskGroup(**group_kwgs) as discover_grp:
         cogify_branching = BranchPythonOperator(
             task_id="cogify_branching",

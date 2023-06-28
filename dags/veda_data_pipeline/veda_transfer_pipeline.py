@@ -33,7 +33,7 @@ templat_dag_run_conf = {
     "origin_bucket": "<bucket>",
     "origin_prefix": "<prefix>/",
     "filename_regex": "<file_regex>",
-    "target_bucket": "<target_bucket>"
+    "target_bucket": "<target_bucket>",
     "collection": "collection-id",
 }
 

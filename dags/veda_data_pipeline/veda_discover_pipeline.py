@@ -56,7 +56,7 @@ templat_dag_run_conf = {
             "description": "<asset_description>",
             "regex": "<asset_regex>",
         },
-        "<asset1_name>": {
+        "<asset2_name>": {
             "title": "<asset_title>",
             "description": "<asset_description>",
             "regex": "<asset_regex>",

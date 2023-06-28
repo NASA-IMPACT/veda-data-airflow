@@ -16,7 +16,7 @@ group_kwgs = {"group_id": "Discover", "tooltip": "Discover"}
 def cogify_choice(ti):
     payload = ti.dag_run.conf
 
-    if payload.get("cogify") == True:
+    if payload.get("cogify"):
         return f"{group_kwgs['group_id']}.cogify_and_copy_data"
     else:
         return f"{group_kwgs['group_id']}.copy_data"

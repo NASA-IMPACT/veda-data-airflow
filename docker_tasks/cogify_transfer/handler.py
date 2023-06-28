@@ -1,6 +1,6 @@
 import os
+import re
 import tempfile
-from uuid import uuid4
 
 import boto3
 from rio_cogeo.cogeo import cog_translate

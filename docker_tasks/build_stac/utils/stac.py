@@ -72,22 +72,22 @@ def generate_stac(item) -> pystac.Item:
 
 
 @generate_stac.register
-def generate_stac_regexevent(item: events.RegexEvent) -> pystac.Item:
+def generate_stac_regexevent(event: events.RegexEvent) -> pystac.Item:
     """
     Generate STAC item from user provided datetime range or regex & filename
     """
-    if item.start_datetime and item.end_datetime:
-        start_datetime = item.start_datetime
-        end_datetime = item.end_datetime
+    if event.start_datetime and event.end_datetime:
+        start_datetime = event.start_datetime
+        end_datetime = event.end_datetime
         single_datetime = None
-    elif single_datetime := item.single_datetime:
+    elif single_datetime := event.single_datetime:
         start_datetime = end_datetime = None
         single_datetime = single_datetime
     else:
         start_datetime, end_datetime, single_datetime = regex.extract_dates(
-            item.s3_filename, item.datetime_range
+            event.s3_filename, event.datetime_range
         )
-    properties = item.properties or {}
+    properties = event.properties or {}
     if start_datetime and end_datetime:
         properties["start_datetime"] = start_datetime.isoformat()
         properties["end_datetime"] = end_datetime.isoformat()
@@ -95,11 +95,11 @@ def generate_stac_regexevent(item: events.RegexEvent) -> pystac.Item:
     create_item_response = create_item(
         properties=properties,
         datetime=single_datetime,
-        cog_url=item.s3_filename,
-        collection=item.collection,
-        asset_name=item.asset_name,
-        asset_roles=item.asset_roles,
-        asset_media_type=item.asset_media_type,
+        cog_urls=event.s3_filenames,
+        collection=event.collection,
+        asset_name=event.asset_name,
+        asset_roles=event.asset_roles,
+        asset_media_type=event.asset_media_type,
     )
     return create_item_response
 

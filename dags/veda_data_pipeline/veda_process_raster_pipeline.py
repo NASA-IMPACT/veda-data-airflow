@@ -26,12 +26,12 @@ This DAG is supposed to be triggered by `veda_discover`. But you still can trigg
 - [Supports linking to external content](https://github.com/NASA-IMPACT/veda-data-pipelines)
 """
 
-templat_dag_run_conf = {
+template_dag_run_conf = {
     "collection": "<collection_name>",
     "prefix": "<prefix>/",
     "bucket": "<bucket>",
     "filename_regex": "<filename_regex>",
-    "discovery": "<s3>|cmr",
+    "discovery": "<s3>",
     "datetime_range": "<month>|<day>",
     "payload": "<s3_uri_event_payload",
 }
@@ -42,7 +42,7 @@ dag_args = {
     "doc_md": dag_doc_md,
 }
 
-with DAG(dag_id="veda_ingest_raster", params=templat_dag_run_conf, **dag_args) as dag:
+with DAG(dag_id="veda_ingest_raster", params=template_dag_run_conf, **dag_args) as dag:
     start = DummyOperator(task_id="Start", dag=dag)
     end = DummyOperator(task_id="End", trigger_rule=TriggerRule.ONE_SUCCESS, dag=dag)
 

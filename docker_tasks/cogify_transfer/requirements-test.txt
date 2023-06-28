@@ -1,3 +1,0 @@
-pytest
-moto
-boto3-stubs[s3]

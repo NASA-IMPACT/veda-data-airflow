@@ -20,6 +20,12 @@ inputs:
   auth_stack_name:
     required: true
     type: string
+  project_prefix:
+    required: true
+    type: string
+  stage:
+    required: true
+    type: string
 
 runs:
   using: "composite"
@@ -44,7 +50,8 @@ runs:
         AWS_DEFAULT_REGION: us-west-2
       run: |
         python ${{ inputs.script_path }} --secret-id ${{ inputs.env_aws_secret_name }} --stack-name ${{ inputs.auth_stack_name}},${{ inputs.backend_stack_name}}
-
+        echo "PROJECT_PREFIX=${{ inputs.project_prefix }}" >> .env
+        echo "STAGE=${{ inputs.stage }}" >> .env
 
     - name: Setup Terraform
       uses: hashicorp/setup-terraform@v2

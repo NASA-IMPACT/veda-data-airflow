@@ -49,7 +49,7 @@ def transfer_file(s3_client, file_key, local_file_path, destination_bucket, coll
     s3_client.upload_file(local_file_path, destination_bucket, target_key)
 
 
-def data_transfer_handler(event, context):
+def cogify_transfer_handler(event, context):
     external_role_arn = os.environ["EXTERNAL_ROLE_ARN"]
     creds = assume_role(external_role_arn, "veda-data-pipelines_data-transfer")
     kwargs = {
@@ -60,19 +60,19 @@ def data_transfer_handler(event, context):
     source_s3 = boto3.client("s3")
     target_s3 = boto3.client("s3", **kwargs)
 
-    bucket_name = event.get('origin_bucket')
-    prefix = event.get('origin_prefix')
+    origin_bucket = event.get('origin_bucket')
+    origin_prefix = event.get('origin_prefix')
     regex_pattern = event.get('filename_regex')
-    destination_bucket = event.get('target_bucket', 'veda-data-store-staging')
+    target_bucket = event.get('target_bucket', 'veda-data-store-staging')
     collection = event.get('collection')
 
-    matching_files = get_matching_files(source_s3, bucket_name, prefix, regex_pattern)
+    matching_files = get_matching_files(source_s3, origin_bucket, origin_prefix, regex_pattern)
     for origin_key in matching_files:
         with tempfile.NamedTemporaryFile() as local_tif, tempfile.NamedTemporaryFile() as local_cog:
             local_tif_path = local_tif.name
             local_cog_path = local_cog.name
-            source_s3.download_file(bucket_name, origin_key, local_tif_path)
+            source_s3.download_file(origin_bucket, origin_key, local_tif_path)
             cog_translate(local_tif_path, local_cog_path, quiet=True)
             filename = origin_key.split('/')[-1]
             destination_key = f"{collection}/{filename}"
-            target_s3.upload_file(local_cog_path, destination_bucket, destination_key)
+            target_s3.upload_file(local_cog_path, target_bucket, destination_key)

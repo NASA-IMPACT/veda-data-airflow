@@ -16,6 +16,7 @@ The DAG `veda_ingest` will run in parallel processing (2800 files per each DAG)
     "origin_bucket": "covid-eo-dashboard",
     "origin_prefix": "s3-prefix/",
     "filename_regex": "^(.*).tif$",
+    "target_bucket": "<target_bucket>",
     "collection": "collection-id",
 }	
 ```

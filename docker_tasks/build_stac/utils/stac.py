@@ -27,6 +27,8 @@ def create_item(
     """
 
     def create_stac_item():
+        [pystac.Asset(
+        ) for asset_href in assets]
         create_stac_item_respose = stac.create_stac_item(
             id=Path(cog_url).stem,
             source=cog_url,

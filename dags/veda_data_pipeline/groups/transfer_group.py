@@ -10,7 +10,7 @@ from veda_data_pipeline.tasks.transfer.handler import (
     data_transfer_handler,
 )
 
-group_kwgs = {"group_id": "Discover", "tooltip": "Discover"}
+group_kwgs = {"group_id": "Transfer", "tooltip": "Transfer"}
 
 
 def cogify_choice(ti):
@@ -24,13 +24,9 @@ def cogify_choice(ti):
 
 def transfer_data(ti):
     config = ti.dag_run.conf
+    role_arn = Variable.get("ASSUME_ROLE_READ_ARN") 
     # (event, chunk_size=2800, role_arn=None, bucket_output=None):
-    return data_transfer_handler(event=config)
-
-
-def cogify_and_transfer(ti):
-    config = ti.dag_run.conf
-    return cogify_and_transfer(event=config)
+    return data_transfer_handler(event=config, role_arn=role_arn)
 
 
 def subdag_transfer():

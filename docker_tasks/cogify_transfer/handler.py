@@ -67,12 +67,16 @@ def cogify_transfer_handler(event, context):
     collection = event.get('collection')
 
     matching_files = get_matching_files(source_s3, origin_bucket, origin_prefix, regex_pattern)
-    for origin_key in matching_files:
-        with tempfile.NamedTemporaryFile() as local_tif, tempfile.NamedTemporaryFile() as local_cog:
-            local_tif_path = local_tif.name
-            local_cog_path = local_cog.name
-            source_s3.download_file(origin_bucket, origin_key, local_tif_path)
-            cog_translate(local_tif_path, local_cog_path, quiet=True)
-            filename = origin_key.split('/')[-1]
-            destination_key = f"{collection}/{filename}"
-            target_s3.upload_file(local_cog_path, target_bucket, destination_key)
+    if not event.get("dry_run"):
+        for origin_key in matching_files:
+            with tempfile.NamedTemporaryFile() as local_tif, tempfile.NamedTemporaryFile() as local_cog:
+                local_tif_path = local_tif.name
+                local_cog_path = local_cog.name
+                source_s3.download_file(origin_bucket, origin_key, local_tif_path)
+                cog_translate(local_tif_path, local_cog_path, quiet=True)
+                filename = origin_key.split('/')[-1]
+                destination_key = f"{collection}/{filename}"
+                target_s3.upload_file(local_cog_path, target_bucket, destination_key)
+    else:
+        print(f"Would have copied {len(matching_files)} files from {origin_bucket} to {target_bucket}")
+        print(f"Files matched: {matching_files}")

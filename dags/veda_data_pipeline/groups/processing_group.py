@@ -19,6 +19,7 @@ def log_task(text: str):
 
 
 def submit_to_stac_ingestor_task(ti):
+    """Submit STAC items to the STAC ingestor API."""
     print("Submit STAC ingestor")
     event = json.loads(ti.xcom_pull(task_ids=f"{group_kwgs['group_id']}.build_stac"))
     success_file = event["payload"]["success_event_key"]

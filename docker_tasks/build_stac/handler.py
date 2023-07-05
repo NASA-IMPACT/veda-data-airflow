@@ -30,7 +30,7 @@ def handler(event: Dict[str, Any]) -> Union[S3LinkOutput, StacItemOutput]:
         Format option 1 (with Granule ID defined to retrieve all metadata from CMR):
         {
             "collection": "OMDOAO3e",
-            "s3_filename": "s3://climatedashboard-data/OMDOAO3e/OMI-Aura_L3-OMDOAO3e_2022m0120_v003-2022m0122t021759.he5.tif",
+            "s3_filenames": "s3://climatedashboard-data/OMDOAO3e/OMI-Aura_L3-OMDOAO3e_2022m0120_v003-2022m0122t021759.he5.tif",
             "granule_id": "G2205784904-GES_DISC",
         }
         Format option 2 (with regex provided to parse datetime from the filename:

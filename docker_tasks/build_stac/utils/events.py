@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Dict, List, Literal, Optional, Union
+from typing import Dict, List, Literal, Optional, Tuple, Union
 
 import pystac
 from pydantic import BaseModel, Field
@@ -7,21 +7,11 @@ from pydantic import BaseModel, Field
 INTERVAL = Literal["month", "year", "day"]
 
 
-class BaseEvent(BaseModel, frozen=True):
+class RegexEvent(BaseModel, frozen=True):
     collection: str
-    s3_filenames: List[str]
-
-    asset_name: Optional[str] = None
-    asset_roles: Optional[List[str]] = None
-    asset_media_type: Optional[Union[str, pystac.MediaType]] = None
-
-
-class CmrEvent(BaseEvent):
-    granule_id: str
-
-
-class RegexEvent(BaseEvent):
-    filename_regex: Optional[str]
+    datetime_group: str
+    # [(asset_label, asset_uri), ...]
+    asset_list: List[Tuple[str, str]]
 
     start_datetime: Optional[datetime] = None
     end_datetime: Optional[datetime] = None
@@ -29,6 +19,3 @@ class RegexEvent(BaseEvent):
 
     properties: Optional[Dict] = Field(default_factory=dict)
     datetime_range: Optional[INTERVAL] = None
-
-
-SupportedEvent = Union[RegexEvent, CmrEvent]

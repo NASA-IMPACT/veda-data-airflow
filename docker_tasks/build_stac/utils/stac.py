@@ -4,7 +4,6 @@ from pathlib import Path
 
 import pystac
 import rasterio
-from cmr import GranuleQuery
 from pystac.utils import str_to_datetime
 from rasterio.session import AWSSession
 from rio_stac import stac
@@ -13,13 +12,11 @@ from . import events, regex, role
 
 
 def create_item(
+    cog_url,
     properties,
     datetime,
-    cog_url,
     collection,
-    assets=None,
-    asset_name=None,
-    asset_roles=None,
+    assets,
     asset_media_type=None,
 ) -> pystac.Item:
     """
@@ -27,8 +24,6 @@ def create_item(
     """
 
     def create_stac_item():
-        [pystac.Asset(
-        ) for asset_href in assets]
         create_stac_item_respose = stac.create_stac_item(
             id=Path(cog_url).stem,
             source=cog_url,
@@ -38,12 +33,6 @@ def create_item(
             with_proj=True,
             with_raster=True,
             assets=assets,
-            asset_name=asset_name or "cog_default",
-            asset_roles=asset_roles or ["data", "layer"],
-            asset_media_type=(
-                asset_media_type
-                or "image/tiff; application=geotiff; profile=cloud-optimized"
-            ),
             geom_densify_pts=10,
             geom_precision=5,
         )
@@ -68,13 +57,7 @@ def create_item(
         return create_stac_item_resp
 
 
-@singledispatch
-def generate_stac(item) -> pystac.Item:
-    raise Exception(f"Unsupported event type: {type(item)=}, {item=}")
-
-
-@generate_stac.register
-def generate_stac_regexevent(event: events.RegexEvent) -> pystac.Item:
+def generate_stac(event: events.RegexEvent) -> pystac.Item:
     """
     Generate STAC item from user provided datetime range or regex & filename
     """
@@ -94,31 +77,20 @@ def generate_stac_regexevent(event: events.RegexEvent) -> pystac.Item:
         properties["start_datetime"] = start_datetime.isoformat()
         properties["end_datetime"] = end_datetime.isoformat()
         single_datetime = None
+    assets = {}
+    for asset_name, asset_href in event.asset_list:
+        with rasterio.open(source=asset_href) as src:
+            media_type = stac.get_media_type(src)
+        assets[asset_name] = pystac.Asset(
+            href=asset_href,
+            media_type=media_type,
+            roles=[],
+        )
     create_item_response = create_item(
+        cog_url=event.asset_list[0][1],
         properties=properties,
         datetime=single_datetime,
-        cog_urls=event.s3_filenames,
         collection=event.collection,
-        asset_name=event.asset_name,
-        asset_roles=event.asset_roles,
-        asset_media_type=event.asset_media_type,
+        assets=assets,
     )
     return create_item_response
-
-
-@generate_stac.register
-def generate_stac_cmrevent(item: events.CmrEvent) -> pystac.Item:
-    """
-    Generate STAC Item from CMR granule
-    """
-    cmr_json = GranuleQuery().concept_id(item.granule_id).get(1)[0]
-
-    return create_item(
-        properties=cmr_json,
-        datetime=str_to_datetime(cmr_json["time_start"]),
-        cog_url=item.s3_filename,
-        collection=item.collection,
-        asset_name=item.asset_name,
-        asset_roles=item.asset_roles,
-        asset_media_type=item.asset_media_type,
-    )

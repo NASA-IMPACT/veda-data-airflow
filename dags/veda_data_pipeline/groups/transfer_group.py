@@ -14,6 +14,7 @@ group_kwgs = {"group_id": "Transfer", "tooltip": "Transfer"}
 
 
 def cogify_choice(ti):
+    """Choos whether to cogify or not; if yes, use a docker container"""
     payload = ti.dag_run.conf
 
     if payload.get("cogify"):
@@ -23,6 +24,7 @@ def cogify_choice(ti):
 
 
 def transfer_data(ti):
+    """Transfer data from one S3 bucket to another; s3 copy, no need for docker"""
     config = ti.dag_run.conf
     role_arn = Variable.get("ASSUME_ROLE_READ_ARN") 
     # (event, chunk_size=2800, role_arn=None, bucket_output=None):

@@ -16,8 +16,9 @@ The DAG `veda_ingest` will run in parallel processing (2800 files per each DAG)
     "origin_bucket": "covid-eo-dashboard",
     "origin_prefix": "s3-prefix/",
     "filename_regex": "^(.*).tif$",
-    "target_bucket": "<target_bucket>",
+    "target_bucket": "target_s3_bucket",
     "collection": "collection-id",
+    "dry_run": true
 }	
 ```
 - [Supports linking to external content](https://github.com/NASA-IMPACT/veda-data-pipelines)
@@ -35,7 +36,8 @@ templat_dag_run_conf = {
     "origin_prefix": "<prefix>/",
     "filename_regex": "<file_regex>",
     "target_bucket": "<target_bucket>",
-    "collection": "collection-id",
+    "collection": "<collection-id>",
+    "dry_run": "true|false",
 }
 
 with DAG("veda_transfer", params=templat_dag_run_conf, **dag_args) as dag:

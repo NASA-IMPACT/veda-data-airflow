@@ -10,8 +10,7 @@ INTERVAL = Literal["month", "year", "day"]
 class RegexEvent(BaseModel, frozen=True):
     collection: str
     datetime_group: str
-    # [(asset_label, asset_uri), ...]
-    asset_list: List[Tuple[str, str]]
+    assets: Dict
 
     start_datetime: Optional[datetime] = None
     end_datetime: Optional[datetime] = None

@@ -12,7 +12,7 @@ from . import events, regex, role
 
 
 def create_item(
-    cog_url,
+    datetime_group,
     properties,
     datetime,
     collection,
@@ -22,11 +22,15 @@ def create_item(
     """
     Function to create a stac item from a COG using rio_stac
     """
+    if "cog_default" in assets:
+        source = assets["cog_default"].href
+    else:
+        source = [asset.href for asset in assets][0]
 
     def create_stac_item():
         create_stac_item_respose = stac.create_stac_item(
-            id=Path(cog_url).stem,
-            source=cog_url,
+            id=datetime_group,
+            source=source,
             collection=collection,
             input_datetime=datetime,
             properties=properties,
@@ -78,11 +82,13 @@ def generate_stac(event: events.RegexEvent) -> pystac.Item:
         properties["end_datetime"] = end_datetime.isoformat()
         single_datetime = None
     assets = {}
-    for asset_name, asset_href in event.asset_list:
-        with rasterio.open(source=asset_href) as src:
+    for asset_name, asset_definition in event.assets:
+        with rasterio.open(source=asset_definition["href"]) as src:
             media_type = stac.get_media_type(src)
         assets[asset_name] = pystac.Asset(
-            href=asset_href,
+            title=asset_definition["title"],
+            description=asset_definition["description"],
+            href=asset_definition["href"],
             media_type=media_type,
             roles=[],
         )

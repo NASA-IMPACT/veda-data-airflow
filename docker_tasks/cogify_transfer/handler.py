@@ -6,7 +6,6 @@ import boto3
 from rio_cogeo.cogeo import cog_translate
 
 
-
 def assume_role(role_arn, session_name="veda-airflow-pipelines_transfer_files"):
     sts = boto3.client("sts")
     credentials = sts.assume_role(
@@ -26,16 +25,16 @@ def get_matching_files(s3_client, bucket, prefix, regex_pattern):
 
     response = s3_client.list_objects_v2(Bucket=bucket, Prefix=prefix)
     while True:
-        for obj in response['Contents']:
-            file_key = obj['Key']
+        for obj in response["Contents"]:
+            file_key = obj["Key"]
             if re.match(regex_pattern, file_key):
                 matching_files.append(file_key)
 
-        if 'NextContinuationToken' in response:
+        if "NextContinuationToken" in response:
             response = s3_client.list_objects_v2(
                 Bucket=bucket,
                 Prefix=prefix,
-                ContinuationToken=response['NextContinuationToken']
+                ContinuationToken=response["NextContinuationToken"],
             )
         else:
             break
@@ -44,7 +43,7 @@ def get_matching_files(s3_client, bucket, prefix, regex_pattern):
 
 
 def transfer_file(s3_client, file_key, local_file_path, destination_bucket, collection):
-    filename = file_key.split('/')[-1]
+    filename = file_key.split("/")[-1]
     target_key = f"{collection}/{filename}"
     s3_client.upload_file(local_file_path, destination_bucket, target_key)
 
@@ -60,13 +59,15 @@ def cogify_transfer_handler(event, context):
     source_s3 = boto3.client("s3")
     target_s3 = boto3.client("s3", **kwargs)
 
-    origin_bucket = event.get('origin_bucket')
-    origin_prefix = event.get('origin_prefix')
-    regex_pattern = event.get('filename_regex')
-    target_bucket = event.get('target_bucket', 'veda-data-store-staging')
-    collection = event.get('collection')
+    origin_bucket = event.get("origin_bucket")
+    origin_prefix = event.get("origin_prefix")
+    regex_pattern = event.get("filename_regex")
+    target_bucket = event.get("target_bucket", "veda-data-store-staging")
+    collection = event.get("collection")
 
-    matching_files = get_matching_files(source_s3, origin_bucket, origin_prefix, regex_pattern)
+    matching_files = get_matching_files(
+        source_s3, origin_bucket, origin_prefix, regex_pattern
+    )
     if not event.get("dry_run"):
         for origin_key in matching_files:
             with tempfile.NamedTemporaryFile() as local_tif, tempfile.NamedTemporaryFile() as local_cog:
@@ -74,9 +75,11 @@ def cogify_transfer_handler(event, context):
                 local_cog_path = local_cog.name
                 source_s3.download_file(origin_bucket, origin_key, local_tif_path)
                 cog_translate(local_tif_path, local_cog_path, quiet=True)
-                filename = origin_key.split('/')[-1]
+                filename = origin_key.split("/")[-1]
                 destination_key = f"{collection}/{filename}"
                 target_s3.upload_file(local_cog_path, target_bucket, destination_key)
     else:
-        print(f"Would have copied {len(matching_files)} files from {origin_bucket} to {target_bucket}")
+        print(
+            f"Would have copied {len(matching_files)} files from {origin_bucket} to {target_bucket}"
+        )
         print(f"Files matched: {matching_files}")

@@ -1,0 +1,4 @@
+awslambdaric
+boto3
+aws-lambda-powertools
+requests

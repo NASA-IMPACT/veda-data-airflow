@@ -60,8 +60,8 @@ templat_dag_run_conf = {
             "title": "<asset_title>",
             "description": "<asset_description>",
             "regex": "<asset_regex>",
-        }
-    }
+        },
+    },
 }
 
 with DAG("veda_discover", params=templat_dag_run_conf, **dag_args) as dag:

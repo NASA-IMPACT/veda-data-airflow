@@ -4,7 +4,7 @@ from datetime import timedelta
 
 import smart_open
 from airflow.models.variable import Variable
-from airflow.operators.python import BranchPythonOperator, PythonOperator
+from airflow.operators.python import PythonOperator
 from airflow.providers.amazon.aws.operators.ecs import EcsRunTaskOperator
 from airflow.utils.task_group import TaskGroup
 from veda_data_pipeline.tasks.submit_stac.handler import (

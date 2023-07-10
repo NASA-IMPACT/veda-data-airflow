@@ -5,7 +5,6 @@ from airflow.operators.python import BranchPythonOperator, PythonOperator
 from airflow.providers.amazon.aws.operators.ecs import EcsRunTaskOperator
 from airflow.utils.task_group import TaskGroup
 from airflow.utils.trigger_rule import TriggerRule
-from airflow_multi_dagrun.operators import TriggerMultiDagRunOperator
 from veda_data_pipeline.tasks.transfer.handler import (
     data_transfer_handler,
 )
@@ -26,7 +25,7 @@ def cogify_choice(ti):
 def transfer_data(ti):
     """Transfer data from one S3 bucket to another; s3 copy, no need for docker"""
     config = ti.dag_run.conf
-    role_arn = Variable.get("ASSUME_ROLE_READ_ARN") 
+    role_arn = Variable.get("ASSUME_ROLE_READ_ARN")
     # (event, chunk_size=2800, role_arn=None, bucket_output=None):
     return data_transfer_handler(event=config, role_arn=role_arn)
 
@@ -85,8 +84,5 @@ def subdag_transfer():
             awslogs_stream_prefix=f"ecs/{mwaa_stack_conf.get('PREFIX')}-veda-cogify-transfer",  # prefix with container name
         )
 
-        (
-            cogify_branching
-            >> [run_copy, run_cogify_copy]
-        )
+        (cogify_branching >> [run_copy, run_cogify_copy])
         return discover_grp

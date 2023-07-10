@@ -1,7 +1,6 @@
 from datetime import datetime
-from typing import Dict, List, Literal, Optional, Tuple, Union
+from typing import Dict, Literal, Optional
 
-import pystac
 from pydantic import BaseModel, Field
 
 INTERVAL = Literal["month", "year", "day"]

@@ -1,10 +1,7 @@
 import os
-from functools import singledispatch
-from pathlib import Path
 
 import pystac
 import rasterio
-from pystac.utils import str_to_datetime
 from rasterio.session import AWSSession
 from rio_stac import stac
 

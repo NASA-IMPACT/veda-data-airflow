@@ -29,7 +29,7 @@ def handler(event: Dict[str, Any]) -> Union[S3LinkOutput, StacItemOutput]:
     event - object with event parameters
         {
             "collection": "OMDOAO3e",
-            "datetime_group": "_(.*).tif",
+            "id_regex": "_(.*).tif",
             "assets": {
                 "OMDOAO3e_LUT": {
                     "title": "OMDOAO3e_LUT",

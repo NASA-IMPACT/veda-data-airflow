@@ -9,7 +9,7 @@ INTERVAL = Literal["month", "year", "day"]
 
 class RegexEvent(BaseModel, frozen=True):
     collection: str
-    datetime_group: str
+    item_id: str
     assets: Dict
 
     start_datetime: Optional[datetime] = None

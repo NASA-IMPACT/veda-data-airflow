@@ -12,12 +12,11 @@ from . import events, regex, role
 
 
 def create_item(
-    datetime_group,
+    item_id,
     properties,
     datetime,
     collection,
     assets,
-    asset_media_type=None,
 ) -> pystac.Item:
     """
     Function to create a stac item from a COG using rio_stac
@@ -29,7 +28,7 @@ def create_item(
 
     def create_stac_item():
         create_stac_item_respose = stac.create_stac_item(
-            id=datetime_group,
+            id=item_id,
             source=source,
             collection=collection,
             input_datetime=datetime,
@@ -93,7 +92,7 @@ def generate_stac(event: events.RegexEvent) -> pystac.Item:
             roles=[],
         )
     create_item_response = create_item(
-        cog_url=event.asset_list[0][1],
+        item_id=event.item_id,
         properties=properties,
         datetime=single_datetime,
         collection=event.collection,

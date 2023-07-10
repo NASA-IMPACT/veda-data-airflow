@@ -17,7 +17,7 @@ The DAG `veda_ingest` will run in parallel processing (2800 files per each DAG)
     "bucket": "veda-data-store-staging",
     "prefix": "s3-prefix/",
     "filename_regex": "^(.*).tif$",
-    "datetime_group": ".*_(.*).tif$",
+    "id_regex": ".*_(.*).tif$",
     "datetime_range": "month",
     "assets": {
         "asset1": {
@@ -48,7 +48,7 @@ templat_dag_run_conf = {
     "bucket": "<bucket>",
     "prefix": "<prefix>/",
     "filename_regex": "<file_regex>",
-    "datetime_group": "<datetime_group_regex>",
+    "id_regex": "<id_regex>",
     "datetime_range": "<year>|<month>|<day>",
     "assets": {
         "<asset1_name>": {

@@ -18,6 +18,7 @@ The DAG `veda_ingest` will run in parallel processing (2800 files per each DAG)
     "filename_regex": "^(.*).tif$",
     "target_bucket": "target_s3_bucket",
     "collection": "collection-id",
+    "cogify": false,
     "dry_run": true
 }	
 ```
@@ -37,6 +38,7 @@ templat_dag_run_conf = {
     "filename_regex": "<file_regex>",
     "target_bucket": "<target_bucket>",
     "collection": "<collection-id>",
+    "cogify": "true|false",
     "dry_run": "true|false",
 }
 

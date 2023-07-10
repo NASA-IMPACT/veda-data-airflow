@@ -93,7 +93,7 @@ def group_by_item(discovered_files: List[str], id_regex: str, assets: dict) -> d
             filename = file["filename"]
             # Copy the asset definition and update the href
             updated_asset = assets[file["asset_type"]].copy()
-            updated_asset["href"] = filename
+            updated_asset["href"] = uri
             item["assets"][asset_type] = updated_asset
         items_with_assets.append(item)
     return items_with_assets

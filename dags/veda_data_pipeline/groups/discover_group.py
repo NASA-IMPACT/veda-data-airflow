@@ -15,7 +15,8 @@ group_kwgs = {"group_id": "Discover", "tooltip": "Discover"}
 
 def discover_from_s3_task(ti):
     """Discover grouped assets/files from S3 in batches of 2800. Produce a list of such files stored on S3 to process.
-    This task is used as part of the discover_group subdag and outputs data to EVENT_BUCKET."""
+    This task is used as part of the discover_group subdag and outputs data to EVENT_BUCKET.
+    """
     config = ti.dag_run.conf
     # (event, chunk_size=2800, role_arn=None, bucket_output=None):
     MWAA_STAC_CONF = Variable.get("MWAA_STACK_CONF", deserialize_json=True)

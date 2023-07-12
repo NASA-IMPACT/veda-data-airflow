@@ -1,2 +1,0 @@
-awslambdaric
-boto3

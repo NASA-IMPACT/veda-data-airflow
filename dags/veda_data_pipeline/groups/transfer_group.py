@@ -5,7 +5,7 @@ from airflow.operators.python import BranchPythonOperator, PythonOperator
 from airflow.providers.amazon.aws.operators.ecs import EcsRunTaskOperator
 from airflow.utils.task_group import TaskGroup
 from airflow.utils.trigger_rule import TriggerRule
-from veda_data_pipeline.tasks.transfer.handler import (
+from veda_data_pipeline.utils.transfer import (
     data_transfer_handler,
 )
 

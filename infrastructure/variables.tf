@@ -13,6 +13,7 @@ variable "prefix" {
 
 variable "iam_policy_permissions_boundary_name" {
   description = "Permission boundaries"
+  default = null
 }
 
 variable "assume_role_arns" {

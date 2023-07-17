@@ -3,7 +3,7 @@ module "mwaa" {
   prefix                           = var.prefix
   vpc_id                           = var.vpc_id
   iam_role_additional_arn_policies = merge(module.custom_policy.custom_policy_arns_map)
-  permissions_boundary_arn         = "arn:aws:iam::${local.account_id}:policy/${var.iam_policy_permissions_boundary_name}"
+  permissions_boundary_arn         = var.iam_policy_permissions_boundary_name == null ? null : "arn:aws:iam::${local.account_id}:policy/${var.iam_policy_permissions_boundary_name}"
   subnet_tagname                   = var.subnet_tagname
   local_requirement_file_path      = "${path.module}/../dags/requirements.txt"
   local_dag_folder                 = "${path.module}/../dags/"

@@ -101,127 +101,24 @@ def load_to_featuresdb(filename: str, collection: str):
     connection = get_connection_string(con_secrets)
 
     print(f"running ogr2ogr import for collection: {collection}")
-    if collection in ["snapshot_fireline_nrt", "snapshot_newfirepix_nrt"]:
-        # it seems `.fgb`(s) get encoded with a name when written to disk
-        # since we are changing the name during an `s3.copy` operation from the algorithm
-        # the original name is still needed in `-sql` statements to read the file
-        encoded_filename = collection.split("_")[1]
-        out = subprocess.run(
-            [
-                "ogr2ogr",
-                "-f",
-                "PostgreSQL",
-                connection,
-                "-t_srs",
-                "EPSG:4326",
-                filename,
-                "-nln",
-                f"eis_fire_{collection}",
-                "-overwrite",
-                "-sql",
-                f"SELECT fireID, mergeid, t_ed as t from {encoded_filename}",
-                "-progress",
-            ],
-            check=False,
-            capture_output=True,
-        )
-    elif collection == "snapshot_perimeter_nrt":
-        out = subprocess.run(
-            [
-                "ogr2ogr",
-                "-f",
-                "PostgreSQL",
-                connection,
-                "-t_srs",
-                "EPSG:4326",
-                filename,
-                "-nln",
-                f"eis_fire_{collection}",
-                "-overwrite",
-                "-sql",
-                "SELECT n_pixels, n_newpixels, farea, fperim, flinelen, duration, pixden, meanFRP, isactive, t_ed as t, fireID from perimeter",
-                "-progress",
-            ],
-            check=False,
-            capture_output=True,
-        )
-    elif collection in [
-        "lf_nfplist_archive",
-        "lf_nfplist_nrt",
-    ]:
-        out = subprocess.run(
-            [
-                "ogr2ogr",
-                "-f",
-                "PostgreSQL",
-                connection,
-                "-t_srs",
-                "EPSG:4326",
-                filename,
-                "-nln",
-                f"eis_fire_{collection}",
-                "-overwrite",
-                "-sql",
-                f"SELECT x, y, frp, DS, DT, ampm, datetime as t, sat, id as fireID from {collection}",
-                "-progress",
-            ],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            check=False,
-        )
-    elif collection in [
-        "lf_newfirepix_nrt",
-        "lf_fireline_nrt",
-        "lf_newfirepix_archive",
-        "lf_fireline_archive",
-    ]:
-        out = subprocess.run(
-            [
-                "ogr2ogr",
-                "-f",
-                "PostgreSQL",
-                connection,
-                "-t_srs",
-                "EPSG:4326",
-                filename,
-                "-nln",
-                f"eis_fire_{collection}",
-                "-overwrite",
-                "-sql",
-                f"SELECT id as fireID, t from {collection}",
-                "-progress",
-            ],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            check=False,
-        )
-    elif collection in [
-        "lf_perimeter_archive",
-        "lf_perimeter_nrt",
-    ]:
-        out = subprocess.run(
-            [
-                "ogr2ogr",
-                "-f",
-                "PostgreSQL",
-                connection,
-                "-t_srs",
-                "EPSG:4326",
-                filename,
-                "-nln",
-                f"eis_fire_{collection}",
-                "-overwrite",
-                "-sql",
-                f"SELECT n_pixels, n_newpixels, farea, fperim, flinelen, duration, pixden, meanFRP, t, id as fireID from {collection}",
-                "-progress",
-            ],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            check=False,
-        )
-    else:
-        print("Not a valid fireline collection")
-        return {"status": "failure"}
+
+    out = subprocess.run(
+        [
+            "ogr2ogr",
+            "-f",
+            "PostgreSQL",
+            connection,
+            "-t_srs",
+            "EPSG:4326",
+            filename,
+            "-nln",
+            f"eis_fire_{collection}",
+            "-overwrite",
+            "-progress",
+        ],
+        check=False,
+        capture_output=True,
+    )
 
     if out.stderr:
         error_description = f"Error: {out.stderr}"

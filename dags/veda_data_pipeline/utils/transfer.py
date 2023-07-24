@@ -4,7 +4,7 @@ import re
 import boto3
 
 
-def assume_role(role_arn, session_name="veda-data-pipelines_s3-discovery"):
+def assume_role(role_arn, session_name="veda-data-airflow_s3-discovery"):
     sts = boto3.client("sts")
     print(f"Assuming role: {role_arn}")
     credentials = sts.assume_role(

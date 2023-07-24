@@ -6,7 +6,7 @@ from airflow.operators.python import BranchPythonOperator, PythonOperator
 from airflow.utils.task_group import TaskGroup
 from airflow.utils.trigger_rule import TriggerRule
 from airflow_multi_dagrun.operators import TriggerMultiDagRunOperator
-from veda_data_pipeline.tasks.s3_discovery.handler import (
+from veda_data_pipeline.utils.s3_discovery import (
     s3_discovery_handler,
 )
 

@@ -3,7 +3,7 @@ module "mwaa" {
   prefix                           = var.prefix
   vpc_id                           = var.vpc_id
   iam_role_additional_arn_policies = merge(module.custom_policy.custom_policy_arns_map)
-  permissions_boundary_arn         = var.iam_role_permissions_boundary
+  permissions_boundary_arn         = var.iam_policy_permissions_boundary_name == null ? null : "arn:aws:iam::${local.account_id}:policy/${var.iam_policy_permissions_boundary_name}"
   subnet_tagname                   = var.subnet_tagname
   local_requirement_file_path      = "${path.module}/../dags/requirements.txt"
   local_dag_folder                 = "${path.module}/../dags/"
@@ -90,6 +90,7 @@ resource "local_file" "mwaa_variables" {
       aws_region              = local.aws_region
       cognito_app_secret      = var.cognito_app_secret
       stac_ingestor_api_url   = var.stac_ingestor_api_url
+      vector_secret_name = var.vector_secret_name
 
   })
   filename = "/tmp/mwaa_vars.json"

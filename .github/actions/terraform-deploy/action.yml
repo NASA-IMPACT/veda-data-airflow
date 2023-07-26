@@ -11,6 +11,24 @@ inputs:
     required: false
     type: string
     default: "."
+  script_path:
+    required: true
+    type: string
+  backend_stack_name:
+    required: true
+    type: string
+  auth_stack_name:
+    required: true
+    type: string
+  ingestor_stack_name:
+    required: true
+    type: string
+  project_prefix:
+    required: true
+    type: string
+  stage:
+    required: true
+    type: string
 
 runs:
   using: "composite"
@@ -30,8 +48,14 @@ runs:
     - name: Get relevant environment configuration from aws secrets
       shell: bash
       working-directory: ${{ inputs.dir }}
+      env:
+        SECRET_SSM_NAME: ${{ inputs.env_aws_secret_name }}
+        AWS_DEFAULT_REGION: us-west-2
       run: |
-        ./scripts/sync-env.sh ${{ inputs.env_aws_secret_name }}
+        python ${{ inputs.script_path }} --secret-id ${{ inputs.env_aws_secret_name }} --stack-names ${{ inputs.auth_stack_name}},${{ inputs.backend_stack_name}},${{ inputs.ingestor_stack_name}}
+        echo "PROJECT_PREFIX=${{ inputs.project_prefix }}" >> ${{ inputs.env-file }}
+        echo "STAGE=${{ inputs.stage }}" >> ${{ inputs.env-file }}
+        echo "PREFIX=${{ inputs.project_prefix }}-${{ inputs.stage }}" >> ${{ inputs.env-file }}
 
     - name: Setup Terraform
       uses: hashicorp/setup-terraform@v2

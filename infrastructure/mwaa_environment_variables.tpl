@@ -12,5 +12,6 @@
         "AWS_REGION": "${aws_region}"
     },
     "COGNITO_APP_SECRET": "${cognito_app_secret}",
-    "STAC_INGESTOR_API_URL": "${stac_ingestor_api_url}"
+    "STAC_INGESTOR_API_URL": "${stac_ingestor_api_url}",
+    "VECTOR_SECRET_NAME": "${vector_secret_name}"
 }

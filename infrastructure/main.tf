@@ -1,5 +1,5 @@
 module "mwaa" {
-  source                           = "https://github.com/NASA-IMPACT/mwaa_tf_module/releases/download/v1.1.5/mwaa_tf_module.zip"
+  source                           = "https://github.com/NASA-IMPACT/mwaa_tf_module/releases/download/v1.1.6/mwaa_tf_module.zip"
   prefix                           = var.prefix
   vpc_id                           = var.vpc_id
   iam_role_additional_arn_policies = merge(module.custom_policy.custom_policy_arns_map)

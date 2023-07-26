@@ -19,20 +19,6 @@ def assume_role(role_arn, session_name="veda-data-airflow_s3-discovery"):
     }
 
 
-def get_s3_resp_iterator(bucket_name, prefix, s3_client, page_size=1000):
-    """
-    Returns an s3 paginator.
-    :param bucket_name: The bucket.
-    :param prefix: The path for the s3 granules.
-    :param s3_client: Initialized boto3 S3 client
-    :param page_size: Number of records returned
-    """
-    s3_paginator = s3_client.get_paginator("list_objects")
-    return s3_paginator.paginate(
-        Bucket=bucket_name, Prefix=prefix, PaginationConfig={"page_size": page_size}
-    )
-
-
 def get_matching_files(s3_client, bucket, prefix, regex_pattern):
     matching_files = []
 
@@ -62,8 +48,22 @@ def transfer_files_within_s3(
         filename = file_key.split("/")[-1]
         target_key = f"{collection}/{filename}"
         copy_source = {"Bucket": origin_bucket, "Key": file_key}
+
+        # We can use the etag to check if the file has already been copied and avoid duplication of effort
+        # by using the CopySourceIfNoneMatch parameter below.
+        try:
+            target_metadata = s3_client.head_object(
+                Bucket=destination_bucket, Key=target_key
+            )
+            target_etag = target_metadata["ETag"]
+        except s3_client.exceptions.NoSuchKey:
+            target_etag = None
+
         s3_client.copy_object(
-            CopySource=copy_source, Bucket=destination_bucket, Key=target_key
+            CopySource=copy_source,
+            Bucket=destination_bucket,
+            Key=target_key,
+            CopySourceIfNoneMatch=target_etag,
         )
 
 

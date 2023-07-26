@@ -118,16 +118,24 @@ def generate_payload(s3_prefix_key: str, payload: dict):
 
 
 def propagate_forward_datetime_args(event):
-    date_fields = {}
-    if "single_datetime" in event:
-        date_fields["single_datetime"] = event["single_datetime"]
-    if "start_datetime" in event:
-        date_fields["start_datetime"] = event["start_datetime"]
-    if "end_datetime" in event:
-        date_fields["end_datetime"] = event["end_datetime"]
-    if "datetime_range" in event:
-        date_fields["datetime_range"] = event["datetime_range"]
-    return date_fields
+    """
+    This function extracts datetime-related arguments from the input event dictionary.
+    The purpose is to forward these datetime arguments to other functions that may require them.
+
+    The function looks for the keys "single_datetime", "start_datetime", "end_datetime",
+    and "datetime_range" in the event dictionary. If any of these keys are present,
+    it includes them in the output dictionary.
+
+    Parameters:
+    event (dict): Input dictionary potentially containing datetime arguments.
+
+    Returns:
+    dict: A new dictionary containing only the datetime-related keys from the input
+    that were present. If none of the specified keys are in the event,
+    the function returns an empty dictionary.
+    """
+    keys = ["single_datetime", "start_datetime", "end_datetime", "datetime_range"]
+    return {key: event[key] for key in keys if key in event}
 
 
 def s3_discovery_handler(event, chunk_size=2800, role_arn=None, bucket_output=None):

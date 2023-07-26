@@ -7,8 +7,7 @@ from veda_data_pipeline.groups.transfer_group import subdag_transfer
 dag_doc_md = """
 ### Discover files from S3
 #### Purpose
-This DAG discovers files from either S3 and/or CMR then runs a DAG id `veda_ingest`. 
-The DAG `veda_ingest` will run in parallel processing (2800 files per each DAG)
+This DAG is used to transfer files that are to permanent locations for indexing with STAC.
 #### Notes
 - This DAG can run with a configuration similar to this <br>
 ```json

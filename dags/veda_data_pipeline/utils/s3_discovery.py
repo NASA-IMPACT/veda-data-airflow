@@ -65,6 +65,7 @@ def group_by_item(discovered_files: List[str], id_regex: str, assets: dict) -> d
     for uri in discovered_files:
         # Each file gets its matched asset type and id
         filename = uri.split("/")[-1]
+        prefix = "/".join(uri.split("/")[:-1])
         if match := re.match(id_regex, filename):
             # At least one match; can use the match here to construct an ID (match groups separated by '-')
             item_id = "-".join(match.groups())
@@ -74,7 +75,7 @@ def group_by_item(discovered_files: List[str], id_regex: str, assets: dict) -> d
                     asset_type = asset_name
                     break
             grouped_files.append(
-                {"filename": filename, "asset_type": asset_type, "item_id": item_id}
+                {"prefix": prefix, "filename": filename, "asset_type": asset_type, "item_id": item_id}
             )
         else:
             print(f"Warning: skipping file. No id match found: {filename}")
@@ -93,7 +94,7 @@ def group_by_item(discovered_files: List[str], id_regex: str, assets: dict) -> d
             filename = file["filename"]
             # Copy the asset definition and update the href
             updated_asset = assets[file["asset_type"]].copy()
-            updated_asset["href"] = uri
+            updated_asset["href"] = f"{file['prefix']}/{file['filename']}"
             item["assets"][asset_type] = updated_asset
         items_with_assets.append(item)
     return items_with_assets
@@ -146,7 +147,9 @@ def s3_discovery_handler(event, chunk_size=2800, role_arn=None, bucket_output=No
     properties = event.get("properties", {})
     assets = event.get("assets")
     id_regex = event.get("id_regex")
+    id_template = event.get("id_template", collection + "-{}")
     date_fields = propagate_forward_datetime_args(event)
+    dry_run = event.get("dry_run", False)
 
     payload = {**event, "objects": []}
     slice = event.get("slice")
@@ -167,6 +170,15 @@ def s3_discovery_handler(event, chunk_size=2800, role_arn=None, bucket_output=No
         for obj in discover_from_s3(s3_iterator, filename_regex)
     ]
     items_with_assets = group_by_item(file_uris, id_regex, assets)
+    # Update IDs using id_template
+    for item in items_with_assets:
+        item["item_id"] = id_template.format(item["item_id"])
+
+    if dry_run:
+        print(f"-DRYRUN- Discovered {len(items_with_assets)} items")
+        for idx in range(0, min(10, len(items_with_assets))):
+            print("-DRYRUN- Example item")
+            print(json.dumps(items_with_assets[idx]))
 
     item_count = 0
     for item in items_with_assets:
@@ -198,4 +210,9 @@ def s3_discovery_handler(event, chunk_size=2800, role_arn=None, bucket_output=No
     if payload["objects"]:
         out_keys.append(generate_payload(s3_prefix_key=key, payload=payload))
         discovered += len(payload["objects"])
+    # We need to make sure the payload isn't too large for ECS overrides
+    try:
+        del event["assets"]
+    except KeyError:
+        pass
     return {**event, "payload": out_keys, "discovered": discovered}

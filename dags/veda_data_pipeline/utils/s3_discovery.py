@@ -75,7 +75,12 @@ def group_by_item(discovered_files: List[str], id_regex: str, assets: dict) -> d
                     asset_type = asset_name
                     break
             grouped_files.append(
-                {"prefix": prefix, "filename": filename, "asset_type": asset_type, "item_id": item_id}
+                {
+                    "prefix": prefix,
+                    "filename": filename,
+                    "asset_type": asset_type,
+                    "item_id": item_id,
+                }
             )
         else:
             print(f"Warning: skipping file. No id match found: {filename}")

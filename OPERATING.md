@@ -69,7 +69,6 @@ Should follow the following format:
 ```json
 {
     "collection": "<collection-id>",
-    "discovery": "<s3/cmr>",
 
     ## for s3 discovery
     "prefix": "<s3-key-prefix>",
@@ -77,15 +76,7 @@ Should follow the following format:
     "filename_regex": "<filename-regex>",
     "datetime_range": "<month/day/year>",
     
-    ## for cmr discovery
-    "version": "<collection-version>",
-    "temporal": ["<start-date>", "<end-date>"],
-    "bounding_box": ["<bounding-box-as-comma-separated-LBRT>"],
-    "include": "<filename-pattern>",
-    
     ### misc
-    "cogify": "<true/false>",
-    "upload": "<true/false>",
     "dry_run": "<true/false>",
 }
 ```

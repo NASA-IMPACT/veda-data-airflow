@@ -6,7 +6,7 @@ data products and STAC metadata for interfaces such as https://github.com/NASA-I
 ## Project layout
 
 - [dags](./dags/): Contains the Directed Acyclic Graphs which constitute Airflow state machines. This includes the python for running each task as well as the python definitions of the structure of these DAGs
-- [pipeline_tasks](./dags/veda_data_pipeline/veda_pipeline_tasks): Contains a git submodule reference to veda pipeline tasks
+- [pipeline_tasks](./dags/veda_data_pipeline/utils): Contains util functions used in python DAGs
 - [data](./data/): Contains JSON files which define ingests of collections and items
 - [docker_tasks](./docker_tasks/): Contains definitions tasks which we want to run in docker containers either because these tasks have special, unique dependencies or for the sake of performance (e.g. using multiprocessing)
 - [infrastructure](./infrastructure/): Contains the terraform modules necessary to deploy all resources to AWS

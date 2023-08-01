@@ -3,11 +3,12 @@
 
 for s in $(aws secretsmanager get-secret-value --secret-id $1 --query SecretString --output text | jq -r "to_entries|map(\"\(.key)=\(.value|tostring)\")|.[]" ); do
     echo "$s" >> $GITHUB_ENV
+    echo "$s" >> .env
 done
+source .env
 
-export PREFIX=ghgc-pipeline-${STAGE}
-cat << EXPORT_ENVS > .env
-PREFIX=${PREFIX}
+cat << EXPORT_ENVS >> .env
+PREFIX=ghgc-pipeline-${STAGE}
 AWS_REGION=us-west-2
 SUBNET_TAGNAME="ghgc-shared-base/network/vpc/privateSubnet*"
 STATE_BUCKET_NAME=${PREFIX}-tf-state-shared

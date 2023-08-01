@@ -1,11 +1,7 @@
 import os
-from functools import singledispatch
-from pathlib import Path
 
 import pystac
 import rasterio
-from cmr import GranuleQuery
-from pystac.utils import str_to_datetime
 from rasterio.session import AWSSession
 from rio_stac import stac
 
@@ -13,35 +9,32 @@ from . import events, regex, role
 
 
 def create_item(
+    item_id,
     properties,
     datetime,
-    cog_url,
     collection,
-    assets=None,
-    asset_name=None,
-    asset_roles=None,
-    asset_media_type=None,
+    assets,
 ) -> pystac.Item:
     """
     Function to create a stac item from a COG using rio_stac
     """
+    if "cog_default" in assets:
+        source = assets["cog_default"].href
+    else:
+        source = [asset.href for asset in assets][0]
 
     def create_stac_item():
         create_stac_item_respose = stac.create_stac_item(
-            id=Path(cog_url).stem,
-            source=cog_url,
+            id=item_id,
+            source=source,
             collection=collection,
             input_datetime=datetime,
             properties=properties,
             with_proj=True,
             with_raster=True,
             assets=assets,
-            asset_name=asset_name or "cog_default",
-            asset_roles=asset_roles or ["data", "layer"],
-            asset_media_type=(
-                asset_media_type
-                or "image/tiff; application=geotiff; profile=cloud-optimized"
-            ),
+            geom_densify_pts=10,
+            geom_precision=5,
         )
         return create_stac_item_respose
 
@@ -63,57 +56,42 @@ def create_item(
         return create_stac_item_resp
 
 
-@singledispatch
-def generate_stac(item) -> pystac.Item:
-    raise Exception(f"Unsupported event type: {type(item)=}, {item=}")
-
-
-@generate_stac.register
-def generate_stac_regexevent(item: events.RegexEvent) -> pystac.Item:
+def generate_stac(event: events.RegexEvent) -> pystac.Item:
     """
     Generate STAC item from user provided datetime range or regex & filename
     """
-    if item.start_datetime and item.end_datetime:
-        start_datetime = item.start_datetime
-        end_datetime = item.end_datetime
+    if event.start_datetime and event.end_datetime:
+        start_datetime = event.start_datetime
+        end_datetime = event.end_datetime
         single_datetime = None
-    elif single_datetime := item.single_datetime:
+    elif single_datetime := event.single_datetime:
         start_datetime = end_datetime = None
         single_datetime = single_datetime
     else:
         start_datetime, end_datetime, single_datetime = regex.extract_dates(
-            item.s3_filename, item.datetime_range
+            event.s3_filename, event.datetime_range
         )
-    properties = item.properties or {}
+    properties = event.properties or {}
     if start_datetime and end_datetime:
         properties["start_datetime"] = start_datetime.isoformat()
         properties["end_datetime"] = end_datetime.isoformat()
         single_datetime = None
+    assets = {}
+    for asset_name, asset_definition in event.assets:
+        with rasterio.open(source=asset_definition["href"]) as src:
+            media_type = stac.get_media_type(src)
+        assets[asset_name] = pystac.Asset(
+            title=asset_definition["title"],
+            description=asset_definition["description"],
+            href=asset_definition["href"],
+            media_type=media_type,
+            roles=[],
+        )
     create_item_response = create_item(
+        item_id=event.item_id,
         properties=properties,
         datetime=single_datetime,
-        cog_url=item.s3_filename,
-        collection=item.collection,
-        asset_name=item.asset_name,
-        asset_roles=item.asset_roles,
-        asset_media_type=item.asset_media_type,
+        collection=event.collection,
+        assets=assets,
     )
     return create_item_response
-
-
-@generate_stac.register
-def generate_stac_cmrevent(item: events.CmrEvent) -> pystac.Item:
-    """
-    Generate STAC Item from CMR granule
-    """
-    cmr_json = GranuleQuery().concept_id(item.granule_id).get(1)[0]
-
-    return create_item(
-        properties=cmr_json,
-        datetime=str_to_datetime(cmr_json["time_start"]),
-        cog_url=item.s3_filename,
-        collection=item.collection,
-        asset_name=item.asset_name,
-        asset_roles=item.asset_roles,
-        asset_media_type=item.asset_media_type,
-    )

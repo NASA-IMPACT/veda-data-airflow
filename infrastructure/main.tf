@@ -19,6 +19,12 @@ module "mwaa" {
       ecr_repo_name             = "${var.prefix}-veda-build_stac"
     },
     {
+      handler_file_path         = "${path.module}/../docker_tasks/cogify_transfer/handler.py"
+      docker_file_path          = "${path.module}/../docker_tasks/cogify_transfer/Dockerfile"
+      ecs_container_folder_path = "${path.module}/../docker_tasks/cogify_transfer"
+      ecr_repo_name             = "${var.prefix}-veda-cogify_transfer"
+    },
+    {
       handler_file_path         = "${path.module}/../docker_tasks/vector_ingest/handler.py"
       docker_file_path          = "${path.module}/../docker_tasks/vector_ingest/Dockerfile"
       ecs_container_folder_path = "${path.module}/../docker_tasks/vector_ingest"

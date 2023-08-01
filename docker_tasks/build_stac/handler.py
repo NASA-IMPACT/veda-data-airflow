@@ -26,29 +26,32 @@ def handler(event: Dict[str, Any]) -> Union[S3LinkOutput, StacItemOutput]:
     Handler for STAC Collection Item generation
 
     Arguments:
-    event - object with event parameters to be provided in one of 2 formats.
-        Format option 1 (with Granule ID defined to retrieve all metadata from CMR):
+    event - object with event parameters
         {
             "collection": "OMDOAO3e",
-            "s3_filename": "s3://climatedashboard-data/OMDOAO3e/OMI-Aura_L3-OMDOAO3e_2022m0120_v003-2022m0122t021759.he5.tif",
-            "granule_id": "G2205784904-GES_DISC",
-        }
-        Format option 2 (with regex provided to parse datetime from the filename:
-        {
-            "collection": "OMDOAO3e",
-            "s3_filename": "s3://climatedashboard-data/OMSO2PCA/OMSO2PCA_LUT_SCD_2005.tif",
+            "id_regex": "_(.*).tif",
+            "assets": {
+                "OMDOAO3e_LUT": {
+                    "title": "OMDOAO3e_LUT",
+                    "description": "OMDOAO3e_LUT, described",
+                    "href": "s3://climatedashboard-data/OMDOAO3e/OMDOAO3e_LUT.tif",
+                },
+                "OMDOAO3e_LUT": {
+                    "title": "OMDOAO3e_LUT",
+                    "description": "OMDOAO3e_LUT, described",
+                    "href": "s3://climatedashboard-data/OMDOAO3e/OMDOAO3e_LUT.tif",
+                }
+            }
         }
 
     """
 
-    EventType = events.CmrEvent if event.get("granule_id") else events.RegexEvent
-    parsed_event = EventType.parse_obj(event)
-    # try:
-    print("Building stac")
-    stac_item = stac.generate_stac(parsed_event).to_dict()
-    # except Exception as ex:
-    #     out_err: StacItemOutput = {"stac_item": {"error": f"{ex}", "event": event}}
-    #     return out_err
+    parsed_event = events.RegexEvent.parse_obj(event)
+    try:
+        stac_item = stac.generate_stac(parsed_event).to_dict()
+    except Exception as ex:
+        out_err: StacItemOutput = {"stac_item": {"error": f"{ex}", "event": event}}
+        return out_err
 
     output: StacItemOutput = {"stac_item": stac_item}
     return output

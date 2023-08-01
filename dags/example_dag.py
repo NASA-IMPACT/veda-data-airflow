@@ -41,6 +41,7 @@ with DAG(
     dag_id="example_etl_flow",
     start_date=pendulum.today("UTC").add(days=-1),
     schedule_interval=None,
+    tags=["example"],
 ) as dag:
     start = EmptyOperator(task_id="start", dag=dag)
     discover_from_cmr = PythonOperator(

@@ -68,6 +68,5 @@ runs:
       shell: bash
       working-directory: ${{ inputs.dir }}
       run: |
-        cat ${{ inputs.env-file }}
         ./scripts/deploy.sh ${{ inputs.env-file }} <<< init
-        ./scripts/deploy.sh ${{ inputs.env-file }} <<< plan
+        ./scripts/deploy.sh ${{ inputs.env-file }} <<< deploy

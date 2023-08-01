@@ -76,4 +76,3 @@ jobs:
         uses: "./.github/actions/terraform-deploy"
         with:
           env_aws_secret_name: ${{ secrets.ENV_AWS_SECRET_NAME }}
-          env-file: ".env_${{ needs.define-environment.outputs.env_name }}"

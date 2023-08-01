@@ -68,7 +68,7 @@ templat_dag_run_conf = {
 
 with DAG("veda_discover", params=templat_dag_run_conf, **dag_args) as dag:
     start = DummyOperator(task_id="Start", dag=dag)
-    end = DummyOperator(task_id="Stop", trigger_rule=TriggerRule.ONE_SUCCESS, dag=dag)
+    end = DummyOperator(task_id="End", trigger_rule=TriggerRule.ONE_SUCCESS, dag=dag)
 
     discover_grp = subdag_discover()
 

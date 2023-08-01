@@ -6,9 +6,10 @@ for s in $(aws secretsmanager get-secret-value --secret-id $1 --query SecretStri
     echo "$s" >> .env
 done
 source .env
+export PREFIX=ghgc-pipeline-${STAGE}
 
 cat << EXPORT_ENVS >> .env
-PREFIX=ghgc-pipeline-${STAGE}
+PREFIX=$PREFIX
 AWS_REGION=us-west-2
 SUBNET_TAGNAME="ghgc-shared-base/network/vpc/privateSubnet*"
 STATE_BUCKET_NAME=${PREFIX}-tf-state-shared

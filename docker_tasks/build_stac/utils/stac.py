@@ -20,6 +20,7 @@ def get_sts_session():
         aws_session_token=creds["SessionToken"],
     )
 
+
 def create_item(
     item_id,
     properties,
@@ -71,7 +72,7 @@ def generate_stac(event: events.RegexEvent) -> pystac.Item:
                     filename, event.datetime_range
                 )
                 break
-            except Exception as e:
+            except Exception:
                 continue
     # Raise if dates can't be found
     if not (start_datetime or end_datetime or single_datetime):

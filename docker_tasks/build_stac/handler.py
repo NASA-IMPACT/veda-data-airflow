@@ -119,7 +119,9 @@ def stac_handler(payload_event):
 
     # Silent dead letters are nice, but we want the Airflow UI to quickly alert us if something went wrong.
     if len(payload_failures) != 0:
-        raise ValueError(f"Some items failed to be processed. Failures logged here: {dead_letter_key}")
+        raise ValueError(
+            f"Some items failed to be processed. Failures logged here: {dead_letter_key}"
+        )
 
     return {
         "payload": {

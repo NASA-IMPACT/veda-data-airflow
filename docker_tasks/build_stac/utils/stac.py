@@ -69,7 +69,7 @@ def generate_stac(event: events.RegexEvent) -> pystac.Item:
         single_datetime = single_datetime
     else:
         start_datetime, end_datetime, single_datetime = regex.extract_dates(
-            event.s3_filename, event.datetime_range
+            event.item_id, event.datetime_range
         )
     properties = event.properties or {}
     if start_datetime and end_datetime:
@@ -77,7 +77,7 @@ def generate_stac(event: events.RegexEvent) -> pystac.Item:
         properties["end_datetime"] = end_datetime.isoformat()
         single_datetime = None
     assets = {}
-    for asset_name, asset_definition in event.assets:
+    for asset_name, asset_definition in event.assets.items():
         with rasterio.open(source=asset_definition["href"]) as src:
             media_type = stac.get_media_type(src)
         assets[asset_name] = pystac.Asset(

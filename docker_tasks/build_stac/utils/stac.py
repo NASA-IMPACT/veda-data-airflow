@@ -78,7 +78,7 @@ def generate_stac(event: events.RegexEvent) -> pystac.Item:
         single_datetime = None
     assets = {}
     for asset_name, asset_definition in event.assets.items():
-        with rasterio.open(source=asset_definition["href"]) as src:
+        with rasterio.open(asset_definition["href"]) as src:
             media_type = stac.get_media_type(src)
         assets[asset_name] = pystac.Asset(
             title=asset_definition["title"],

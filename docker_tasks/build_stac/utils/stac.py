@@ -21,7 +21,7 @@ def create_item(
     if "cog_default" in assets:
         source = assets["cog_default"].href
     else:
-        source = [asset.href for asset in assets][0]
+        source = [asset.href for asset in assets.values()][0]
 
     def create_stac_item():
         create_stac_item_respose = stac.create_stac_item(

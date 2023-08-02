@@ -39,7 +39,7 @@ def handler(event: Dict[str, Any]) -> Union[S3LinkOutput, StacItemOutput]:
                 "OMDOAO3e_LUT": {
                     "title": "OMDOAO3e_LUT",
                     "description": "OMDOAO3e_LUT, described",
-                    "href": "s3://climatedashboard-data/OMDOAO3e/OMDOAO3e_LUTF.tif",
+                    "href": "s3://climatedashboard-data/OMDOAO3e/OMDOAO3e_LUTFX.tif",
                 }
             }
         }

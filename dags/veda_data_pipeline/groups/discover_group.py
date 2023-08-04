@@ -6,28 +6,17 @@ from airflow.operators.python import BranchPythonOperator, PythonOperator
 from airflow.utils.task_group import TaskGroup
 from airflow.utils.trigger_rule import TriggerRule
 from airflow_multi_dagrun.operators import TriggerMultiDagRunOperator
-from veda_data_pipeline.veda_pipeline_tasks.s3_discovery.handler import (
+from veda_data_pipeline.utils.s3_discovery import (
     s3_discovery_handler,
 )
 
 group_kwgs = {"group_id": "Discover", "tooltip": "Discover"}
 
 
-def get_payload(ti_xcom_pull):
-    task_ids = [
-        f"{group_kwgs['group_id']}.discover_from_s3",
-        f"{group_kwgs['group_id']}.discover_from_cmr",
-    ]
-    return [
-        payload for payload in ti_xcom_pull(task_ids=task_ids) if payload is not None
-    ][0]
-
-
-def discover_from_cmr_task(text):
-    return {"place_holder": text}
-
-
 def discover_from_s3_task(ti):
+    """Discover grouped assets/files from S3 in batches of 2800. Produce a list of such files stored on S3 to process.
+    This task is used as part of the discover_group subdag and outputs data to EVENT_BUCKET.
+    """
     config = ti.dag_run.conf
     # (event, chunk_size=2800, role_arn=None, bucket_output=None):
     MWAA_STAC_CONF = Variable.get("MWAA_STACK_CONF", deserialize_json=True)
@@ -40,7 +29,10 @@ def discover_from_s3_task(ti):
 
 
 def get_files_to_process(ti):
-    payload = get_payload(ti.xcom_pull)
+    """Get files from S3 produced by the discovery task.
+    Used as part of both the parallel_run_process_rasters and parallel_run_process_vectors tasks.
+    """
+    payload = ti.xcom_pull(task_ids=f"{group_kwgs['group_id']}.discover_from_s3")
     payloads_xcom = payload.pop("payload", [])
     dag_run_id = ti.dag_run.run_id
     for indx, payload_xcom in enumerate(payloads_xcom):
@@ -53,6 +45,7 @@ def get_files_to_process(ti):
 
 
 def vector_raster_choice(ti):
+    """Choose whether to process rasters or vectors based on the payload."""
     payload = ti.dag_run.conf
 
     if payload.get("vector"):
@@ -60,23 +53,8 @@ def vector_raster_choice(ti):
     return f"{group_kwgs['group_id']}.parallel_run_process_rasters"
 
 
-def discover_choice(ti):
-    config = ti.dag_run.conf
-    supported_discoveries = {"s3": "discover_from_s3", "cmr": "discover_from_cmr"}
-    return f"{group_kwgs['group_id']}.{supported_discoveries[config['discovery']]}"
-
-
 def subdag_discover():
     with TaskGroup(**group_kwgs) as discover_grp:
-        discover_branching = BranchPythonOperator(
-            task_id="discover_branching", python_callable=discover_choice
-        )
-
-        discover_from_cmr = PythonOperator(
-            task_id="discover_from_cmr",
-            python_callable=discover_from_cmr_task,
-            op_kwargs={"text": "Discover from CMR"},
-        )
         discover_from_s3 = PythonOperator(
             task_id="discover_from_s3",
             python_callable=discover_from_s3_task,
@@ -104,8 +82,7 @@ def subdag_discover():
         )
 
         (
-            discover_branching
-            >> [discover_from_cmr, discover_from_s3]
+            discover_from_s3
             >> raster_vector_branching
             >> [run_process_raster, run_process_vector]
         )

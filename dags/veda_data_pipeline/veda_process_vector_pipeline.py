@@ -63,13 +63,13 @@ with DAG(dag_id="veda_ingest_vector", params=templat_dag_run_conf, **dag_args) a
         task_definition=f"{mwaa_stack_conf.get('PREFIX')}-vector-tasks",
         launch_type="FARGATE",
         do_xcom_push=True,
-        execution_timeout=timedelta(minutes=60),
+        execution_timeout=timedelta(minutes=120),
         overrides={
             "containerOverrides": [
                 {
                     "name": f"{mwaa_stack_conf.get('PREFIX')}-veda-vector_ingest",
                     "command": [
-                        "/usr/bin/python",
+                        "/var/lang/bin/python",
                         "handler.py",
                         "--payload",
                         "{}".format("{{ task_instance.dag_run.conf }}"),
@@ -88,8 +88,6 @@ with DAG(dag_id="veda_ingest_vector", params=templat_dag_run_conf, **dag_args) a
                             "value": Variable.get("VECTOR_SECRET_NAME"),
                         },
                     ],
-                    "memory": 2048,
-                    "cpu": 1024,
                 },
             ],
         },

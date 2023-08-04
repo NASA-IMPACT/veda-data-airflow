@@ -9,17 +9,14 @@ from . import events, regex, role
 
 
 def get_sts_session():
-    creds = {}
-    if os.environ.get("AccessKeyId"):
-        creds = os.environ
     if role_arn := os.environ.get("EXTERNAL_ROLE_ARN"):
-        print("We're inside")
         creds = role.assume_role(role_arn, "veda-data-pipelines_build-stac")
-    return AWSSession(
-        aws_access_key_id=creds["AccessKeyId"],
-        aws_secret_access_key=creds["SecretAccessKey"],
-        aws_session_token=creds["SessionToken"],
-    )
+        return AWSSession(
+            aws_access_key_id=creds["AccessKeyId"],
+            aws_secret_access_key=creds["SecretAccessKey"],
+            aws_session_token=creds["SessionToken"],
+        )
+    return
 
 
 def create_item(
@@ -89,7 +86,7 @@ def generate_stac(event: events.RegexEvent) -> pystac.Item:
     rasterio_kwargs = {}
     rasterio_kwargs["session"] = get_sts_session()
     with rasterio.Env(
-        session=rasterio_kwargs["session"],
+        session=rasterio_kwargs.get("session"),
         options={**rasterio_kwargs},
     ):
         for asset_name, asset_definition in event.assets.items():

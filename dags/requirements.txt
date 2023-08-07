@@ -1,5 +1,4 @@
 --constraint /usr/local/airflow/dags/requirements-constraints.txt
-
 affine==2.4.0
 netCDF4==1.6.2
 pydantic==1.10.4
@@ -8,4 +7,9 @@ rio-cogeo==3.5.0
 smart-open==6.3.0
 airflow_multi_dagrun==2.3.1
 apache-airflow-providers-docker==3.2.0
+apache-airflow-providers-postgres==5.2.2
+apache-airflow-providers-common-sql==1.2.0
 typing-extensions==4.4.0
+psycopg2-binary==2.9.5
+pypgstac==0.7.4
+pyOpenSSL==22.0.0

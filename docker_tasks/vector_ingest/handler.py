@@ -8,7 +8,6 @@ import json
 import smart_open
 from urllib.parse import urlparse
 import psycopg2
-import requests
 
 
 def download_file(file_uri: str):
@@ -102,57 +101,132 @@ def load_to_featuresdb(filename: str, collection: str):
     connection = get_connection_string(con_secrets)
 
     print(f"running ogr2ogr import for collection: {collection}")
-
-    try:
-        if collection in ["fireline", "newfirepix"]:
-            subprocess.run(
-                [
-                    "ogr2ogr",
-                    "-f",
-                    "PostgreSQL",
-                    connection,
-                    "-t_srs",
-                    "EPSG:4326",
-                    filename,
-                    "-nln",
-                    f"eis_fire_{collection}",
-                    "-overwrite",
-                    "-sql",
-                    f"SELECT fireID, mergeid, t_ed as t from {collection}",
-                    "-progress",
-                ],
-                check=True,
-                capture_output=True,
-            )
-            alter_datetime_add_indexes(collection)
-        elif collection == "perimeter":
-            subprocess.run(
-                [
-                    "ogr2ogr",
-                    "-f",
-                    "PostgreSQL",
-                    connection,
-                    "-t_srs",
-                    "EPSG:4326",
-                    filename,
-                    "-nln",
-                    f"eis_fire_{collection}",
-                    "-overwrite",
-                    "-sql",
-                    "SELECT n_pixels, n_newpixels, farea, fperim, flinelen, duration, pixden, meanFRP, isactive, t_ed as t, fireID from perimeter",
-                    "-progress",
-                ],
-                check=True,
-                capture_output=True,
-            )
-            alter_datetime_add_indexes(collection)
-        else:
-            print("Not a valid fireline collection")
-            return {"status": "failure"}
-
-    except subprocess.CalledProcessError as e:
-        print(e.stderr)
+    if collection in ["snapshot_fireline_nrt", "snapshot_newfirepix_nrt"]:
+        # it seems `.fgb`(s) get encoded with a name when written to disk
+        # since we are changing the name during an `s3.copy` operation from the algorithm
+        # the original name is still needed in `-sql` statements to read the file
+        encoded_filename = collection.split("_")[1]
+        out = subprocess.run(
+            [
+                "ogr2ogr",
+                "-f",
+                "PostgreSQL",
+                connection,
+                "-t_srs",
+                "EPSG:4326",
+                filename,
+                "-nln",
+                f"eis_fire_{collection}",
+                "-overwrite",
+                "-sql",
+                f"SELECT fireID, mergeid, t_ed as t from {encoded_filename}",
+                "-progress",
+            ],
+            check=False,
+            capture_output=True,
+        )
+    elif collection == "snapshot_perimeter_nrt":
+        out = subprocess.run(
+            [
+                "ogr2ogr",
+                "-f",
+                "PostgreSQL",
+                connection,
+                "-t_srs",
+                "EPSG:4326",
+                filename,
+                "-nln",
+                f"eis_fire_{collection}",
+                "-overwrite",
+                "-sql",
+                "SELECT n_pixels, n_newpixels, farea, fperim, flinelen, duration, pixden, meanFRP, isactive, t_ed as t, fireID from perimeter",
+                "-progress",
+            ],
+            check=False,
+            capture_output=True,
+        )
+    elif collection in [
+        "lf_nfplist_archive",
+        "lf_nfplist_nrt",
+    ]:
+        out = subprocess.run(
+            [
+                "ogr2ogr",
+                "-f",
+                "PostgreSQL",
+                connection,
+                "-t_srs",
+                "EPSG:4326",
+                filename,
+                "-nln",
+                f"eis_fire_{collection}",
+                "-overwrite",
+                "-sql",
+                f"SELECT x, y, frp, DS, DT, ampm, datetime as t, sat, id as fireID from {collection}",
+                "-progress",
+            ],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=False,
+        )
+    elif collection in [
+        "lf_newfirepix_nrt",
+        "lf_fireline_nrt",
+        "lf_newfirepix_archive",
+        "lf_fireline_archive",
+    ]:
+        out = subprocess.run(
+            [
+                "ogr2ogr",
+                "-f",
+                "PostgreSQL",
+                connection,
+                "-t_srs",
+                "EPSG:4326",
+                filename,
+                "-nln",
+                f"eis_fire_{collection}",
+                "-overwrite",
+                "-sql",
+                f"SELECT id as fireID, t from {collection}",
+                "-progress",
+            ],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=False,
+        )
+    elif collection in [
+        "lf_perimeter_archive",
+        "lf_perimeter_nrt",
+    ]:
+        out = subprocess.run(
+            [
+                "ogr2ogr",
+                "-f",
+                "PostgreSQL",
+                connection,
+                "-t_srs",
+                "EPSG:4326",
+                filename,
+                "-nln",
+                f"eis_fire_{collection}",
+                "-overwrite",
+                "-sql",
+                f"SELECT n_pixels, n_newpixels, farea, fperim, flinelen, duration, pixden, meanFRP, t, id as fireID from {collection}",
+                "-progress",
+            ],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=False,
+        )
+    else:
+        print("Not a valid fireline collection")
         return {"status": "failure"}
+
+    if out.stderr:
+        error_description = f"Error: {out.stderr}"
+        print(error_description)
+        return {"status": "failure", "reason": error_description}
 
     return {"status": "success"}
 
@@ -182,11 +256,16 @@ def handler(event, context):
         downloaded_filepath = download_file(href)
         print(f"[ DOWNLOAD FILEPATH ]: {downloaded_filepath}")
         print(f"[ COLLECTION ]: {collection}")
-        status.append(load_to_featuresdb(downloaded_filepath, collection))
+        coll_status = load_to_featuresdb(downloaded_filepath, collection)
+        status.append(coll_status)
+        # delete file after ingest
+        os.remove(downloaded_filepath)
+        if coll_status["status"] == "success":
+            alter_datetime_add_indexes(collection)
+        else:
+            # bubble exception so Airflow shows it as a failure
+            raise Exception(coll_status["reason"])
     print(status)
-    resp = requests.get(url="https://firenrt.delta-backend.com/refresh")
-    print(f"[ REFRESH STATUS CODE ]: {resp.status_code}")
-    print(f"[ REFRESH JSON ]: {resp.json()}")
 
 
 if __name__ == "__main__":

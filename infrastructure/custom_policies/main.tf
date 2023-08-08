@@ -81,12 +81,8 @@ data "aws_iam_policy_document" "mwaa_executor_policies" {
       "s3:Put*",
     ]
     resources = [
-      "arn:aws:s3:::ghgc-data-store-dev",
-      "arn:aws:s3:::ghgc-data-store-dev/*",
-      "arn:aws:s3:::ghgc-data-store-staging",
-      "arn:aws:s3:::ghgc-data-store-staging/*",
-      "arn:aws:s3:::ghgc-data-store",
-      "arn:aws:s3:::ghgc-data-store/*",
+      "arn:aws:s3:::ghgc-*",
+      "arn:aws:s3:::ghgc-*/*"
     ]
   }
 

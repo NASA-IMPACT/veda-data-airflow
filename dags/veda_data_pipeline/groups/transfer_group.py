@@ -25,7 +25,7 @@ def cogify_choice(ti):
 def transfer_data(ti):
     """Transfer data from one S3 bucket to another; s3 copy, no need for docker"""
     config = ti.dag_run.conf
-    role_arn = Variable.get("ASSUME_ROLE_READ_ARN")
+    role_arn = Variable.get("ASSUME_ROLE_READ_ARN", default_var="")
     # (event, chunk_size=2800, role_arn=None, bucket_output=None):
     return data_transfer_handler(event=config, role_arn=role_arn)
 

@@ -49,9 +49,8 @@ def transfer_file(s3_client, file_key, local_file_path, destination_bucket, coll
 
 
 def cogify_transfer_handler(event, context):
-    external_role_arn = os.environ["EXTERNAL_ROLE_ARN"]
     kwargs = {}
-    if external_role_arn:
+    if external_role_arn := os.environ["EXTERNAL_ROLE_ARN"]:
         creds = assume_role(external_role_arn, "veda-data-pipelines_data-transfer")
         kwargs = {
             "aws_access_key_id": creds["AccessKeyId"],

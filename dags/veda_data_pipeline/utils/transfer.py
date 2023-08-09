@@ -2,6 +2,7 @@ import os
 import re
 
 import boto3
+from botocore.exceptions import ClientError
 
 
 def assume_role(role_arn, session_name="veda-data-airflow_s3-discovery"):
@@ -56,8 +57,8 @@ def transfer_files_within_s3(
                 Bucket=destination_bucket, Key=target_key
             )
             target_etag = target_metadata["ETag"]
-        except s3_client.exceptions.NoSuchKey:
-            target_etag = None
+        except (s3_client.exceptions.NoSuchKey, ClientError):
+            target_etag = ""
 
         s3_client.copy_object(
             CopySource=copy_source,

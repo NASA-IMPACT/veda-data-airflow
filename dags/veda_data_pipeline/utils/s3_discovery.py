@@ -105,6 +105,26 @@ def group_by_item(discovered_files: List[str], id_regex: str, assets: dict) -> d
     return items_with_assets
 
 
+def construct_single_asset_items(discovered_files: List[str]) -> dict:
+    items_with_assets = []
+    for uri in discovered_files:
+        # Each file gets its matched asset type and id
+        filename = uri.split("/")[-1]
+        prefix = "/".join(uri.split("/")[:-1])
+        item = {
+            "item_id": filename,
+            "assets": {
+                "cog_default": {
+                    "title": "Default COG Layer",
+                    "description": "Cloud optimized default layer to display on map",
+                    "href": f"{prefix}/{filename}",
+                }
+            },
+        }
+        items_with_assets.append(item)
+    return items_with_assets
+
+
 def generate_payload(s3_prefix_key: str, payload: dict):
     """Generate a payload and write it to an S3 file.
     This function takes in a prefix for an S3 key and a dictionary containing a payload.
@@ -155,6 +175,8 @@ def s3_discovery_handler(event, chunk_size=2800, role_arn=None, bucket_output=No
     id_template = event.get("id_template", collection + "-{}")
     date_fields = propagate_forward_datetime_args(event)
     dry_run = event.get("dry_run", False)
+    if dry_run:
+        print("Running discovery in dry run mode")
 
     payload = {**event, "objects": []}
     slice = event.get("slice")
@@ -174,7 +196,21 @@ def s3_discovery_handler(event, chunk_size=2800, role_arn=None, bucket_output=No
         f"s3://{bucket}/{obj['Key']}"
         for obj in discover_from_s3(s3_iterator, filename_regex)
     ]
-    items_with_assets = group_by_item(file_uris, id_regex, assets)
+
+    if len(file_uris) == 0:
+        raise ValueError(f"No files discovered at bucket: {bucket}, prefix: {prefix}")
+
+    # out of convenience, we might not always want to explicitly define assets
+    if assets is not None:
+        items_with_assets = group_by_item(file_uris, id_regex, assets)
+    else:
+        items_with_assets = construct_single_asset_items(file_uris)
+
+    if len(items_with_assets) == 0:
+        raise ValueError(
+            f"No items could be constructed for files at bucket: {bucket}, prefix: {prefix}"
+        )
+
     # Update IDs using id_template
     for item in items_with_assets:
         item["item_id"] = id_template.format(item["item_id"])

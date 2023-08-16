@@ -113,7 +113,13 @@ def construct_single_asset_items(discovered_files: List[str]) -> dict:
         prefix = "/".join(uri.split("/")[:-1])
         item = {
             "item_id": filename,
-            "assets": {"cog_default": {"href": f"{prefix}/{filename}"}},
+            "assets": {
+                "cog_default": {
+                    "title": "Default COG Layer",
+                    "description": "Cloud optimized default layer to display on map",
+                    "href": f"{prefix}/{filename}",
+                }
+            },
         }
         items_with_assets.append(item)
     return items_with_assets

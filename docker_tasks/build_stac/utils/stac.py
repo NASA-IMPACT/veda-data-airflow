@@ -97,7 +97,7 @@ def generate_stac(event: events.RegexEvent) -> pystac.Item:
                 description=asset_definition["description"],
                 href=asset_definition["href"],
                 media_type=media_type,
-                roles=[],
+                roles=["data", "layer"],
             )
         create_item_response = create_item(
             item_id=event.item_id,

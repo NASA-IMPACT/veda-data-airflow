@@ -219,6 +219,29 @@ def load_to_featuresdb(filename: str, collection: str):
             stderr=subprocess.PIPE,
             check=False,
         )
+    elif collection == "fwi":
+        out = subprocess.run(
+            [
+                "ogr2ogr",
+                "-f",
+                "PostgreSQL",
+                connection,
+                "-s_srs",
+                "EPSG:4326",
+                "-t_srs",
+                "EPSG:4326",
+                "-oo X_POSSIBLE_NAMES=lon",
+                "-oo Y_POSSIBLE_NAMES=lat",
+                filename,
+                "-nln",
+                f"eis_fire_{collection}",
+                "-append",
+                "-progress",
+            ],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=False,
+        )
     else:
         print("Not a valid fireline collection")
         return {"status": "failure"}

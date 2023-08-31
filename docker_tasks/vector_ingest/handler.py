@@ -274,7 +274,7 @@ def handler(event, context):
     s3_objects = event_received["objects"]
     status = list()
     for s3_object in s3_objects:
-        href = s3_object["s3_filename"]
+        href = s3_object["assets"]["cog_default"]["href"]
         collection = s3_object["collection"]
         downloaded_filepath = download_file(href)
         print(f"[ DOWNLOAD FILEPATH ]: {downloaded_filepath}")

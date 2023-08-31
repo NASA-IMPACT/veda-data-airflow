@@ -114,7 +114,7 @@ def construct_single_asset_items(discovered_files: List[str]) -> dict:
         item = {
             "item_id": filename,
             "assets": {
-                "cog_default": {
+                "default": {
                     "title": "Default COG Layer",
                     "description": "Cloud optimized default layer to display on map",
                     "href": f"{prefix}/{filename}",
@@ -215,12 +215,6 @@ def s3_discovery_handler(event, chunk_size=2800, role_arn=None, bucket_output=No
     for item in items_with_assets:
         item["item_id"] = id_template.format(item["item_id"])
 
-    if dry_run:
-        print(f"-DRYRUN- Discovered {len(items_with_assets)} items")
-        for idx in range(0, min(10, len(items_with_assets))):
-            print("-DRYRUN- Example item")
-            print(json.dumps(items_with_assets[idx]))
-
     item_count = 0
     for item in items_with_assets:
         item_count += 1
@@ -239,6 +233,10 @@ def s3_discovery_handler(event, chunk_size=2800, role_arn=None, bucket_output=No
             "properties": properties,
             **date_fields,
         }
+
+        if dry_run and item_count < 10:
+            print("-DRYRUN- Example item")
+            print(json.dumps(file_obj))
 
         payload["objects"].append(file_obj)
         if records == chunk_size:

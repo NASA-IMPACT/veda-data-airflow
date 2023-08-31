@@ -95,7 +95,6 @@ def generate_stac(event: events.RegexEvent) -> pystac.Item:
             with rasterio.open(asset_definition["href"]) as src:
                 media_type = stac.get_media_type(src)
             # The default asset name for cogs is "cog_default", so we need to intercept 'default'
-            #  and change it
             if asset_name == "default":
                 asset_name = "cog_default"
             assets[asset_name] = pystac.Asset(

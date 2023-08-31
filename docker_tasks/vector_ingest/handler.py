@@ -232,7 +232,7 @@ def load_to_featuresdb(filename: str, collection: str):
                 "EPSG:4326",
                 "-oo",
                 "X_POSSIBLE_NAMES=lon",
-                "-oo", 
+                "-oo",
                 "Y_POSSIBLE_NAMES=lat",
                 filename,
                 "-nln",

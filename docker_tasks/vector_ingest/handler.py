@@ -238,7 +238,6 @@ def load_to_featuresdb(filename: str, collection: str):
                 "-nln",
                 f"eis_fire_{collection}",
                 "-append",
-                "-progress",
             ],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,

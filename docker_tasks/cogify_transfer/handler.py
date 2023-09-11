@@ -71,7 +71,9 @@ def cogify_transfer_handler(event):
     )
     if not dry_run:
         for origin_key in matching_files:
-            with tempfile.NamedTemporaryFile(delete=False) as local_tif, tempfile.NamedTemporaryFile(delete=False) as local_cog:
+            with tempfile.NamedTemporaryFile(
+                delete=False
+            ) as local_tif, tempfile.NamedTemporaryFile(delete=False) as local_cog:
                 local_tif_path = local_tif.name
                 local_cog_path = local_cog.name
                 source_s3.download_file(origin_bucket, origin_key, local_tif_path)

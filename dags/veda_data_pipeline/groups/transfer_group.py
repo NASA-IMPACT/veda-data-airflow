@@ -56,7 +56,7 @@ def subdag_transfer():
             overrides={
                 "containerOverrides": [
                     {
-                        "name": f"{mwaa_stack_conf.get('PREFIX')}-veda-cogify-transfer",
+                        "name": f"{mwaa_stack_conf.get('PREFIX')}-veda-cogify_transfer",
                         "command": [
                             "/usr/local/bin/python",
                             "handler.py",

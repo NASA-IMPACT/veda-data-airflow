@@ -8,6 +8,10 @@ from rio_stac import stac
 from . import events, regex, role
 
 
+PROJECTION_EXT_VERSION = "v1.1.0"
+RASTER_EXT_VERSION = "v1.1.0"
+
+
 def get_sts_session():
     if role_arn := os.environ.get("EXTERNAL_ROLE_ARN"):
         creds = role.assume_role(role_arn, "veda-data-pipelines_build-stac")
@@ -21,6 +25,7 @@ def get_sts_session():
 
 def create_item(
     item_id,
+    bbox,
     properties,
     datetime,
     collection,
@@ -29,24 +34,33 @@ def create_item(
     """
     Function to create a stac item from a COG using rio_stac
     """
-    if "cog_default" in assets:
-        source = assets["cog_default"].href
-    else:
-        source = [asset.href for asset in assets.values()][0]
-
-    stac_item = stac.create_stac_item(
+    # item
+    item = pystac.Item(
         id=item_id,
-        source=source,
+        geometry=stac.bbox_to_geom(bbox),
+        bbox=bbox,
         collection=collection,
-        input_datetime=datetime,
+        stac_extensions=[
+            f"https://stac-extensions.github.io/raster/{RASTER_EXT_VERSION}/schema.json",
+            f"https://stac-extensions.github.io/projection/{PROJECTION_EXT_VERSION}/schema.json",
+        ],
+        datetime=datetime,
         properties=properties,
-        with_proj=True,
-        with_raster=True,
-        assets=assets,
-        geom_densify_pts=10,
-        geom_precision=5,
     )
-    return stac_item
+
+    # if we add a collection we MUST add a link
+    if collection:
+        item.add_link(
+            pystac.Link(
+                pystac.RelType.COLLECTION,
+                collection,
+                media_type=pystac.MediaType.JSON,
+            )
+        )
+
+    for key, asset in assets.items():
+        item.add_asset(key=key, asset=asset)
+    return item
 
 
 def generate_stac(event: events.RegexEvent) -> pystac.Item:
@@ -89,18 +103,34 @@ def generate_stac(event: events.RegexEvent) -> pystac.Item:
         session=rasterio_kwargs.get("session"),
         options={**rasterio_kwargs},
     ):
+        bboxes = []
         for asset_name, asset_definition in event.assets.items():
             with rasterio.open(asset_definition["href"]) as src:
+                # Get BBOX and Footprint
+                dataset_geom = stac.get_dataset_geom(src, densify_pts=0, precision=-1)
+                bboxes.append(dataset_geom["bbox"])
+
                 media_type = stac.get_media_type(src)
+                proj_info = {
+                    f"proj:{name}": value
+                    for name, value in stac.get_projection_info(src).items()
+                }
+                raster_info = {"raster:bands": stac.get_raster_info(src, max_size=1024)}
+
             assets[asset_name] = pystac.Asset(
                 title=asset_definition["title"],
                 description=asset_definition["description"],
                 href=asset_definition["href"],
                 media_type=media_type,
                 roles=["data", "layer"],
+                extra_fields={**proj_info, **raster_info},
             )
+
+        minx, miny, maxx, maxy = zip(*bboxes)
+        bbox = [min(minx), min(miny), max(maxx), max(maxy)]
         create_item_response = create_item(
             item_id=event.item_id,
+            bbox=bbox,
             properties=properties,
             datetime=single_datetime,
             collection=event.collection,

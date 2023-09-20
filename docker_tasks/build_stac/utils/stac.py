@@ -92,8 +92,8 @@ def generate_stac(event: events.RegexEvent) -> pystac.Item:
 
     properties = event.properties or {}
     if start_datetime and end_datetime:
-        properties["start_datetime"] = start_datetime.isoformat()
-        properties["end_datetime"] = end_datetime.isoformat()
+        properties["start_datetime"] = start_datetime.strftime("%Y-%m-%dT%H:%M:%SZ")
+        properties["end_datetime"] = end_datetime.strftime("%Y-%m-%dT%H:%M:%SZ")
         single_datetime = None
     assets = {}
 

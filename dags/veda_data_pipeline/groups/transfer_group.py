@@ -13,7 +13,7 @@ group_kwgs = {"group_id": "Transfer", "tooltip": "Transfer"}
 
 
 def cogify_choice(ti):
-    """Choos whether to cogify or not; if yes, use a docker container"""
+    """Choose whether to cogify or not; if yes, use a docker container"""
     payload = ti.dag_run.conf
 
     if payload.get("cogify"):

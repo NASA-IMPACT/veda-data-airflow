@@ -1,3 +1,5 @@
+import csv
+from io import StringIO
 import os
 import re
 
@@ -66,6 +68,43 @@ def transfer_files_within_s3(
             CopySourceIfNoneMatch=target_etag,
         )
 
+def get_inventory_file_content(s3_client, bucket, collection):
+    inventory_key = f"veda_collection_inventories/{collection}.csv"
+    try:
+        response = s3_client.get_object(Bucket=bucket, Key=inventory_key)
+        content = response["Body"].read().decode("utf-8")
+        return content
+    except s3_client.exceptions.NoSuchKey:
+        return None
+
+def update_inventory_csv(s3_client, bucket, collection, matching_files_metadata):
+    inventory_content = get_inventory_file_content(s3_client, bucket, collection)
+    
+    # Convert existing CSV content to dictionary for easy updates
+    existing_data = {}
+    if inventory_content:
+        reader = csv.DictReader(StringIO(inventory_content))
+        for row in reader:
+            existing_data[row["object_key"]] = row
+
+    # Update the dictionary with new data
+    for obj_metadata in matching_files_metadata:
+        existing_data[obj_metadata["Key"]] = {
+            "last_modified": obj_metadata["LastModified"].strftime('%Y-%m-%d %H:%M:%S'),
+            "etag": obj_metadata["ETag"].replace('"', ''),
+            "object_key": obj_metadata["Key"]
+        }
+
+    # Convert dictionary back to CSV
+    output = StringIO()
+    fieldnames = ["last_modified", "etag", "object_key"]
+    writer = csv.DictWriter(output, fieldnames=fieldnames)
+    writer.writeheader()
+    for item in existing_data.values():
+        writer.writerow(item)
+    
+    # Upload updated CSV to S3
+    s3_client.put_object(Body=output.getvalue(), Bucket=bucket, Key=f"veda_collection_inventories/{collection}.csv")
 
 def data_transfer_handler(event, role_arn=None, bucket_output=None):
     origin_bucket = event.get("origin_bucket")
@@ -83,6 +122,10 @@ def data_transfer_handler(event, role_arn=None, bucket_output=None):
         prefix=origin_prefix,
         regex_pattern=filename_regex,
     )
+
+    matching_files_metadata = [s3client.head_object(Bucket=origin_bucket, Key=file_key) for file_key in matching_files]
+    update_inventory_csv(s3client, origin_bucket, collection, matching_files_metadata)
+    
     if not event.get("dry_run"):
         transfer_files_within_s3(
             s3_client=s3client,

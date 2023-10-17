@@ -95,10 +95,10 @@ def alter_datetime_add_indexes(collection: str):
 
 
 def load_to_featuresdb(
-    filename: str, 
-    collection: str, 
-    extra_flags: list = None, 
-    target_projection: str = "EPSG:4326"
+    filename: str,
+    collection: str,
+    extra_flags: list = None,
+    target_projection: str = "EPSG:4326",
 ):
     if extra_flags is None:
         extra_flags = ["-overwrite", "-progress"]
@@ -134,20 +134,21 @@ def load_to_featuresdb(
 
     return {"status": "success"}
 
+
 def load_to_featuresdb_eis(
-    filename: str, 
+    filename: str,
     collection: str,
-    extra_flags: list = None, 
-    target_projection: str = "EPSG:4326"
+    extra_flags: list = None,
+    target_projection: str = "EPSG:4326",
 ):
     """
-        EIS Fire team naming convention for outputs
-            Snapshots: "snapshot_{layer_name}_nrt_{region_name}.fgb"
-            Lf_archive: "lf_{layer_name}_archive_{region_name}.fgb"
-            Lf_nrt: "lf_{layer_name}_nrt_{region_name}.fgb"
-        
-        Insert on table call everything except the region name:
-            e.g. `snapshot_perimeter_nrt_conus` this gets inserted into the table `eis_fire_snapshot_perimeter_nrt`
+    EIS Fire team naming convention for outputs
+        Snapshots: "snapshot_{layer_name}_nrt_{region_name}.fgb"
+        Lf_archive: "lf_{layer_name}_archive_{region_name}.fgb"
+        Lf_nrt: "lf_{layer_name}_nrt_{region_name}.fgb"
+
+    Insert on table call everything except the region name:
+        e.g. `snapshot_perimeter_nrt_conus` this gets inserted into the table `eis_fire_snapshot_perimeter_nrt`
     """
     collection = collection.rsplit("_", 1)[0]
 

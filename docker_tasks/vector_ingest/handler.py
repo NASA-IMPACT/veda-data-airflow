@@ -94,7 +94,66 @@ def alter_datetime_add_indexes(collection: str):
     conn.commit()
 
 
-def load_to_featuresdb(filename: str, collection: str):
+def load_to_featuresdb(
+    filename: str, 
+    collection: str, 
+    extra_flags: list = None, 
+    target_projection: str = "EPSG:4326"
+):
+    if extra_flags is None:
+        extra_flags = ["-overwrite", "-progress"]
+
+    secret_name = os.environ.get("VECTOR_SECRET_NAME")
+
+    con_secrets = get_secret(secret_name)
+    connection = get_connection_string(con_secrets)
+
+    print(f"running ogr2ogr import for collection: {collection}")
+    options = [
+        "ogr2ogr",
+        "-f",
+        "PostgreSQL",
+        connection,
+        "-t_srs",
+        target_projection,
+        filename,
+        "-nln",
+        collection,
+        *extra_flags,
+    ]
+    out = subprocess.run(
+        options,
+        check=False,
+        capture_output=True,
+    )
+
+    if out.stderr:
+        error_description = f"Error: {out.stderr}"
+        print(error_description)
+        return {"status": "failure", "reason": error_description}
+
+    return {"status": "success"}
+
+def load_to_featuresdb_eis(
+    filename: str, 
+    collection: str,
+    extra_flags: list = None, 
+    target_projection: str = "EPSG:4326"
+):
+    """
+        EIS Fire team naming convention for outputs
+            Snapshots: "snapshot_{layer_name}_nrt_{region_name}.fgb"
+            Lf_archive: "lf_{layer_name}_archive_{region_name}.fgb"
+            Lf_nrt: "lf_{layer_name}_nrt_{region_name}.fgb"
+        
+        Insert on table call everything except the region name:
+            e.g. `snapshot_perimeter_nrt_conus` this gets inserted into the table `eis_fire_snapshot_perimeter_nrt`
+    """
+    collection = collection.rsplit("_", 1)[0]
+
+    if extra_flags is None:
+        extra_flags = ["-append", "-progress"]
+
     secret_name = os.environ.get("VECTOR_SECRET_NAME")
 
     con_secrets = get_secret(secret_name)
@@ -109,12 +168,11 @@ def load_to_featuresdb(filename: str, collection: str):
             "PostgreSQL",
             connection,
             "-t_srs",
-            "EPSG:4326",
+            target_projection,
             filename,
             "-nln",
             f"eis_fire_{collection}",
-            "-overwrite",
-            "-progress",
+            *extra_flags,
         ],
         check=False,
         capture_output=True,
@@ -153,7 +211,12 @@ def handler(event, context):
         downloaded_filepath = download_file(href)
         print(f"[ DOWNLOAD FILEPATH ]: {downloaded_filepath}")
         print(f"[ COLLECTION ]: {collection}")
-        coll_status = load_to_featuresdb(downloaded_filepath, collection)
+
+        s3_object_prefix = s3_object["prefix"]
+        if s3_object_prefix.startswith("EIS/"):
+            coll_status = load_to_featuresdb_eis(downloaded_filepath, collection)
+        else:
+            coll_status = load_to_featuresdb(downloaded_filepath, collection)
         status.append(coll_status)
         # delete file after ingest
         os.remove(downloaded_filepath)

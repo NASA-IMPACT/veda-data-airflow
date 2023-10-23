@@ -73,27 +73,6 @@ def get_secret(secret_name: str) -> None:
         return json.loads(base64.b64decode(get_secret_value_response["SecretBinary"]))
 
 
-def alter_datetime_add_indexes(collection: str):
-    secret_name = os.environ.get("VECTOR_SECRET_NAME")
-
-    con_secrets = get_secret(secret_name)
-
-    conn = psycopg2.connect(
-        host=con_secrets["host"],
-        dbname=con_secrets["dbname"],
-        user=con_secrets["username"],
-        password=con_secrets["password"],
-    )
-
-    cur = conn.cursor()
-    cur.execute(
-        f"ALTER table eis_fire_{collection} "
-        f"ALTER COLUMN t TYPE TIMESTAMP USING t::timestamp without time zone; "
-        f"CREATE INDEX IF NOT EXISTS idx_eis_fire_{collection}_datetime ON eis_fire_{collection}(t);"
-    )
-    conn.commit()
-
-
 def load_to_featuresdb(
     filename: str,
     collection: str,
@@ -187,6 +166,29 @@ def load_to_featuresdb_eis(
     return {"status": "success"}
 
 
+def alter_datetime_add_indexes_eis(collection: str):
+    secret_name = os.environ.get("VECTOR_SECRET_NAME")
+
+    con_secrets = get_secret(secret_name)
+
+    conn = psycopg2.connect(
+        host=con_secrets["host"],
+        dbname=con_secrets["dbname"],
+        user=con_secrets["username"],
+        password=con_secrets["password"],
+    )
+
+    cur = conn.cursor()
+    cur.execute(
+        f"ALTER table eis_fire_{collection} "
+        f"ALTER COLUMN t TYPE TIMESTAMP USING t::timestamp without time zone; "
+        f"CREATE INDEX IF NOT EXISTS idx_eis_fire_{collection}_datetime ON eis_fire_{collection}(t);"
+        f"CREATE INDEX IF NOT EXISTS idx_eis_fire_{collection}_primarykey ON eis_fire_{collection}(primarykey);"
+        f"CREATE INDEX IF NOT EXISTS idx_eis_fire_{collection}_region ON eis_fire_{collection}(region);"
+    )
+    conn.commit()
+
+
 def handler(event, context):
     print("Vector ingest started")
     parser = ArgumentParser(
@@ -218,12 +220,14 @@ def handler(event, context):
             coll_status = load_to_featuresdb_eis(downloaded_filepath, collection)
         else:
             coll_status = load_to_featuresdb(downloaded_filepath, collection)
+
         status.append(coll_status)
         # delete file after ingest
         os.remove(downloaded_filepath)
-        if coll_status["status"] == "success":
-            alter_datetime_add_indexes(collection)
-        else:
+
+        if coll_status["status"] == "success" and s3_object_prefix.startswith("EIS/"):
+            alter_datetime_add_indexes_eis(collection)
+        elif coll_status["status"] != "success":
             # bubble exception so Airflow shows it as a failure
             raise Exception(coll_status["reason"])
     print(status)

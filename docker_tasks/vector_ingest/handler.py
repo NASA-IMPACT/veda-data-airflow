@@ -219,6 +219,30 @@ def load_to_featuresdb(filename: str, collection: str):
             stderr=subprocess.PIPE,
             check=False,
         )
+    elif collection == "fwi":
+        out = subprocess.run(
+            [
+                "ogr2ogr",
+                "-f",
+                "PostgreSQL",
+                connection,
+                "-s_srs",
+                "EPSG:4326",
+                "-t_srs",
+                "EPSG:4326",
+                "-oo",
+                "X_POSSIBLE_NAMES=lon",
+                "-oo",
+                "Y_POSSIBLE_NAMES=lat",
+                filename,
+                "-nln",
+                f"eis_fire_{collection}",
+                "-append",
+            ],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=False,
+        )
     else:
         print("Not a valid fireline collection")
         return {"status": "failure"}
@@ -251,7 +275,7 @@ def handler(event, context):
     s3_objects = event_received["objects"]
     status = list()
     for s3_object in s3_objects:
-        href = s3_object["s3_filename"]
+        href = s3_object["assets"]["default"]["href"]
         collection = s3_object["collection"]
         downloaded_filepath = download_file(href)
         print(f"[ DOWNLOAD FILEPATH ]: {downloaded_filepath}")

@@ -47,7 +47,8 @@ runs:
         ./scripts/sync-env.sh ${{ inputs.env_aws_secret_name }}
         else
         python ${{ inputs.script_path }} --secret-id ${{ inputs.env_aws_secret_name }} --stack-names ${{ inputs.auth_stack_name}},${{ inputs.backend_stack_name}},${{ inputs.ingestor_stack_name}}
-        echo "PREFIX=data-pipeline-${{ inputs.stage }}" >> ${{ inputs.env-file }}
+        source .env
+        echo "PREFIX=data-pipeline-$STAGE" >> ${{ inputs.env-file }}
         fi
 
 

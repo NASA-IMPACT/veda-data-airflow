@@ -89,8 +89,8 @@ def ensure_table_exists(connection_string, gpkg_file, target_projection, table_n
     """create a table if it doesn't exist or just
     validate GeoDataFrame columns against existing table
 
-    :param connection_string:
-    :param gpkg_file: geopackage file location
+    :param connection_string: db connections tring
+    :param gpkg_path: file path to GPKG
     :param table_name: name of table to create
     :return: None
     """
@@ -122,10 +122,10 @@ def upsert_to_postgis(
 ):
     """batch the GPKG file and upsert via threads
 
-    :param connection_string:
-    :param gpkg_path:
-    :param table_name:
-    :param batch_size:
+    :param connection_string: db connections tring
+    :param gpkg_path: file path to GPKG
+    :param table_name: name of the target table
+    :param batch_size: upper limit of batch size
     :return:
     """
     engine = create_engine(connection_string)
@@ -145,13 +145,11 @@ def upsert_to_postgis(
     # convert to WKB
     gdf["geometry"] = gdf["geometry"].apply(lambda geom: wkb.dumps(geom, hex=True))
 
-    batches = [gdf.iloc[i : i + batch_size] for i in range(0, len(gdf), batch_size)]
-
     def upsert_batch(batch):
         with engine.connect() as conn:
             with conn.begin():
                 for row in batch.to_dict(orient="records"):
-                    # make sure all column names are lower case
+                    # make sure all column names are lower case for keys and values
                     row = {k.lower(): v for k, v in row.items()}
                     columns = [col.lower() for col in batch.columns]
 
@@ -159,6 +157,7 @@ def upsert_to_postgis(
                         [f":{col}" for col in columns[:-1]]
                     )
                     # NOTE: we need to escape `::geometry` so parameterized statements don't try to replace it
+                    # because parametrized statements in sqlalchemy are `:<variable-name>`
                     geom_placeholder = f"ST_Transform(ST_SetSRID(ST_GeomFromWKB(:geometry\:\:geometry), {source_epsg_code}), {target_projection})"  # noqa: W605
                     upsert_sql = sqlalchemy.text(
                         f"""
@@ -172,7 +171,10 @@ def upsert_to_postgis(
                     # logging.debug(f"[ UPSERT SQL ]:\n{str(upsert_sql)}")
                     conn.execute(upsert_sql, row)
 
-    with concurrent.futures.ThreadPoolExecutor() as executor:
+    batches = [gdf.iloc[i : i + batch_size] for i in range(0, len(gdf), batch_size)]
+    # set `max_workers` to something below max concurrent connections for postgresql
+    # https://www.postgresql.org/docs/14/runtime-config-connection.html
+    with concurrent.futures.ThreadPoolExecutor(max_workers=75) as executor:
         executor.map(upsert_batch, batches)
 
 
@@ -250,6 +252,14 @@ def load_to_featuresdb_eis(
     collection: str,
     target_projection: int = 4326,
 ):
+    """create table if not exists and upload GPKG
+
+    :param filename: the file path to the downloaded GPKG
+    :param collection: the name of the collection
+    :param target_projection: srid for the target table
+    :return:
+
+    """
     # NOTE: about `collection.rsplit` below:
     #
     # EIS Fire team naming convention for outputs
@@ -272,7 +282,6 @@ def load_to_featuresdb_eis(
     upsert_to_postgis(
         connection_string, filename, target_projection, table_name=target_table_name
     )
-
     return {"status": "success"}
 
 

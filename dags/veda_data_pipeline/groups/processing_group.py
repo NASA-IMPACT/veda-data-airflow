@@ -4,13 +4,10 @@ from datetime import timedelta
 
 import smart_open
 from airflow.models.variable import Variable
-from airflow.operators.python import BranchPythonOperator, PythonOperator
+from airflow.operators.python import PythonOperator
 from airflow.providers.amazon.aws.operators.ecs import EcsRunTaskOperator
 from airflow.utils.task_group import TaskGroup
-from veda_data_pipeline.veda_pipeline_tasks.cogify.handler import (
-    cogify_handler,
-)
-from veda_data_pipeline.veda_pipeline_tasks.submit_stac.handler import (
+from veda_data_pipeline.utils.submit_stac import (
     submission_handler,
 )
 
@@ -22,6 +19,7 @@ def log_task(text: str):
 
 
 def submit_to_stac_ingestor_task(ti):
+    """Submit STAC items to the STAC ingestor API."""
     print("Submit STAC ingestor")
     event = json.loads(ti.xcom_pull(task_ids=f"{group_kwgs['group_id']}.build_stac"))
     success_file = event["payload"]["success_event_key"]
@@ -37,27 +35,8 @@ def submit_to_stac_ingestor_task(ti):
     return event
 
 
-def cogify_task(ti):
-    payload = ti.dag_run.conf
-    return cogify_handler(payload)
-
-
-def cogify_choice(ti, **kwargs):
-    # Only get the payload from the successful task
-    payload = ti.dag_run.conf
-    if payload.get("cogify"):
-        return f"{group_kwgs['group_id']}.cogify"
-
-    return f"{group_kwgs['group_id']}.build_stac"
-
-
 def subdag_process():
     with TaskGroup(**group_kwgs) as process_grp:
-        cogify_branching = BranchPythonOperator(
-            task_id="cogify_branching",
-            trigger_rule="one_success",
-            python_callable=cogify_choice,
-        )
         mwaa_stack_conf = Variable.get("MWAA_STACK_CONF", deserialize_json=True)
         build_stac = EcsRunTaskOperator(
             task_id="build_stac",
@@ -105,11 +84,9 @@ def subdag_process():
             awslogs_group=mwaa_stack_conf.get("LOG_GROUP_NAME"),
             awslogs_stream_prefix=f"ecs/{mwaa_stack_conf.get('PREFIX')}-veda-stac-build",  # prefix with container name
         )
-        cogify = PythonOperator(task_id="cogify", python_callable=cogify_task)
         submit_to_stac_ingestor = PythonOperator(
             task_id="submit_to_stac_ingestor",
             python_callable=submit_to_stac_ingestor_task,
         )
-        cogify_branching >> build_stac >> submit_to_stac_ingestor
-        cogify_branching >> cogify >> build_stac >> submit_to_stac_ingestor
+        build_stac >> submit_to_stac_ingestor
         return process_grp

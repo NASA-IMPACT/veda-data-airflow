@@ -56,6 +56,7 @@ def get_gdf_schema(gdf, target_projection):
     """map GeoDataFrame columns into a table schema
 
     :param gdf:  GeoDataFrame from geopandas
+    :param target_projection: srid for the target table geometry column
     :return:
     """
     # map geodatafrome dtypes to sqlalchemy types
@@ -85,26 +86,26 @@ def get_gdf_schema(gdf, target_projection):
     return schema
 
 
-def ensure_table_exists(connection_string, gpkg_file, target_projection, table_name):
+def ensure_table_exists(
+    db_metadata: MetaData, gpkg_file: str, target_projection: int, table_name: str
+):
     """create a table if it doesn't exist or just
     validate GeoDataFrame columns against existing table
 
-    :param connection_string: db connections tring
-    :param gpkg_path: file path to GPKG
+    :param db_metadata: instance of sqlalchemy.MetaData
+    :param gpkg_file: file path to GPKG
+    :param target_projection: srid for target DB table geometry column
     :param table_name: name of table to create
     :return: None
     """
-    engine = create_engine(connection_string)
-    metadata = MetaData()
-    metadata.bind = engine
-
     gdf = gpd.read_file(gpkg_file)
     gdf_schema = get_gdf_schema(gdf, target_projection)
+    engine = db_metadata.bind
     try:
-        Table(table_name, metadata, autoload_with=engine)
+        Table(table_name, db_metadata, autoload_with=engine)
     except sqlalchemy.exc.NoSuchTableError:
-        Table(table_name, metadata, *gdf_schema)
-        metadata.create_all(engine)
+        Table(table_name, db_metadata, *gdf_schema)
+        db_metadata.create_all(engine)
 
     # validate gdf schema against existing table schema
     insp = inspect(engine)
@@ -118,20 +119,20 @@ def ensure_table_exists(connection_string, gpkg_file, target_projection, table_n
 
 
 def upsert_to_postgis(
-    connection_string, gpkg_path, target_projection, table_name, batch_size=10000
+    engine,
+    gpkg_path: str,
+    target_projection: int,
+    table_name: str,
+    batch_size: int = 10000,
 ):
     """batch the GPKG file and upsert via threads
 
-    :param connection_string: db connections tring
+    :param engine: instance of sqlalchemy.Engine
     :param gpkg_path: file path to GPKG
     :param table_name: name of the target table
     :param batch_size: upper limit of batch size
     :return:
     """
-    engine = create_engine(connection_string)
-    metadata = MetaData()
-    metadata.bind = engine
-
     gdf = gpd.read_file(gpkg_path)
     source_epsg_code = gdf.crs.to_epsg()
     if not source_epsg_code:
@@ -257,9 +258,12 @@ def load_to_featuresdb_eis(
     :param filename: the file path to the downloaded GPKG
     :param collection: the name of the collection
     :param target_projection: srid for the target table
-    :return:
-
+    :return: None
     """
+    secret_name = os.environ.get("VECTOR_SECRET_NAME")
+    conn_secrets = get_secret(secret_name)
+    connection_string = get_connection_string(conn_secrets, as_uri=True)
+
     # NOTE: about `collection.rsplit` below:
     #
     # EIS Fire team naming convention for outputs
@@ -272,16 +276,12 @@ def load_to_featuresdb_eis(
     collection = collection.rsplit("_", 1)[0]
     target_table_name = f"eis_fire_{collection}"
 
-    secret_name = os.environ.get("VECTOR_SECRET_NAME")
-    conn_secrets = get_secret(secret_name)
-    connection_string = get_connection_string(conn_secrets, as_uri=True)
+    engine = create_engine(connection_string)
+    metadata = MetaData()
+    metadata.bind = engine
 
-    ensure_table_exists(
-        connection_string, filename, target_projection, table_name=target_table_name
-    )
-    upsert_to_postgis(
-        connection_string, filename, target_projection, table_name=target_table_name
-    )
+    ensure_table_exists(metadata, filename, target_projection, target_table_name)
+    upsert_to_postgis(engine, filename, target_projection, target_table_name)
     return {"status": "success"}
 
 

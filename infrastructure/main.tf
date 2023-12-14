@@ -46,38 +46,38 @@ module "custom_policy" {
 }
 
 
-data "aws_subnets" "private" {
-  filter {
-    name   = "vpc-id"
-    values = [var.vector_vpc]
-  }
+# data "aws_subnets" "private" {
+#   filter {
+#     name   = "vpc-id"
+#     values = [var.vector_vpc]
+#   }
 
-  tags = {
-    "Scope" = "private"
-  }
-}
+#   tags = {
+#     "Scope" = "private"
+#   }
+# }
 
-resource "aws_security_group" "vector_sg" {
-  name   = "${var.prefix}_veda_vector_sg"
-  vpc_id = var.vector_vpc
+# resource "aws_security_group" "vector_sg" {
+#   name   = "${var.prefix}_veda_vector_sg"
+#   vpc_id = var.vector_vpc
 
-  egress {
-    from_port        = 0
-    to_port          = 0
-    protocol         = "-1"
-    cidr_blocks      = ["0.0.0.0/0"]
-    ipv6_cidr_blocks = ["::/0"]
-  }
-}
+#   egress {
+#     from_port        = 0
+#     to_port          = 0
+#     protocol         = "-1"
+#     cidr_blocks      = ["0.0.0.0/0"]
+#     ipv6_cidr_blocks = ["::/0"]
+#   }
+# }
 
-resource "aws_vpc_security_group_ingress_rule" "vector_rds_ingress" {
-  security_group_id = var.vector_security_group
+# resource "aws_vpc_security_group_ingress_rule" "vector_rds_ingress" {
+#   security_group_id = var.vector_security_group
 
-  from_port                    = 5432
-  to_port                      = 5432
-  ip_protocol                  = "tcp"
-  referenced_security_group_id = aws_security_group.vector_sg.id
-}
+#   from_port                    = 5432
+#   to_port                      = 5432
+#   ip_protocol                  = "tcp"
+#   referenced_security_group_id = aws_security_group.vector_sg.id
+# }
 
 resource "local_file" "mwaa_variables" {
   content = templatefile("${path.module}/mwaa_environment_variables.tpl",

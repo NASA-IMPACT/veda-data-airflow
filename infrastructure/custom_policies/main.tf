@@ -59,7 +59,7 @@ data "aws_iam_policy_document" "mwaa_executor_policies" {
     ]
     resources = [
       "arn:aws:secretsmanager:${var.region}:${var.account_id}:secret:${var.cognito_app_secret}-??????",
-      "arn:aws:secretsmanager:${var.region}:${var.account_id}:secret:${var.vector_secret_name}-??????"
+      # "arn:aws:secretsmanager:${var.region}:${var.account_id}:secret:${var.vector_secret_name}-??????"
     ]
   }
 

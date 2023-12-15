@@ -15,6 +15,6 @@ variable "assume_role_arns" {
 variable "cognito_app_secret" {
   type = string
 }
-variable "vector_secret_name" {
-  type = string
-}
+# variable "vector_secret_name" {
+#   type = string
+# }

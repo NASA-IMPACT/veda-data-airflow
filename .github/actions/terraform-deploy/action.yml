@@ -45,7 +45,7 @@ runs:
         else
         python ${{ inputs.script_path }} --secret-id ${{ inputs.env_aws_secret_name }} --stack-names veda-auth-stack-production,veda-backend-production
         source .env
-        echo "PREFIX=veda-$STAGE" >> ${{ inputs.env-file }}
+        echo "PREFIX=veda-pipeline-pre-$STAGE" >> ${{ inputs.env-file }}
         fi
 
 

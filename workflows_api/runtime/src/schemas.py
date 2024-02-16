@@ -1,7 +1,7 @@
 import enum
 import re
 from datetime import datetime
-from typing import TYPE_CHECKING, Dict, List, Literal, Optional, Union
+from typing import Dict, List, Literal, Optional, Union
 from urllib.parse import urlparse
 
 import src.validators as validators
@@ -15,10 +15,6 @@ from src.schema_helpers import BboxExtent, SpatioTemporalExtent, TemporalExtent
 from stac_pydantic import Collection, Item, shared
 from stac_pydantic.links import Link
 from typing_extensions import Annotated
-
-
-if TYPE_CHECKING:
-    from src import services
 
 
 class AccessibleAsset(shared.Asset):

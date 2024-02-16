@@ -1,5 +1,4 @@
-import os
-from typing import Optional, Union
+from typing import Union
 
 import requests
 import fsspec
@@ -27,13 +26,14 @@ class CollectionPublisher:
         url = f"{ingest_api}/collections"
         headers = {
             "Authorization": f"Bearer {token}",
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
         }
         response = requests.post(url, json=collection, headers=headers)
         if response.status_code == 200:
             print("Success:", response.json())
         else:
             print("Error:", response.status_code, response.text)
+
 
 # TODO refactor
 class Publisher:
@@ -166,11 +166,10 @@ class Publisher:
         url = f"{ingest_api}/collections"
         headers = {
             "Authorization": f"Bearer {token}",
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
         }
         response = requests.post(url, json=collection, headers=headers)
         if response.status_code == 200:
             print("Success:", response.json())
         else:
             print("Error:", response.status_code, response.text)
-

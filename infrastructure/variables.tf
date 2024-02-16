@@ -50,6 +50,8 @@ variable "cognito_client_id" {
 }
 
 variable "cognito_client_secret" {
+  description = "Optional secret, if required by cognito user pool"
+  default = ""
   type = string
 }
 

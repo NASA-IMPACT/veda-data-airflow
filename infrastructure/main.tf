@@ -112,13 +112,13 @@ resource "local_file" "mwaa_variables" {
 
 # ECR repository to host workflows API image
 resource "aws_ecr_repository" "workflows_api_lambda_repository" {
-  name = "workflows-api-function-repository"
+  name = "workflows-api-lambda-repository"
 
   # Provisioner to build and push Docker image
   provisioner "local-exec" {
     command = <<-EOT
       aws ecr get-login-password --region ${local.aws_region} | docker login --username AWS --password-stdin ${aws_ecr_repository.workflows_api_lambda_repository.repository_url}
-      docker build -t ${aws_ecr_repository.workflows_api_lambda_repository.repository_url}:latest ../workflows_api/
+      docker build -t ${aws_ecr_repository.workflows_api_lambda_repository.repository_url}:latest ../workflows_api/runtime/
       docker push ${aws_ecr_repository.workflows_api_lambda_repository.repository_url}:latest
     EOT
   }
@@ -129,17 +129,41 @@ resource "aws_iam_role" "lambda_execution_role" {
   name = "lambda_execution_role"
 
   assume_role_policy = jsonencode({
-    Version = "2012-10-17"
+    Version = "2012-10-17",
     Statement = [
       {
-        Action = "sts:AssumeRole"
-        Effect = "Allow"
+        Action = "sts:AssumeRole",
+        Effect = "Allow",
         Principal = {
-          Service = "lambda.amazonaws.com"
-        }
+          Service = "lambda.amazonaws.com",
+        },
       },
-    ]
+    ],
   })
+}
+
+resource "aws_iam_policy" "ecr_access" {
+  name        = "ECR_Access_For_Lambda"
+  path        = "/"
+  description = "ECR access policy for Lambda function"
+  policy      = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Effect   = "Allow",
+        Action   = [
+          "ecr:GetDownloadUrlForLayer",
+          "ecr:BatchGetImage",
+        ],
+        Resource = "${aws_ecr_repository.workflows_api_lambda_repository.arn}",
+      },
+    ],
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "ecr_access_attach" {
+  role       = aws_iam_role.lambda_execution_role.name
+  policy_arn = aws_iam_policy.ecr_access.arn
 }
 
 resource "aws_lambda_function" "workflows_api_handler" {
@@ -147,6 +171,7 @@ resource "aws_lambda_function" "workflows_api_handler" {
   role          = aws_iam_role.lambda_execution_role.arn
   handler       = "handler.handler"
   runtime       = "python3.9"
+  package_type = "Image"
 
   image_uri = "${aws_ecr_repository.workflows_api_lambda_repository.repository_url}:latest"
   environment {
@@ -157,7 +182,7 @@ resource "aws_lambda_function" "workflows_api_handler" {
       CLIENT_SECRET     = var.cognito_client_secret
       STAGE             = var.stage
       DATA_ACCESS_ROLE_ARN = var.data_access_role_arn
-      WORKFLOW_WOOT_PATH = var.workflow_root_path
+      WORKFLOW_ROOT_PATH = var.workflow_root_path
       INGEST_URL = var.ingest_url
       RASTER_URL = var.raster_url
       STAC_URL = var.stac_url
@@ -195,7 +220,7 @@ resource "null_resource" "update_cloudfront" {
   }
 
   provisioner "local-exec" {
-    command = "${path.module}/cf_update.sh ${var.cloudfront_id} workflows_api_origin ${aws_apigatewayv2_api.workflows_http_api.api_endpoint}"
+    command = "${path.module}/cf_update.sh ${var.cloudfront_id} workflows_api_origin \"${aws_apigatewayv2_api.workflows_http_api.api_endpoint}\""
   }
 
   depends_on = [aws_apigatewayv2_api.workflows_http_api]

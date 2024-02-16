@@ -17,7 +17,7 @@ class Settings(BaseSettings):
     client_secret: str = Field("", description="The Cognito APP client secret")
     stage: str = Field(description="API stage")
     workflow_root_path: str = Field(description="Root path of API")
-    ingest_root_path: str = Field(description="Root path of API")
+    ingest_url: str = Field(description="URL of ingest API")
 
     class Config(AwsSsmSourceConfig):
         env_file = ".env"

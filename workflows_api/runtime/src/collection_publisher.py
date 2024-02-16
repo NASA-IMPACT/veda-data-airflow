@@ -1,6 +1,7 @@
 import os
 from typing import Optional, Union
 
+import requests
 import fsspec
 import xarray as xr
 import xstac
@@ -12,34 +13,27 @@ from src.schemas import (
     ZarrDataset,
 )
 from src.validators import get_s3_credentials
-from stac_pydantic import Item
 
 
 class CollectionPublisher:
-    def ingest(self, collection: DashboardCollection):
+    def ingest(self, collection: DashboardCollection, token: str, ingest_api: str):
         """
         Takes a collection model,
         does necessary preprocessing,
         and loads into the PgSTAC collection table
         """
-        # TODO get service auth token
-        creds = get_db_credentials(os.environ["DB_SECRET_ARN"])
-        collection = [convert_decimals_to_float(collection.dict(by_alias=True))]
-        # TODO reroute to API
-        pass
+        collection = collection.model_dump(by_alias=True)
 
-class ItemPublisher:
-    def ingest(self, item: Item):
-        """
-        Takes an item model,
-        does necessary preprocessing,
-        and loads into the PgSTAC item table
-        """
-        creds = get_db_credentials(os.environ["DB_SECRET_ARN"])
-        item = [convert_decimals_to_float(item.dict(by_alias=True))]
-        with PgstacDB(dsn=creds.dsn_string, debug=True) as db:
-            load_into_pgstac(db=db, ingestions=item, table=IngestionType.items)
-
+        url = f"{ingest_api}/collections"
+        headers = {
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json"
+        }
+        response = requests.post(url, json=collection, headers=headers)
+        if response.status_code == 200:
+            print("Success:", response.json())
+        else:
+            print("Error:", response.status_code, response.text)
 
 # TODO refactor
 class Publisher:
@@ -161,25 +155,22 @@ class Publisher:
         create_function = self.func_map.get(data_type, self.create_cog_collection)
         return create_function(dataset)
 
-    def ingest(self, collection: DashboardCollection):
+    def ingest(self, collection: DashboardCollection, token: str, ingest_api: str):
         """
         Takes a collection model,
         does necessary preprocessing,
         and loads into the PgSTAC collection table
         """
-        db_creds = self._get_db_credentials()
-        # TODO reroute to ingest API
-        collection = [convert_decimals_to_float(collection.dict(by_alias=True))]
-        with PgstacDB(dsn=db_creds.dsn_string, debug=True) as db:
-            load_into_pgstac(
-                db=db, ingestions=collection, table=IngestionType.collections
-            )
+        collection = collection.model_dump(by_alias=True)
 
-    def delete(self, collection_id: str):
-        """
-        Deletes the collection from the database
-        """
-        db_creds = self._get_db_credentials()
-        with PgstacDB(dsn=db_creds.dsn_string, debug=True) as db:
-            loader = VEDALoader(db=db)
-            loader.delete_collection(collection_id)
+        url = f"{ingest_api}/collections"
+        headers = {
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json"
+        }
+        response = requests.post(url, json=collection, headers=headers)
+        if response.status_code == 200:
+            print("Success:", response.json())
+        else:
+            print("Error:", response.status_code, response.text)
+

@@ -56,7 +56,7 @@ def decode_token(
             claims.setdefault("aud", claims["client_id"])
 
         claims.validate()
-        return claims
+        return claims, token
     except errors.JoseError:  #
         logger.exception("Unable to decode token")
         raise HTTPException(status_code=403, detail="Bad auth token")
@@ -65,6 +65,9 @@ def decode_token(
 def get_username(claims: security.HTTPBasicCredentials = Depends(decode_token)):
     return claims["sub"]
 
+def get_and_validate_token(token: security.HTTPAuthorizationCredentials = Depends(token_scheme)):
+    decode_token(token)
+    return token
 
 def _get_secret_hash(username: str, client_id: str, client_secret: str) -> str:
     # A keyed-hash message authentication code (HMAC) calculated using

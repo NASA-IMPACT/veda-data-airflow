@@ -64,14 +64,15 @@ def validate_dataset(dataset: schemas.COGDataset):
     "/dataset/publish", tags=["Dataset"], dependencies=[Depends(auth.get_username)]
 )
 async def publish_dataset(
+    token = Depends(auth.get_and_validate_token),
     dataset: Union[schemas.ZarrDataset, schemas.COGDataset] = Body(
         ..., discriminator="data_type"
-    )
+    ),
 ):
     # Construct and load collection
     collection_data = publisher.generate_stac(dataset, dataset.data_type or "cog")
     collection = schemas.DashboardCollection.parse_obj(collection_data)
-    collection_publisher.ingest(collection)
+    collection_publisher.ingest(collection, token, settings.ingest_url)
 
     # TODO improve typing
     return_dict = {

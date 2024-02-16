@@ -37,6 +37,22 @@ variable "cognito_app_secret" {
   type = string
 }
 
+variable "jwks_url" {
+  type = string
+}
+
+variable "cognito_userpool_id" {
+  type = string
+}
+
+variable "cognito_client_id" {
+  type = string
+}
+
+variable "cognito_client_secret" {
+  type = string
+}
+
 variable "stac_ingestor_api_url" {
   type = string
 }
@@ -55,6 +71,24 @@ variable "vector_security_group" {
   type = string
 }
 variable "vector_vpc" {
+  type = string
+}
+
+variable "data_access_role_arn" {
+  type = string
+}
+
+variable "workflow_root_path" {
+  type = string
+  default = "/api/workflows"
+}
+
+variable "ingest_root_path" {
+  type = string
+  default = "/api/ingest"
+}
+
+variable "cloudfront_id" {
   type = string
 }
 

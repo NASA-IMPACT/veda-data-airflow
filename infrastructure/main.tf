@@ -105,3 +105,97 @@ resource "local_file" "mwaa_variables" {
   })
   filename = "/tmp/mwaa_vars.json"
 }
+
+##########################################################
+# Workflows API
+##########################################################
+
+# ECR repository to host workflows API image
+resource "aws_ecr_repository" "workflows_api_lambda_repository" {
+  name = "workflows-api-function-repository"
+
+  # Provisioner to build and push Docker image
+  provisioner "local-exec" {
+    command = <<-EOT
+      aws ecr get-login-password --region ${local.aws_region} | docker login --username AWS --password-stdin ${aws_ecr_repository.workflows_api_lambda_repository.repository_url}
+      docker build -t ${aws_ecr_repository.workflows_api_lambda_repository.repository_url}:latest ../workflows_api/
+      docker push ${aws_ecr_repository.workflows_api_lambda_repository.repository_url}:latest
+    EOT
+  }
+} 
+
+# IAM Role for Lambda Execution
+resource "aws_iam_role" "lambda_execution_role" {
+  name = "lambda_execution_role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "lambda.amazonaws.com"
+        }
+      },
+    ]
+  })
+}
+
+resource "aws_lambda_function" "workflows_api_handler" {
+  function_name = "api_handler"
+  role          = aws_iam_role.lambda_execution_role.arn
+  handler       = "handler.handler"
+  runtime       = "python3.9"
+
+  image_uri = "${aws_ecr_repository.workflows_api_lambda_repository.repository_url}:latest"
+  environment {
+    variables = {
+      JWKS_URL          = var.jwks_url
+      USERPOOL_ID       = var.cognito_userpool_id
+      CLIENT_ID         = var.cognito_client_id
+      CLIENT_SECRET     = var.cognito_client_secret
+      STAGE             = var.stage
+      DATA_ACCESS_ROLE_ARN = var.data_access_role_arn
+      WORKFLOW_WOOT_PATH = var.workflow_root_path
+      INGEST_ROOT_PATH = var.ingest_root_path
+
+      # Add other environment variables as needed
+    }
+  }
+}
+
+
+# API Gateway HTTP API
+resource "aws_apigatewayv2_api" "workflows_http_api" {
+  name          = "http_api"
+  protocol_type = "HTTP"
+}
+
+# Lambda Integration for API Gateway
+resource "aws_apigatewayv2_integration" "workflows_lambda_integration" {
+  api_id           = aws_apigatewayv2_api.workflows_http_api.id
+  integration_type = "AWS_PROXY"
+  integration_uri  = aws_lambda_function.workflows_api_handler.invoke_arn
+}
+
+# Default Route for API Gateway
+resource "aws_apigatewayv2_route" "workflows_default_route" {
+  api_id    = aws_apigatewayv2_api.workflows_http_api.id
+  route_key = "$default"
+  target    = "integrations/${aws_apigatewayv2_integration.workflows_lambda_integration.id}"
+}
+
+# Cloudfront update
+
+resource "null_resource" "update_cloudfront" {
+  triggers = {
+    cloudfront_id=var.cloudfront_id
+  }
+
+  provisioner "local-exec" {
+    command = "${path.module}/cf_update.sh ${var.cloudfront_id} workflows_api_origin ${aws_apigatewayv2_api.workflows_http_api.api_endpoint}"
+  }
+
+  depends_on = [aws_apigatewayv2_api.workflows_http_api]
+}

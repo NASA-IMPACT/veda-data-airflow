@@ -44,5 +44,6 @@ class Database:
         }
 
 
-class NotInDb(Exception): 
-    ...
+# black wants a second newline here, flake8 doesn't
+# flake8: noqa
+class NotInDb(Exception): ...

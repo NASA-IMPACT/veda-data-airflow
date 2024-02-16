@@ -65,9 +65,13 @@ def decode_token(
 def get_username(claims: security.HTTPBasicCredentials = Depends(decode_token)):
     return claims["sub"]
 
-def get_and_validate_token(token: security.HTTPAuthorizationCredentials = Depends(token_scheme)):
+
+def get_and_validate_token(
+    token: security.HTTPAuthorizationCredentials = Depends(token_scheme),
+):
     decode_token(token)
     return token
+
 
 def _get_secret_hash(username: str, client_id: str, client_secret: str) -> str:
     # A keyed-hash message authentication code (HMAC) calculated using

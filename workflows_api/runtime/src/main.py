@@ -64,7 +64,7 @@ def validate_dataset(dataset: schemas.COGDataset):
     "/dataset/publish", tags=["Dataset"], dependencies=[Depends(auth.get_username)]
 )
 async def publish_dataset(
-    token = Depends(auth.get_and_validate_token),
+    token=Depends(auth.get_and_validate_token),
     dataset: Union[schemas.ZarrDataset, schemas.COGDataset] = Body(
         ..., discriminator="data_type"
     ),

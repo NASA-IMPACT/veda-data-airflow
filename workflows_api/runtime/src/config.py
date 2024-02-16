@@ -21,5 +21,5 @@ class Settings(BaseSettings):
     stac_url: str = Field(description="URL of STAC API")
     mwaa_env: str = Field(description="MWAA URL")
 
-    class Config():
+    class Config:
         env_file = ".env"

@@ -44,6 +44,7 @@ workflows_app = FastAPI(
 
 # "Datasets" interface (collections + item ingests from one input)
 
+
 @workflows_app.post(
     "/dataset/validate",
     tags=["Dataset"],
@@ -101,7 +102,6 @@ async def publish_dataset(
     return return_dict
 
 
-
 @workflows_app.post(
     "/discovery",
     response_model=schemas.WorkflowExecutionResponse,
@@ -138,9 +138,9 @@ async def get_discovery_workflow_execution_status(
     tags=["Workflow-Executions"],
     dependencies=[Depends(auth.get_username)],
 )
-async def get_workflow_list() -> Union[
-    schemas.ExecutionResponse, schemas.WorkflowExecutionResponse
-]:
+async def get_workflow_list() -> (
+    Union[schemas.ExecutionResponse, schemas.WorkflowExecutionResponse]
+):
     """
     Returns the status of the workflow execution
     """

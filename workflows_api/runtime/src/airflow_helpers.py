@@ -90,7 +90,7 @@ def list_dags() -> str:
         f"https://{mwaa_cli_token['WebServerHostname']}/aws_mwaa/cli"
     )
 
-    raw_data = f"dags list"
+    raw_data = "dags list"
     mwaa_response = requests.post(
         mwaa_webserver_hostname,
         headers={

@@ -1,6 +1,4 @@
 import logging
-import os
-from getpass import getuser
 from typing import Union
 
 import requests
@@ -8,29 +6,20 @@ import src.airflow_helpers as airflow_helpers
 import src.auth as auth
 import src.config as config
 import src.schemas as schemas
-from src.collection_publisher import CollectionPublisher, ItemPublisher, Publisher
+from src.collection_publisher import CollectionPublisher, Publisher
 
 from fastapi import Body, Depends, FastAPI, HTTPException
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
-settings = (
-    config.Settings()
-    if os.environ.get("NO_PYDANTIC_SSM_SETTINGS")
-    else config.Settings.from_ssm(
-        stack=os.environ.get(
-            "STACK", f"veda-stac-ingestion-system-{os.environ.get('STAGE', getuser())}"
-        ),
-    )
-)
+settings = config.Settings()
 
 logger = logging.getLogger(__name__)
 
 collection_publisher = CollectionPublisher()
-item_publisher = ItemPublisher()
 publisher = Publisher()
 
-# Subapp for managing Processes and DAG executions (workflows)
+# App for managing Processes and DAG executions (workflows)
 
 workflows_app = FastAPI(
     title="VEDA Workflows API",

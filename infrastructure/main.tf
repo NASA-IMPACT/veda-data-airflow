@@ -161,6 +161,7 @@ resource "aws_lambda_function" "workflows_api_handler" {
       INGEST_URL = var.ingest_url
       RASTER_URL = var.raster_url
       STAC_URL = var.stac_url
+      MWAA_ENV = module.mwaa.airflow_url
     }
   }
 }

@@ -19,6 +19,7 @@ class Settings(BaseSettings):
     ingest_url: str = Field(description="URL of ingest API")
     raster_url: str = Field(description="URL of raster API")
     stac_url: str = Field(description="URL of STAC API")
+    mwaa_env: str = Field(description="MWAA URL")
 
     class Config():
         env_file = ".env"

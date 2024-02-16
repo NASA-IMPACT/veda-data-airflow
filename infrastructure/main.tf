@@ -158,9 +158,9 @@ resource "aws_lambda_function" "workflows_api_handler" {
       STAGE             = var.stage
       DATA_ACCESS_ROLE_ARN = var.data_access_role_arn
       WORKFLOW_WOOT_PATH = var.workflow_root_path
-      INGEST_ROOT_PATH = var.ingest_root_path
-
-      # Add other environment variables as needed
+      INGEST_URL = var.ingest_url
+      RASTER_URL = var.raster_url
+      STAC_URL = var.stac_url
     }
   }
 }

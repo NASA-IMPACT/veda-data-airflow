@@ -1,5 +1,4 @@
 from pydantic import AnyHttpUrl, BaseSettings, Field, constr
-from pydantic_ssm_settings import AwsSsmSourceConfig
 
 AwsArn = constr(regex=r"^arn:aws:iam::\d{12}:role/.+")
 AwsStepArn = constr(regex=r"^arn:aws:states:.+:\d{12}:stateMachine:.+")
@@ -18,10 +17,8 @@ class Settings(BaseSettings):
     stage: str = Field(description="API stage")
     workflow_root_path: str = Field(description="Root path of API")
     ingest_url: str = Field(description="URL of ingest API")
+    raster_url: str = Field(description="URL of raster API")
+    stac_url: str = Field(description="URL of STAC API")
 
-    class Config(AwsSsmSourceConfig):
+    class Config():
         env_file = ".env"
-
-    @classmethod
-    def from_ssm(cls, stack: str):
-        return cls(_secrets_dir=f"/{stack}")

@@ -83,9 +83,16 @@ variable "workflow_root_path" {
   default = "/api/workflows"
 }
 
-variable "ingest_root_path" {
+variable "ingest_url" {
   type = string
-  default = "/api/ingest"
+}
+
+variable "raster_url" {
+  type = string
+}
+
+variable "stac_url" {
+  type = string
 }
 
 variable "cloudfront_id" {

@@ -4,7 +4,6 @@ from typing import Optional, Union
 import fsspec
 import xarray as xr
 import xstac
-from pypgstac.db import PgstacDB
 from src.schemas import (
     COGDataset,
     DashboardCollection,
@@ -12,15 +11,7 @@ from src.schemas import (
     SpatioTemporalExtent,
     ZarrDataset,
 )
-from src.utils import (
-    DbCreds,
-    IngestionType,
-    convert_decimals_to_float,
-    get_db_credentials,
-    load_into_pgstac,
-)
 from src.validators import get_s3_credentials
-from src.vedaloader import VEDALoader
 from stac_pydantic import Item
 
 
@@ -31,22 +22,11 @@ class CollectionPublisher:
         does necessary preprocessing,
         and loads into the PgSTAC collection table
         """
+        # TODO get service auth token
         creds = get_db_credentials(os.environ["DB_SECRET_ARN"])
         collection = [convert_decimals_to_float(collection.dict(by_alias=True))]
-        with PgstacDB(dsn=creds.dsn_string, debug=True) as db:
-            load_into_pgstac(
-                db=db, ingestions=collection, table=IngestionType.collections
-            )
-
-    def delete(self, collection_id: str):
-        """
-        Deletes the collection from the database
-        """
-        creds = get_db_credentials(os.environ["DB_SECRET_ARN"])
-        with PgstacDB(dsn=creds.dsn_string, debug=True) as db:
-            loader = VEDALoader(db=db)
-            loader.delete_collection(collection_id)
-
+        # TODO reroute to API
+        pass
 
 class ItemPublisher:
     def ingest(self, item: Item):
@@ -80,10 +60,8 @@ class Publisher:
         "type": "Collection",
         "stac_version": "1.0.0",
     }
-    db_creds: Optional[DbCreds]
 
-    def __init__(self, db_creds: Optional[DbCreds] = None) -> None:
-        self.db_creds = db_creds
+    def __init__(self) -> None:
         self.func_map = {
             DataType.zarr: self.create_zarr_collection,
             DataType.cog: self.create_cog_collection,
@@ -190,6 +168,7 @@ class Publisher:
         and loads into the PgSTAC collection table
         """
         db_creds = self._get_db_credentials()
+        # TODO reroute to ingest API
         collection = [convert_decimals_to_float(collection.dict(by_alias=True))]
         with PgstacDB(dsn=db_creds.dsn_string, debug=True) as db:
             load_into_pgstac(
@@ -204,9 +183,3 @@ class Publisher:
         with PgstacDB(dsn=db_creds.dsn_string, debug=True) as db:
             loader = VEDALoader(db=db)
             loader.delete_collection(collection_id)
-
-    def _get_db_credentials(self) -> DbCreds:
-        if self.db_creds:
-            return self.db_creds
-        else:
-            return get_db_credentials(os.environ["DB_SECRET_ARN"])

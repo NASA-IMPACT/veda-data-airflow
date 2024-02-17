@@ -112,21 +112,26 @@ resource "local_file" "mwaa_variables" {
 
 # ECR repository to host workflows API image
 resource "aws_ecr_repository" "workflows_api_lambda_repository" {
-  name = "workflows-api-lambda-repository"
+  name = "veda_${var.stage}_workflows-api-lambda-repository"
+} 
 
-  # Provisioner to build and push Docker image
+resource "null_resource" "if_change_run_provisioner" {
+  triggers = {
+      always_run = "${timestamp()}"
+      }
   provisioner "local-exec" {
     command = <<-EOT
+      set -e
       aws ecr get-login-password --region ${local.aws_region} | docker login --username AWS --password-stdin ${aws_ecr_repository.workflows_api_lambda_repository.repository_url}
       docker build -t ${aws_ecr_repository.workflows_api_lambda_repository.repository_url}:latest ../workflows_api/runtime/
       docker push ${aws_ecr_repository.workflows_api_lambda_repository.repository_url}:latest
     EOT
   }
-} 
+}
 
 # IAM Role for Lambda Execution
 resource "aws_iam_role" "lambda_execution_role" {
-  name = "lambda_execution_role"
+  name = "veda_${var.stage}_lambda_execution_role"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17",
@@ -143,7 +148,7 @@ resource "aws_iam_role" "lambda_execution_role" {
 }
 
 resource "aws_iam_policy" "ecr_access" {
-  name        = "ECR_Access_For_Lambda"
+  name        = "veda_${var.stage}_ECR_Access_For_Lambda"
   path        = "/"
   description = "ECR access policy for Lambda function"
   policy      = jsonencode({
@@ -166,11 +171,15 @@ resource "aws_iam_role_policy_attachment" "ecr_access_attach" {
   policy_arn = aws_iam_policy.ecr_access.arn
 }
 
+resource "aws_iam_role_policy_attachment" "lambda_basic_execution" {
+  role       = aws_iam_role.lambda_execution_role.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+}
+
+
 resource "aws_lambda_function" "workflows_api_handler" {
-  function_name = "api_handler"
+  function_name = "veda_${var.stage}_workflows_api_handler"
   role          = aws_iam_role.lambda_execution_role.arn
-  handler       = "handler.handler"
-  runtime       = "python3.9"
   package_type = "Image"
 
   image_uri = "${aws_ecr_repository.workflows_api_lambda_repository.repository_url}:latest"
@@ -194,7 +203,7 @@ resource "aws_lambda_function" "workflows_api_handler" {
 
 # API Gateway HTTP API
 resource "aws_apigatewayv2_api" "workflows_http_api" {
-  name          = "http_api"
+  name          = "veda_${var.stage}_workflows_http_api"
   protocol_type = "HTTP"
 }
 
@@ -210,6 +219,12 @@ resource "aws_apigatewayv2_route" "workflows_default_route" {
   api_id    = aws_apigatewayv2_api.workflows_http_api.id
   route_key = "$default"
   target    = "integrations/${aws_apigatewayv2_integration.workflows_lambda_integration.id}"
+}
+
+resource "aws_apigatewayv2_stage" "workflows_default_stage" {
+  api_id      = aws_apigatewayv2_api.workflows_http_api.id
+  name        = "$default"
+  auto_deploy = true
 }
 
 # Cloudfront update

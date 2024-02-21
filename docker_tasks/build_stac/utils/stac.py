@@ -2,6 +2,7 @@ import os
 
 import pystac
 import rasterio
+from pystac.utils import datetime_to_str
 from rasterio.session import AWSSession
 from rio_stac import stac
 
@@ -80,8 +81,8 @@ def generate_stac(event: events.RegexEvent) -> pystac.Item:
 
     properties = event.properties or {}
     if start_datetime and end_datetime:
-        properties["start_datetime"] = start_datetime.isoformat()
-        properties["end_datetime"] = end_datetime.isoformat()
+        properties["start_datetime"] = datetime_to_str(start_datetime)
+        properties["end_datetime"] = datetime_to_str(end_datetime)
         single_datetime = None
     assets = {}
 

@@ -1,6 +1,8 @@
 FROM public.ecr.aws/lambda/python:3.9
 
-COPY . ./runtime
-RUN pip install -r ./runtime/requirements.txt
+COPY ./requirements.txt ${LAMBDA_TASK_ROOT}
+RUN pip install -r ${LAMBDA_TASK_ROOT}/requirements.txt
 
-CMD [ "runtime.handler.handler" ]
+COPY . ${LAMBDA_TASK_ROOT}
+
+CMD [ "lambda_function.handler" ]

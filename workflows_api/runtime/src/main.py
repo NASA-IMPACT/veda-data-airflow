@@ -28,6 +28,9 @@ workflows_app = FastAPI(
         "url": "https://www.apache.org/licenses/LICENSE-2.0.html",
     },
     contact={"url": "https://github.com/NASA-IMPACT/veda-backend"},
+    root_path=settings.workflow_root_path,
+    openapi_url="/openapi.json",
+    docs_url="/docs",
 )
 
 

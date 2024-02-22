@@ -123,7 +123,7 @@ resource "null_resource" "if_change_run_provisioner" {
     command = <<-EOT
       set -e
       aws ecr get-login-password --region ${local.aws_region} | docker login --username AWS --password-stdin ${aws_ecr_repository.workflows_api_lambda_repository.repository_url}
-      docker build -t ${aws_ecr_repository.workflows_api_lambda_repository.repository_url}:latest ../workflows_api/runtime/
+      docker build --platform=linux/amd64 -t ${aws_ecr_repository.workflows_api_lambda_repository.repository_url}:latest ../workflows_api/runtime/
       docker push ${aws_ecr_repository.workflows_api_lambda_repository.repository_url}:latest
     EOT
   }
@@ -181,6 +181,7 @@ resource "aws_lambda_function" "workflows_api_handler" {
   function_name = "veda_${var.stage}_workflows_api_handler"
   role          = aws_iam_role.lambda_execution_role.arn
   package_type = "Image"
+  timeout = 30
 
   image_uri = "${aws_ecr_repository.workflows_api_lambda_repository.repository_url}:latest"
   environment {
@@ -212,6 +213,7 @@ resource "aws_apigatewayv2_integration" "workflows_lambda_integration" {
   api_id           = aws_apigatewayv2_api.workflows_http_api.id
   integration_type = "AWS_PROXY"
   integration_uri  = aws_lambda_function.workflows_api_handler.invoke_arn
+  payload_format_version = "2.0"
 }
 
 # Default Route for API Gateway
@@ -227,11 +229,19 @@ resource "aws_apigatewayv2_stage" "workflows_default_stage" {
   auto_deploy = true
 }
 
+resource "aws_lambda_permission" "api-gateway" {
+  statement_id  = "AllowExecutionFromAPIGateway"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.workflows_api_handler.arn
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${aws_apigatewayv2_api.workflows_http_api.execution_arn}/*/$default"
+}
+
 # Cloudfront update
 
 resource "null_resource" "update_cloudfront" {
   triggers = {
-    cloudfront_id=var.cloudfront_id
+    always_run = "${timestamp()}"
   }
 
   provisioner "local-exec" {

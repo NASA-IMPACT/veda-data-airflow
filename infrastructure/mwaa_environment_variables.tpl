@@ -11,7 +11,7 @@
         "ACCOUNT_ID": "${account_id}",
         "AWS_REGION": "${aws_region}"
     },
-    "COGNITO_APP_SECRET": "${cognito_app_secret}",
-    "STAC_INGESTOR_API_URL": "${stac_ingestor_api_url}",
+    "VEDA_COGNITO_APP_SECRET": "${veda_cognito_app_secret}",
+    "VEDA_STAC_INGESTOR_API_URL": "${veda_stac_ingestor_api_url}",
     "VECTOR_SECRET_NAME": "${vector_secret_name}"
 }

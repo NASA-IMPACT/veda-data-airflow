@@ -29,8 +29,8 @@ def submit_to_stac_ingestor_task(ti):
     for item in stac_items:
         submission_handler(
             event=item,
-            cognito_app_secret=Variable.get("COGNITO_APP_SECRET"),
-            stac_ingestor_api_url=Variable.get("STAC_INGESTOR_API_URL"),
+            cognito_app_secret=Variable.get("VEDA_COGNITO_APP_SECRET"),
+            stac_ingestor_api_url=Variable.get("VEDA_STAC_INGESTOR_API_URL"),
         )
     return event
 

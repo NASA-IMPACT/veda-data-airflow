@@ -12,7 +12,7 @@ variable "assume_role_arns" {
   type        = list(string)
   description = "Assume roles ARN (MCP)"
 }
-variable "cognito_app_secret" {
+variable "veda_cognito_app_secret" {
   type = string
 }
 variable "vector_secret_name" {

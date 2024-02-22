@@ -34,11 +34,11 @@ variable "stage" {
   default = "dev"
 }
 
-variable "cognito_app_secret" {
+variable "veda_cognito_app_secret" {
   type = string
 }
 
-variable "stac_ingestor_api_url" {
+variable "veda_stac_ingestor_api_url" {
   type = string
 }
 variable "min_workers" {

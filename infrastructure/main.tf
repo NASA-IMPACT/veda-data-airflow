@@ -41,7 +41,7 @@ module "custom_policy" {
   mwaa_arn           = module.mwaa.mwaa_arn
   assume_role_arns   = var.assume_role_arns
   region             = local.aws_region
-  cognito_app_secret = var.cognito_app_secret
+  cognito_app_secret = var.veda_cognito_app_secret
   vector_secret_name = var.vector_secret_name
 }
 
@@ -94,8 +94,8 @@ resource "local_file" "mwaa_variables" {
       mwaa_execution_role_arn = module.mwaa.mwaa_role_arn
       account_id              = local.account_id
       aws_region              = local.aws_region
-      cognito_app_secret      = var.cognito_app_secret
-      stac_ingestor_api_url   = var.stac_ingestor_api_url
+      cognito_app_secret      = var.veda_cognito_app_secret
+      stac_ingestor_api_url   = var.veda_stac_ingestor_api_url
       vector_secret_name = var.vector_secret_name
 
   })

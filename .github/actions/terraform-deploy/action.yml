@@ -17,9 +17,6 @@ inputs:
     type: string
   auth_stack_name:
     type: string
-  ingestor_stack_name:
-    type: string
-
 
 runs:
   using: "composite"
@@ -46,7 +43,7 @@ runs:
         if [[ -z "${{ inputs.script_path }}" ]]; then
         ./scripts/sync-env.sh ${{ inputs.env_aws_secret_name }}
         else
-        python ${{ inputs.script_path }} --secret-id ${{ inputs.env_aws_secret_name }} --stack-names ${{ inputs.auth_stack_name}},${{ inputs.backend_stack_name}},${{ inputs.ingestor_stack_name}}
+        python ${{ inputs.script_path }} --secret-id ${{ inputs.env_aws_secret_name }} --stack-names ${{ inputs.auth_stack_name}},${{ inputs.backend_stack_name}}
         source .env
         echo "PREFIX=data-pipeline-$STAGE" >> ${{ inputs.env-file }}
         fi

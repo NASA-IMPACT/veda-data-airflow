@@ -95,7 +95,7 @@ resource "local_file" "mwaa_variables" {
       account_id              = local.account_id
       aws_region              = local.aws_region
       veda_cognito_app_secret = var.veda_cognito_app_secret
-      stac_ingestor_api_url   = var.veda_stac_ingestor_api_url
+      veda_stac_ingestor_api_url   = var.veda_stac_ingestor_api_url
       vector_secret_name = var.vector_secret_name
 
   })

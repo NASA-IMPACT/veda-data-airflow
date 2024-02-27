@@ -1,9 +1,0 @@
-{
-    "collection": "nceo_africa_2017",
-    "prefix": "file-staging/nasa-map/nceo-africa-2017/",
-    "bucket": "nasa-maap-data-store",
-    "filename_regex": "^(.*)AGB_map_2017v0m_COG.tif$",
-    "discovery": "s3",
-    "datetime_range": "year",
-    "upload": false
-}

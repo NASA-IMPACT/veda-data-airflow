@@ -1,8 +1,0 @@
-{
-    "collection": "blue-tarp-planetscope",
-    "prefix": "blue-tarp-planetscope/",
-    "bucket": "veda-data-store-staging",
-    "filename_regex": "^(.*).tif$",
-    "discovery": "s3",
-    "upload": false
-}

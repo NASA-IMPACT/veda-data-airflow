@@ -110,7 +110,7 @@ def list_dags() -> str:
 
 def get_status(dag_run_id: str) -> Dict:
     """
-    Get the status of a workflow execution.
+    Get the status of a veda_discover workflow execution by dag_id
     """
     if not (MWAA_ENV := os.environ.get("MWAA_ENV")):
         raise HTTPException(status_code=400, detail="MWAA environment not set")

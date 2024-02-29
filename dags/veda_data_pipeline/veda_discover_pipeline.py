@@ -20,6 +20,7 @@ The DAG `veda_ingest` will run in parallel processing (2800 files per each DAG)
     "id_regex": ".*_(.*).tif$",
     "id_template": "example-id-prefix-{}",
     "datetime_range": "month",
+    "last_successful_execution": datetime(2015,01,01),
     "assets": {
         "asset1": {
             "title": "Asset type 1",
@@ -39,7 +40,6 @@ The DAG `veda_ingest` will run in parallel processing (2800 files per each DAG)
 
 dag_args = {
     "start_date": pendulum.today("UTC").add(days=-1),
-    "schedule_interval": None,
     "catchup": False,
     "doc_md": dag_doc_md,
 }
@@ -66,10 +66,15 @@ templat_dag_run_conf = {
     },
 }
 
-with DAG("veda_discover", params=templat_dag_run_conf, **dag_args) as dag:
-    start = DummyOperator(task_id="Start", dag=dag)
-    end = DummyOperator(task_id="End", trigger_rule=TriggerRule.ONE_SUCCESS, dag=dag)
+def get_discover_dag(id, event={}):
+    with DAG(id, schedule_interval=event.get("schedule"), params=templat_dag_run_conf, **dag_args) as dag:
+        start = DummyOperator(task_id="Start", dag=dag)
+        end = DummyOperator(task_id="End", trigger_rule=TriggerRule.ONE_SUCCESS, dag=dag)
 
-    discover_grp = subdag_discover()
+        discover_grp = subdag_discover(event)
 
-    start >> discover_grp >> end
+        start >> discover_grp >> end
+        
+        return dag
+
+get_discover_dag("veda_discover")

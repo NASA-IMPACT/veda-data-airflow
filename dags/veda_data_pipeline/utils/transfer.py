@@ -57,7 +57,7 @@ def transfer_files_within_s3(
             )
             target_etag = target_metadata["ETag"]
         except s3_client.exceptions.NoSuchKey:
-            target_etag = None
+            target_etag = ""
 
         s3_client.copy_object(
             CopySource=copy_source,

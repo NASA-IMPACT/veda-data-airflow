@@ -25,7 +25,8 @@ def generate_dags():
         result = client.get_object(Bucket=bucket, Key=key)
         collection = result["Body"].read().decode()
         collection = json.loads(collection)
-        get_discover_dag(id=collection["id"], event=collection)
+        if collection.get("schedule"):
+            get_discover_dag(id=collection["id"], event=collection)
         
 
 generate_dags()

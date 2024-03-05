@@ -6,7 +6,7 @@ from typing import List
 from uuid import uuid4
 
 from datetime import datetime
-
+from dateutil.tz import tzlocal
 import boto3
 from smart_open import open as smrt_open
 
@@ -163,6 +163,10 @@ def s3_discovery_handler(event, chunk_size=2800, role_arn=None, bucket_output=No
     id_template = event.get("id_template", collection + "-{}")
     date_fields = propagate_forward_datetime_args(event)
     dry_run = event.get("dry_run", False)
+    if process_from := event.get("process_from_yyyy_mm_dd"):
+        process_from = datetime.strptime(process_from, "%Y-%m-%d").replace(
+            tzinfo=tzlocal()
+        )
     if last_execution := event.get("last_successful_execution"):
         last_execution = datetime.fromisoformat(last_execution)
 
@@ -183,7 +187,7 @@ def s3_discovery_handler(event, chunk_size=2800, role_arn=None, bucket_output=No
     file_uris = [
         f"s3://{bucket}/{obj['Key']}"
         for obj in discover_from_s3(
-            s3_iterator, filename_regex, last_execution=last_execution
+            s3_iterator, filename_regex, last_execution=process_from or last_execution
         )
     ]
 

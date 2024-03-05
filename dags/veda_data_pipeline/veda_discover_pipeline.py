@@ -18,6 +18,7 @@ The DAG `veda_ingest` will run in parallel processing (2800 files per each DAG)
     "prefix": "s3-prefix/",
     "filename_regex": "^(.*).tif$",
     "id_regex": ".*_(.*).tif$",
+    "process_from_iso_date_format": "YYYY-MM-DDTHH:mm:ss.SSSSSSZ",
     "id_template": "example-id-prefix-{}",
     "datetime_range": "month",
     "last_successful_execution": datetime(2015,01,01),

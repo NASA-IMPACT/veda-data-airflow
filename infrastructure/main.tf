@@ -105,3 +105,150 @@ resource "local_file" "mwaa_variables" {
   })
   filename = "/tmp/mwaa_vars.json"
 }
+
+##########################################################
+# Workflows API
+##########################################################
+
+# ECR repository to host workflows API image
+resource "aws_ecr_repository" "workflows_api_lambda_repository" {
+  name = "veda_${var.stage}_workflows-api-lambda-repository"
+} 
+
+resource "null_resource" "if_change_run_provisioner" {
+  triggers = {
+      always_run = "${timestamp()}"
+      }
+  provisioner "local-exec" {
+    command = <<-EOT
+      set -e
+      aws ecr get-login-password --region ${local.aws_region} | docker login --username AWS --password-stdin ${aws_ecr_repository.workflows_api_lambda_repository.repository_url}
+      docker build --platform=linux/amd64 -t ${aws_ecr_repository.workflows_api_lambda_repository.repository_url}:latest ../workflows_api/runtime/
+      docker push ${aws_ecr_repository.workflows_api_lambda_repository.repository_url}:latest
+    EOT
+  }
+}
+
+# IAM Role for Lambda Execution
+resource "aws_iam_role" "lambda_execution_role" {
+  name = "veda_${var.stage}_lambda_execution_role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Action = "sts:AssumeRole",
+        Effect = "Allow",
+        Principal = {
+          Service = "lambda.amazonaws.com",
+        },
+      },
+    ],
+  })
+}
+
+resource "aws_iam_policy" "ecr_access" {
+  name        = "veda_${var.stage}_ECR_Access_For_Lambda"
+  path        = "/"
+  description = "ECR access policy for Lambda function"
+  policy      = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Effect   = "Allow",
+        Action   = [
+          "ecr:GetDownloadUrlForLayer",
+          "ecr:BatchGetImage",
+        ],
+        Resource = "${aws_ecr_repository.workflows_api_lambda_repository.arn}",
+      },
+    ],
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "ecr_access_attach" {
+  role       = aws_iam_role.lambda_execution_role.name
+  policy_arn = aws_iam_policy.ecr_access.arn
+}
+
+resource "aws_iam_role_policy_attachment" "lambda_basic_execution" {
+  role       = aws_iam_role.lambda_execution_role.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+}
+
+
+resource "aws_lambda_function" "workflows_api_handler" {
+  function_name = "veda_${var.stage}_workflows_api_handler"
+  role          = aws_iam_role.lambda_execution_role.arn
+  package_type = "Image"
+  timeout = 30
+
+  image_uri = "${aws_ecr_repository.workflows_api_lambda_repository.repository_url}:latest"
+  environment {
+    variables = {
+      JWKS_URL          = var.jwks_url
+      USERPOOL_ID       = var.cognito_userpool_id
+      CLIENT_ID         = var.cognito_client_id
+      CLIENT_SECRET     = var.cognito_client_secret
+      STAGE             = var.stage
+      DATA_ACCESS_ROLE_ARN = var.data_access_role_arn
+      WORKFLOW_ROOT_PATH = var.workflow_root_path
+      INGEST_URL = var.ingest_url
+      RASTER_URL = var.raster_url
+      STAC_URL = var.stac_url
+      MWAA_ENV = module.mwaa.airflow_url
+    }
+  }
+}
+
+
+# API Gateway HTTP API
+resource "aws_apigatewayv2_api" "workflows_http_api" {
+  name          = "veda_${var.stage}_workflows_http_api"
+  protocol_type = "HTTP"
+}
+
+# Lambda Integration for API Gateway
+resource "aws_apigatewayv2_integration" "workflows_lambda_integration" {
+  api_id           = aws_apigatewayv2_api.workflows_http_api.id
+  integration_type = "AWS_PROXY"
+  integration_uri  = aws_lambda_function.workflows_api_handler.invoke_arn
+  payload_format_version = "2.0"
+}
+
+# Default Route for API Gateway
+resource "aws_apigatewayv2_route" "workflows_default_route" {
+  api_id    = aws_apigatewayv2_api.workflows_http_api.id
+  route_key = "$default"
+  target    = "integrations/${aws_apigatewayv2_integration.workflows_lambda_integration.id}"
+}
+
+resource "aws_apigatewayv2_stage" "workflows_default_stage" {
+  api_id      = aws_apigatewayv2_api.workflows_http_api.id
+  name        = "$default"
+  auto_deploy = true
+}
+
+resource "aws_lambda_permission" "api-gateway" {
+  statement_id  = "AllowExecutionFromAPIGateway"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.workflows_api_handler.arn
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${aws_apigatewayv2_api.workflows_http_api.execution_arn}/*/$default"
+}
+
+# Cloudfront update
+
+resource "null_resource" "update_cloudfront" {
+  triggers = {
+    always_run = "${timestamp()}"
+  }
+
+  count = var.cloudfront_id ? 1 : 0
+
+  provisioner "local-exec" {
+    command = "${path.module}/cf_update.sh ${var.cloudfront_id} workflows_api_origin \"${aws_apigatewayv2_api.workflows_http_api.api_endpoint}\""
+  }
+
+  depends_on = [aws_apigatewayv2_api.workflows_http_api]
+}

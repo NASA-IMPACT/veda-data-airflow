@@ -182,7 +182,7 @@ resource "aws_lambda_function" "workflows_api_handler" {
   image_uri = "${aws_ecr_repository.workflows_api_lambda_repository.repository_url}:latest"
   environment {
     variables = {
-      COGNITO_APP_SECRET = var.veda_cognito_app_secret
+      WORKFLOWS_CLIENT_SECRET_ID = var.veda_cognito_app_secret
       STAGE             = var.stage
       DATA_ACCESS_ROLE_ARN = var.veda_data_access_role_arn
       WORKFLOW_ROOT_PATH = var.workflow_root_path

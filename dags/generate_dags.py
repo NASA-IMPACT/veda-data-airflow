@@ -12,10 +12,10 @@ def generate_dags():
     import boto3
     import json
 
-    MWAA_STAC_CONF = Variable.get("MWAA_STACK_CONF", deserialize_json=True)
-    bucket = MWAA_STAC_CONF["EVENT_BUCKET"]
+    mwaa_stac_conf = Variable.get("MWAA_STACK_CONF", deserialize_json=True)
+    bucket = mwaa_stac_conf["EVENT_BUCKET"]
 
-    client = boto3.client('s3')
+    client = boto3.client("s3")
     response = client.list_objects_v2(Bucket=bucket, Prefix="collections/")
 
     for file_ in response["Contents"]:
@@ -26,7 +26,9 @@ def generate_dags():
         collection = result["Body"].read().decode()
         collection = json.loads(collection)
         if collection.get("schedule"):
-            get_discover_dag(id=collection["id"], event=collection)
-        
+            get_discover_dag(
+                id=f"discover-{collection['collection']}", event=collection
+            )
+
 
 generate_dags()

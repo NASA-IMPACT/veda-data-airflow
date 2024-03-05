@@ -21,9 +21,9 @@ def discover_from_s3_task(ti, event={}, **kwargs):
         **event,
         **ti.dag_run.conf,
     }
-    if not kwargs.get('dag_run').external_trigger:
-        config["last_successful_execution"] = kwargs.get("prev_start_date_success")
-
+    last_successful_execution = kwargs.get("prev_start_date_success")
+    if last_successful_execution:
+        config["last_successful_execution"] = last_successful_execution.isoformat()
     # (event, chunk_size=2800, role_arn=None, bucket_output=None):
     MWAA_STAC_CONF = Variable.get("MWAA_STACK_CONF", deserialize_json=True)
     read_assume_arn = Variable.get("ASSUME_ROLE_READ_ARN", default_var=None)

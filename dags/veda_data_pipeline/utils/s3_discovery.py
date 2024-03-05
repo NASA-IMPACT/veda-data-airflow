@@ -40,7 +40,9 @@ def get_s3_resp_iterator(bucket_name, prefix, s3_client, page_size=1000):
     )
 
 
-def discover_from_s3(response_iterator, filename_regex: str, last_execution: datetime) -> dict:
+def discover_from_s3(
+    response_iterator, filename_regex: str, last_execution: datetime
+) -> dict:
     """Iterate through pages of S3 objects returned by a ListObjectsV2 operation.
     The discover_from_s3 function takes in an iterator over the pages of S3 objects returned
     by a ListObjectsV2 operation. It iterates through the pages and yields each S3 object in the page as a dictionary.
@@ -58,11 +60,9 @@ def discover_from_s3(response_iterator, filename_regex: str, last_execution: dat
         for s3_object in page.get("Contents", {}):
             key = s3_object["Key"]
             conditionals = [re.match(filename_regex, key)]
-            if (last_execution):
+            if last_execution:
                 last_modified = s3_object["LastModified"]
-                conditionals.append(
-                    last_modified > last_execution
-                )
+                conditionals.append(last_modified > last_execution)
             if all(conditionals):
                 yield s3_object
 
@@ -163,7 +163,9 @@ def s3_discovery_handler(event, chunk_size=2800, role_arn=None, bucket_output=No
     id_template = event.get("id_template", collection + "-{}")
     date_fields = propagate_forward_datetime_args(event)
     dry_run = event.get("dry_run", False)
-    last_execution = event.get("last_successful_execution")
+    last_execution = None
+    if event.get("last_successful_execution"):
+        last_execution = datetime.fromisoformat(event["last_successful_execution"])
 
     payload = {**event, "objects": []}
     slice = event.get("slice")
@@ -181,7 +183,9 @@ def s3_discovery_handler(event, chunk_size=2800, role_arn=None, bucket_output=No
     )
     file_uris = [
         f"s3://{bucket}/{obj['Key']}"
-        for obj in discover_from_s3(s3_iterator, filename_regex, last_execution=last_execution)
+        for obj in discover_from_s3(
+            s3_iterator, filename_regex, last_execution=last_execution
+        )
     ]
 
     items_with_assets = group_by_item(file_uris, id_regex, assets)

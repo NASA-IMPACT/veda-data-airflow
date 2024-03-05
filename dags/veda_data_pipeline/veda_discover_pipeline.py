@@ -42,6 +42,7 @@ dag_args = {
     "start_date": pendulum.today("UTC").add(days=-1),
     "catchup": False,
     "doc_md": dag_doc_md,
+    "is_paused_upon_creation": False,
 }
 
 templat_dag_run_conf = {
@@ -66,15 +67,25 @@ templat_dag_run_conf = {
     },
 }
 
+
 def get_discover_dag(id, event={}):
-    with DAG(id, schedule_interval=event.get("schedule"), params=templat_dag_run_conf, **dag_args) as dag:
+    params_dag_run_conf = event or templat_dag_run_conf
+    with DAG(
+        id,
+        schedule_interval=event.get("schedule"),
+        params=params_dag_run_conf,
+        **dag_args
+    ) as dag:
         start = DummyOperator(task_id="Start", dag=dag)
-        end = DummyOperator(task_id="End", trigger_rule=TriggerRule.ONE_SUCCESS, dag=dag)
+        end = DummyOperator(
+            task_id="End", trigger_rule=TriggerRule.ONE_SUCCESS, dag=dag
+        )
 
         discover_grp = subdag_discover(event)
 
         start >> discover_grp >> end
-        
+
         return dag
+
 
 get_discover_dag("veda_discover")

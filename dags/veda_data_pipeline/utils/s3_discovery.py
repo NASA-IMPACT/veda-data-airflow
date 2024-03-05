@@ -163,9 +163,8 @@ def s3_discovery_handler(event, chunk_size=2800, role_arn=None, bucket_output=No
     id_template = event.get("id_template", collection + "-{}")
     date_fields = propagate_forward_datetime_args(event)
     dry_run = event.get("dry_run", False)
-    last_execution = None
-    if event.get("last_successful_execution"):
-        last_execution = datetime.fromisoformat(event["last_successful_execution"])
+    if last_execution := event.get("last_successful_execution"):
+        last_execution = datetime.fromisoformat(last_execution)
 
     payload = {**event, "objects": []}
     slice = event.get("slice")

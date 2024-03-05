@@ -60,3 +60,24 @@ variable "vector_vpc" {
   default = null
 }
 
+variable "veda_data_access_role_arn" {
+  type = string
+}
+
+variable "veda_raster_url" {
+  type = string
+}
+
+variable "veda_stac_url" {
+  type = string
+}
+
+variable "workflow_root_path" {
+  type = string
+  default = "/api/workflows"
+}
+
+variable "cloudfront_id" {
+  type = string
+}
+

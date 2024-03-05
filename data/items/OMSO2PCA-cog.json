@@ -1,8 +1,0 @@
-{
-    "collection": "OMSO2PCA-COG",
-    "prefix": "OMSO2PCA-COG/",
-    "bucket": "veda-data-store-staging",
-    "filename_regex": "^(.*).tif$",
-    "discovery": "s3",
-    "datetime_range": "year"
-}

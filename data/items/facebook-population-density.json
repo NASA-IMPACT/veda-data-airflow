@@ -1,8 +1,0 @@
-{
-    "collection": "facebook_population_density",
-    "prefix": "facebook_population_density/",
-    "bucket": "veda-data-store-staging",
-    "filename_regex": "^(.*).tif$",
-    "discovery": "s3",
-    "upload": false
-}

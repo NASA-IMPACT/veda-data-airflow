@@ -1,8 +1,0 @@
-{
-    "collection": "OMI_trno2-COG",
-    "prefix": "OMI_trno2-COG/",
-    "bucket": "veda-data-store-staging",
-    "filename_regex": "^(.*).tif$",
-    "discovery": "s3",
-    "datetime_range": "year"
-}

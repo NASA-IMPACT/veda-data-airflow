@@ -57,19 +57,15 @@ def transfer_files_within_s3(
                 Bucket=destination_bucket, Key=target_key
             )
             target_etag = target_metadata["ETag"]
-        except (s3_client.exceptions.NoSuchKey, ClientError):
+        except s3_client.exceptions.NoSuchKey:
             target_etag = ""
 
-        try:
-            s3_client.copy_object(
-                CopySource=copy_source,
-                Bucket=destination_bucket,
-                Key=target_key,
-                CopySourceIfNoneMatch=target_etag,
-            )
-        except s3_client.ClientError:
-            # If the file with same etag already exits, it throws a ClientError; it's okay
-            pass
+        s3_client.copy_object(
+            CopySource=copy_source,
+            Bucket=destination_bucket,
+            Key=target_key,
+            CopySourceIfNoneMatch=target_etag,
+        )
 
 
 def data_transfer_handler(event, role_arn=None, bucket_output=None):

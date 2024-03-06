@@ -109,8 +109,8 @@ def submission_handler(
         print(json.dumps(stac_item, indent=2))
         return
     ingestor = IngestionApi.from_veda_auth_secret(
-        secret_id=os.getenv("VEDA_COGNITO_APP_SECRET", cognito_app_secret),
-        base_url=os.getenv("VEDA_STAC_INGESTOR_API_URL", stac_ingestor_api_url),
+        secret_id=os.getenv("COGNITO_APP_SECRET", cognito_app_secret),
+        base_url=os.getenv("STAC_INGESTOR_API_URL", stac_ingestor_api_url),
     )
     ingestor.submit(stac_item)
     # print("Successfully submitted STAC item")

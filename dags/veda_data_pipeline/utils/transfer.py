@@ -2,7 +2,6 @@ import os
 import re
 
 import boto3
-from botocore.exceptions import ClientError
 
 
 def assume_role(role_arn, session_name="veda-data-airflow_s3-discovery"):

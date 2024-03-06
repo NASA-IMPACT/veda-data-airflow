@@ -58,7 +58,7 @@ data "aws_iam_policy_document" "mwaa_executor_policies" {
       "secretsmanager:DescribeSecret"
     ]
     resources = [
-      "arn:aws:secretsmanager:${var.region}:${var.account_id}:secret:${var.veda_cognito_app_secret}-??????",
+      "arn:aws:secretsmanager:${var.region}:${var.account_id}:secret:${var.cognito_app_secret}-??????",
       "arn:aws:secretsmanager:${var.region}:${var.account_id}:secret:${var.vector_secret_name}-??????"
     ]
   }
@@ -81,8 +81,7 @@ data "aws_iam_policy_document" "mwaa_executor_policies" {
       "s3:Put*",
     ]
     resources = [
-      "arn:aws:s3:::ghgc-*",
-      "arn:aws:s3:::ghgc-*/*"
+      "arn:aws:s3:::*",
     ]
   }
 

@@ -41,7 +41,7 @@ module "custom_policy" {
   mwaa_arn           = module.mwaa.mwaa_arn
   assume_role_arns   = var.assume_role_arns
   region             = local.aws_region
-  veda_cognito_app_secret = var.veda_cognito_app_secret
+  cognito_app_secret = var.cognito_app_secret
   vector_secret_name = var.vector_secret_name
 }
 
@@ -94,10 +94,9 @@ resource "local_file" "mwaa_variables" {
       mwaa_execution_role_arn = module.mwaa.mwaa_role_arn
       account_id              = local.account_id
       aws_region              = local.aws_region
-      veda_cognito_app_secret = var.veda_cognito_app_secret
-      veda_stac_ingestor_api_url   = var.veda_stac_ingestor_api_url
-      vector_secret_name = var.vector_secret_name
-
+      cognito_app_secret      = var.cognito_app_secret
+      stac_ingestor_api_url   = var.stac_ingestor_api_url
+      vector_secret_name      = var.vector_secret_name
   })
   filename = "/tmp/mwaa_vars.json"
 }
@@ -182,13 +181,13 @@ resource "aws_lambda_function" "workflows_api_handler" {
   image_uri = "${aws_ecr_repository.workflows_api_lambda_repository.repository_url}:latest"
   environment {
     variables = {
-      WORKFLOWS_CLIENT_SECRET_ID = var.veda_cognito_app_secret
+      WORKFLOWS_CLIENT_SECRET_ID = var.cognito_app_secret
       STAGE             = var.stage
-      DATA_ACCESS_ROLE_ARN = var.veda_data_access_role_arn
+      DATA_ACCESS_ROLE_ARN = var.data_access_role_arn
       WORKFLOW_ROOT_PATH = var.workflow_root_path
-      INGEST_URL = var.veda_stac_ingestor_api_url
-      RASTER_URL = var.veda_raster_url
-      STAC_URL = var.veda_stac_url
+      INGEST_URL = var.stac_ingestor_api_url
+      RASTER_URL = var.raster_url
+      STAC_URL = var.stac_url
       MWAA_ENV = module.mwaa.airflow_url
     }
   }

@@ -104,9 +104,20 @@ def generate_stac(event: events.RegexEvent) -> pystac.Item:
         session=rasterio_kwargs.get("session"),
         options={**rasterio_kwargs},
     ):
+        bboxes = []
         for asset_name, asset_definition in event.assets.items():
             with rasterio.open(asset_definition["href"]) as src:
+                # Get BBOX and Footprint
+                dataset_geom = stac.get_dataset_geom(src, densify_pts=0, precision=-1)
+                bboxes.append(dataset_geom["bbox"])
+
                 media_type = stac.get_media_type(src)
+                proj_info = {
+                    f"proj:{name}": value
+                    for name, value in stac.get_projection_info(src).items()
+                }
+                raster_info = {"raster:bands": stac.get_raster_info(src, max_size=1024)}
+
             # The default asset name for cogs is "cog_default", so we need to intercept 'default'
             if asset_name == "default":
                 asset_name = "cog_default"
@@ -115,10 +126,16 @@ def generate_stac(event: events.RegexEvent) -> pystac.Item:
                 description=asset_definition["description"],
                 href=asset_definition["href"],
                 media_type=media_type,
-                roles=[],
+                roles=["data", "layer"],
+                extra_fields={**proj_info, **raster_info},
             )
+
+        minx, miny, maxx, maxy = zip(*bboxes)
+        bbox = [min(minx), min(miny), max(maxx), max(maxy)]
+        
         create_item_response = create_item(
             item_id=event.item_id,
+            bbox=bbox,
             properties=properties,
             datetime=single_datetime,
             collection=event.collection,

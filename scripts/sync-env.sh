@@ -6,12 +6,12 @@ for s in $(aws secretsmanager get-secret-value --secret-id $1 --query SecretStri
     echo "$s" >> .env
 done
 source .env
-export PREFIX=ghgc-pipeline-${STAGE}
+export PREFIX=veda-pipeline-${STAGE}
 
 cat << EXPORT_ENVS >> .env
 PREFIX=$PREFIX
 AWS_REGION=us-west-2
 STATE_BUCKET_NAME=${PREFIX}-tf-state-shared
-STATE_BUCKET_KEY=ghgc-mwaa/${PREFIX}-mwaa/terraform.tfstate
+STATE_BUCKET_KEY=veda-mwaa/${PREFIX}-mwaa/terraform.tfstate
 STATE_DYNAMO_TABLE=${PREFIX}-shared-state-mwaa-lock-state
 EXPORT_ENVS

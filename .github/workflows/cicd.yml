@@ -10,7 +10,6 @@ on:
       - main
       - dev
       - production
-      - ghc-deploy-dev-mcp
   pull_request:
     branches:
       - main

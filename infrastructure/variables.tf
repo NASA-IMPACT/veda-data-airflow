@@ -34,11 +34,11 @@ variable "stage" {
   default = "dev"
 }
 
-variable "veda_cognito_app_secret" {
+variable "cognito_app_secret" {
   type = string
 }
 
-variable "veda_stac_ingestor_api_url" {
+variable "stac_ingestor_api_url" {
   type = string
 }
 variable "min_workers" {
@@ -60,15 +60,15 @@ variable "vector_vpc" {
   default = null
 }
 
-variable "veda_data_access_role_arn" {
+variable "data_access_role_arn" {
   type = string
 }
 
-variable "veda_raster_url" {
+variable "raster_url" {
   type = string
 }
 
-variable "veda_stac_url" {
+variable "stac_url" {
   type = string
 }
 

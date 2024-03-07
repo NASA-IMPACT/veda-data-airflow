@@ -71,7 +71,7 @@ resource "aws_security_group" "vector_sg" {
 }
 
 resource "aws_vpc_security_group_ingress_rule" "vector_rds_ingress" {
-  count             = var.vector_vpc == null ? 0 : 1
+  count             = var.vector_vpc == "null" ? 0 : 1
   security_group_id = var.vector_security_group
 
   from_port                    = 5432

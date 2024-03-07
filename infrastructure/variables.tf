@@ -13,7 +13,7 @@ variable "prefix" {
 
 variable "iam_policy_permissions_boundary_name" {
   description = "Permission boundaries"
-  default = null
+  default     = null
 }
 
 variable "assume_role_arns" {
@@ -57,7 +57,7 @@ variable "vector_security_group" {
 }
 variable "vector_vpc" {
   type    = string
-  default = null
+  default = "null"
 }
 
 variable "data_access_role_arn" {
@@ -73,7 +73,7 @@ variable "stac_url" {
 }
 
 variable "workflow_root_path" {
-  type = string
+  type    = string
   default = "/api/workflows"
 }
 

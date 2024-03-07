@@ -236,7 +236,7 @@ resource "null_resource" "update_cloudfront" {
     always_run = "${timestamp()}"
   }
 
-  count = var.cloudfront_id ? 1 : 0
+  count = coalesce(var.cloudfront_id, false) ? 1 : 0
 
   provisioner "local-exec" {
     command = "${path.module}/cf_update.sh ${var.cloudfront_id} workflows_api_origin \"${aws_apigatewayv2_api.workflows_http_api.api_endpoint}\""

@@ -174,9 +174,9 @@ resource "aws_iam_policy" "lambda_access" {
   })
 }
 
-resource "aws_iam_role_policy_attachment" "ecr_access_attach" {
+resource "aws_iam_role_policy_attachment" "lambda_access_attach" {
   role       = aws_iam_role.lambda_execution_role.name
-  policy_arn = aws_iam_policy.ecr_access.arn
+  policy_arn = aws_iam_policy.lambda_access.arn
 }
 
 resource "aws_iam_role_policy_attachment" "lambda_basic_execution" {

@@ -1,9 +1,9 @@
 module "mwaa" {
-  source                           = "https://github.com/NASA-IMPACT/mwaa_tf_module/releases/download/v1.1.5/mwaa_tf_module.zip"
+  source                           = "https://github.com/NASA-IMPACT/mwaa_tf_module/releases/download/v1.1.7.0/mwaa_tf_module.zip"
   prefix                           = var.prefix
   vpc_id                           = var.vpc_id
   iam_role_additional_arn_policies = merge(module.custom_policy.custom_policy_arns_map)
-  permissions_boundary_arn         = var.iam_role_permissions_boundary
+  permissions_boundary_arn         = var.iam_policy_permissions_boundary_name == "null" ? null : "arn:aws:iam::${local.account_id}:policy/${var.iam_policy_permissions_boundary_name}"
   subnet_tagname                   = var.subnet_tagname
   local_requirement_file_path      = "${path.module}/../dags/requirements.txt"
   local_dag_folder                 = "${path.module}/../dags/"
@@ -45,11 +45,10 @@ module "custom_policy" {
   vector_secret_name = var.vector_secret_name
 }
 
-
 data "aws_subnets" "private" {
   filter {
     name   = "vpc-id"
-    values = [var.vector_vpc]
+    values = [var.vector_vpc == null ? "" : var.vector_vpc]
   }
 
   tags = {
@@ -58,6 +57,7 @@ data "aws_subnets" "private" {
 }
 
 resource "aws_security_group" "vector_sg" {
+  count  = var.vector_vpc == "null" ? 0 : 1
   name   = "${var.prefix}_veda_vector_sg"
   vpc_id = var.vector_vpc
 
@@ -71,12 +71,13 @@ resource "aws_security_group" "vector_sg" {
 }
 
 resource "aws_vpc_security_group_ingress_rule" "vector_rds_ingress" {
+  count             = var.vector_vpc == "null" ? 0 : 1
   security_group_id = var.vector_security_group
 
   from_port                    = 5432
   to_port                      = 5432
   ip_protocol                  = "tcp"
-  referenced_security_group_id = aws_security_group.vector_sg.id
+  referenced_security_group_id = aws_security_group.vector_sg[count.index].id
 }
 
 resource "local_file" "mwaa_variables" {
@@ -95,13 +96,7 @@ resource "local_file" "mwaa_variables" {
       aws_region              = local.aws_region
       cognito_app_secret      = var.cognito_app_secret
       stac_ingestor_api_url   = var.stac_ingestor_api_url
-      assume_role_read_arn    = var.assume_role_arns[0]
-      assume_role_write_arn   = var.assume_role_arns[1]
       vector_secret_name      = var.vector_secret_name
-      vector_subnet_1         = data.aws_subnets.private.ids[0]
-      vector_subnet_2         = data.aws_subnets.private.ids[1]
-      vector_security_group   = aws_security_group.vector_sg.id
-      vector_vpc              = var.vector_vpc
   })
   filename = "/tmp/mwaa_vars.json"
 }
@@ -113,12 +108,12 @@ resource "local_file" "mwaa_variables" {
 # ECR repository to host workflows API image
 resource "aws_ecr_repository" "workflows_api_lambda_repository" {
   name = "veda_${var.stage}_workflows-api-lambda-repository"
-} 
+}
 
 resource "null_resource" "if_change_run_provisioner" {
   triggers = {
-      always_run = "${timestamp()}"
-      }
+    always_run = "${timestamp()}"
+  }
   provisioner "local-exec" {
     command = <<-EOT
       set -e
@@ -131,7 +126,8 @@ resource "null_resource" "if_change_run_provisioner" {
 
 # IAM Role for Lambda Execution
 resource "aws_iam_role" "lambda_execution_role" {
-  name = "veda_${var.stage}_lambda_execution_role"
+  name                 = "veda_${var.stage}_lambda_execution_role"
+  permissions_boundary = var.iam_policy_permissions_boundary_name == "null" ? null : "arn:aws:iam::${local.account_id}:policy/${var.iam_policy_permissions_boundary_name}"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17",
@@ -147,28 +143,51 @@ resource "aws_iam_role" "lambda_execution_role" {
   })
 }
 
-resource "aws_iam_policy" "ecr_access" {
-  name        = "veda_${var.stage}_ECR_Access_For_Lambda"
+resource "aws_iam_policy" "lambda_access" {
+  name        = "veda_${var.stage}_Access_For_Lambda"
   path        = "/"
-  description = "ECR access policy for Lambda function"
-  policy      = jsonencode({
+  description = "Access policy for Lambda function"
+  policy = jsonencode({
     Version = "2012-10-17",
     Statement = [
       {
-        Effect   = "Allow",
-        Action   = [
+        Effect = "Allow",
+        Action = [
           "ecr:GetDownloadUrlForLayer",
-          "ecr:BatchGetImage",
+          "ecr:BatchGetImage"
         ],
-        Resource = "${aws_ecr_repository.workflows_api_lambda_repository.arn}",
+        Resource = [
+          "${aws_ecr_repository.workflows_api_lambda_repository.arn}",
+        ],
       },
+      {
+        Effect = "Allow",
+        Action = [
+          "secretsmanager:GetSecretValue"
+        ],
+        Resource = [
+          "arn:aws:secretsmanager:${var.aws_region}:${local.account_id}:secret:${var.workflows_client_secret}*"
+        ],
+      },
+      {
+        Effect: "Allow",
+        Action: "sts:AssumeRole",
+        Resource: var.data_access_role_arn
+      },
+      {
+        Action: "airflow:CreateCliToken",
+        Resource: [
+          "arn:aws:airflow:${var.aws_region}:${local.account_id}:environment/veda-pipeline-${var.stage}-mwaa"
+        ],
+        Effect: "Allow"
+      }
     ],
   })
 }
 
-resource "aws_iam_role_policy_attachment" "ecr_access_attach" {
+resource "aws_iam_role_policy_attachment" "lambda_access_attach" {
   role       = aws_iam_role.lambda_execution_role.name
-  policy_arn = aws_iam_policy.ecr_access.arn
+  policy_arn = aws_iam_policy.lambda_access.arn
 }
 
 resource "aws_iam_role_policy_attachment" "lambda_basic_execution" {
@@ -180,23 +199,19 @@ resource "aws_iam_role_policy_attachment" "lambda_basic_execution" {
 resource "aws_lambda_function" "workflows_api_handler" {
   function_name = "veda_${var.stage}_workflows_api_handler"
   role          = aws_iam_role.lambda_execution_role.arn
-  package_type = "Image"
-  timeout = 30
-
+  package_type  = "Image"
+  timeout       = 30
   image_uri = "${aws_ecr_repository.workflows_api_lambda_repository.repository_url}:latest"
   environment {
     variables = {
-      JWKS_URL          = var.jwks_url
-      USERPOOL_ID       = var.cognito_userpool_id
-      CLIENT_ID         = var.cognito_client_id
-      CLIENT_SECRET     = var.cognito_client_secret
-      STAGE             = var.stage
-      DATA_ACCESS_ROLE_ARN = var.data_access_role_arn
-      WORKFLOW_ROOT_PATH = var.workflow_root_path
-      INGEST_URL = var.ingest_url
-      RASTER_URL = var.raster_url
-      STAC_URL = var.stac_url
-      MWAA_ENV = module.mwaa.airflow_url
+      WORKFLOWS_CLIENT_SECRET_ID = var.workflows_client_secret
+      STAGE                      = var.stage
+      DATA_ACCESS_ROLE_ARN       = var.data_access_role_arn
+      WORKFLOW_ROOT_PATH         = var.workflow_root_path
+      INGEST_URL                 = var.stac_ingestor_api_url
+      RASTER_URL                 = var.raster_url
+      STAC_URL                   = var.stac_url
+      MWAA_ENV                   = "veda-pipeline-${var.stage}-mwaa"
     }
   }
 }
@@ -210,9 +225,9 @@ resource "aws_apigatewayv2_api" "workflows_http_api" {
 
 # Lambda Integration for API Gateway
 resource "aws_apigatewayv2_integration" "workflows_lambda_integration" {
-  api_id           = aws_apigatewayv2_api.workflows_http_api.id
-  integration_type = "AWS_PROXY"
-  integration_uri  = aws_lambda_function.workflows_api_handler.invoke_arn
+  api_id                 = aws_apigatewayv2_api.workflows_http_api.id
+  integration_type       = "AWS_PROXY"
+  integration_uri        = aws_lambda_function.workflows_api_handler.invoke_arn
   payload_format_version = "2.0"
 }
 

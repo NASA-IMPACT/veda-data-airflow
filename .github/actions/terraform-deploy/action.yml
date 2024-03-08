@@ -1,0 +1,64 @@
+name: Deploy
+
+inputs:
+  env_aws_secret_name:
+    required: true
+    type: string
+  env-file:
+    type: string
+    default: ".env"
+  dir:
+    required: false
+    type: string
+    default: "."
+  script_path:
+    type: string
+  backend_stack_name:
+    type: string
+  auth_stack_name:
+    type: string
+
+runs:
+  using: "composite"
+
+  steps:
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.10"
+        cache: "pip"
+
+    - name: Install python dependencies
+      shell: bash
+      working-directory: ${{ inputs.dir }}
+      run: pip install -r deploy_requirements.txt
+
+    - name: Get relevant environment configuration from aws secrets
+      shell: bash
+      working-directory: ${{ inputs.dir }}
+      env:
+        SECRET_SSM_NAME: ${{ inputs.env_aws_secret_name }}
+        AWS_DEFAULT_REGION: us-west-2
+      run: |
+        if [[ -z "${{ inputs.script_path }}" ]]; then
+        ./scripts/sync-env.sh ${{ inputs.env_aws_secret_name }}
+        else
+        echo ${{ inputs.auth_stack_name}}
+        echo ${{ inputs.backend_stack_name}}
+        python ${{ inputs.script_path }} --secret-id ${{ inputs.env_aws_secret_name }} --stack-names ${{ inputs.auth_stack_name}},${{ inputs.backend_stack_name}}
+        source .env
+        echo "PREFIX=data-pipeline-$STAGE" >> ${{ inputs.env-file }}
+        cat .env
+        fi
+
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v3
+      with:
+        terraform_version: 1.3.3
+
+    - name: Deploy
+      shell: bash
+      working-directory: ${{ inputs.dir }}
+      run: |
+        ./scripts/deploy.sh ${{ inputs.env-file }} <<< init
+        ./scripts/deploy.sh ${{ inputs.env-file }} <<< deploy

@@ -49,7 +49,7 @@ def subdag_process():
             overrides={
                 "containerOverrides": [
                     {
-                        "name": f"{mwaa_stack_conf.get('PREFIX')}-veda-build_stac",
+                        "name": f"{mwaa_stack_conf.get('PREFIX')}-veda-stac-build",
                         "command": [
                             "/usr/local/bin/python",
                             "handler.py",
@@ -59,7 +59,7 @@ def subdag_process():
                         "environment": [
                             {
                                 "name": "EXTERNAL_ROLE_ARN",
-                                "value": Variable.get("ASSUME_ROLE_READ_ARN"),
+                                "value": Variable.get("ASSUME_ROLE_READ_ARN", default_var=''),
                             },
                             {
                                 "name": "BUCKET",
@@ -82,7 +82,7 @@ def subdag_process():
                 },
             },
             awslogs_group=mwaa_stack_conf.get("LOG_GROUP_NAME"),
-            awslogs_stream_prefix=f"ecs/{mwaa_stack_conf.get('PREFIX')}-veda-build_stac",  # prefix with container name
+            awslogs_stream_prefix=f"ecs/{mwaa_stack_conf.get('PREFIX')}-veda-stac-build",  # prefix with container name
         )
         submit_to_stac_ingestor = PythonOperator(
             task_id="submit_to_stac_ingestor",

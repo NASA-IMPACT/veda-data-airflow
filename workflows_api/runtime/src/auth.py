@@ -1,10 +1,5 @@
-import base64
-import hashlib
-import hmac
 import logging
-from typing import Dict
 
-import boto3
 import requests
 import src.config as config
 from authlib.jose import JsonWebKey, JsonWebToken, JWTClaims, KeySet, errors
@@ -24,7 +19,13 @@ def get_settings() -> config.Settings:
 
 
 def get_jwks_url(settings: config.Settings = Depends(get_settings)) -> str:
-    return settings.jwks_url
+    import boto3
+    import json
+    client = boto3.client("secretsmanager")
+    response = client.get_secret_value(SecretId=settings.workflows_client_secret_id)
+    secrets = json.loads(response["SecretString"])
+
+    return f"https://cognito-idp.{secrets['aws_region']}.amazonaws.com/{secrets['userpool_id']}/.well-known/jwks.json"
 
 
 @cached(TTLCache(maxsize=1, ttl=3600))
@@ -56,7 +57,7 @@ def decode_token(
             claims.setdefault("aud", claims["client_id"])
 
         claims.validate()
-        return claims, token
+        return claims
     except errors.JoseError:  #
         logger.exception("Unable to decode token")
         raise HTTPException(status_code=403, detail="Bad auth token")
@@ -66,56 +67,7 @@ def get_username(claims: security.HTTPBasicCredentials = Depends(decode_token)):
     return claims["sub"]
 
 
-def get_and_validate_token(
+def get_token(
     token: security.HTTPAuthorizationCredentials = Depends(token_scheme),
 ):
-    decode_token(token)
     return token
-
-
-def _get_secret_hash(username: str, client_id: str, client_secret: str) -> str:
-    # A keyed-hash message authentication code (HMAC) calculated using
-    # the secret key of a user pool client and username plus the client
-    # ID in the message.
-    message = username + client_id
-    dig = hmac.new(
-        bytearray(client_secret, "utf-8"),
-        msg=message.encode("UTF-8"),
-        digestmod=hashlib.sha256,
-    ).digest()
-    return base64.b64encode(dig).decode()
-
-
-def authenticate_and_get_token(
-    username: str,
-    password: str,
-    user_pool_id: str,
-    app_client_id: str,
-    app_client_secret: str,
-) -> Dict:
-    client = boto3.client("cognito-idp")
-    if app_client_secret:
-        auth_params = {
-            "USERNAME": username,
-            "PASSWORD": password,
-            "SECRET_HASH": _get_secret_hash(username, app_client_id, app_client_secret),
-        }
-    else:
-        auth_params = {
-            "USERNAME": username,
-            "PASSWORD": password,
-        }
-    try:
-        resp = client.admin_initiate_auth(
-            UserPoolId=user_pool_id,
-            ClientId=app_client_id,
-            AuthFlow="ADMIN_USER_PASSWORD_AUTH",
-            AuthParameters=auth_params,
-        )
-    except client.exceptions.NotAuthorizedException:
-        return {
-            "message": "Login failed, please make sure the credentials are correct."
-        }
-    except Exception as e:
-        return {"message": f"Login failed with exception {e}"}
-    return resp["AuthenticationResult"]

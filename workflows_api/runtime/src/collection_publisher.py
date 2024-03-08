@@ -21,7 +21,7 @@ class CollectionPublisher:
         does necessary preprocessing,
         and loads into the PgSTAC collection table
         """
-        collection = collection.model_dump(by_alias=True)
+        collection = collection.json(by_alias=True)
 
         url = f"{ingest_api}/collections"
         headers = {
@@ -161,7 +161,7 @@ class Publisher:
         does necessary preprocessing,
         and loads into the PgSTAC collection table
         """
-        collection = collection.model_dump(by_alias=True)
+        collection = collection.json(by_alias=True)
 
         url = f"{ingest_api}/collections"
         headers = {

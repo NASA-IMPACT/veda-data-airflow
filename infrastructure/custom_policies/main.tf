@@ -64,36 +64,24 @@ data "aws_iam_policy_document" "mwaa_executor_policies" {
   }
 
   statement {
-    effect = "Allow"
+    effect = length(var.assume_role_arns) > 0 ? "Allow" : "Deny"
     actions = [
       "sts:AssumeRole"
     ]
-    resources = var.assume_role_arns
+    resources = length(var.assume_role_arns) > 0 ? var.assume_role_arns: ["*"]
   }
+
   statement {
     effect = "Allow"
     actions = [
       "s3:GetObject*",
       "s3:GetBucket*",
       "s3:List*",
-      "s3:DeleteObject*",
-      "s3:PutObject",
-      "s3:PutObjectLegalHold",
-      "s3:PutObjectRetention",
-      "s3:PutObjectTagging",
-      "s3:PutObjectVersionTagging",
-      "s3:Abort*"
+      "s3:Copy*",
+      "s3:Put*",
     ]
     resources = [
-      "arn:aws:s3:::veda-data-pipelines-staging-lambda-ndjson-bucket",
-      "arn:aws:s3:::veda-data-pipelines-staging-lambda-ndjson-bucket/*",
-      "arn:aws:s3:::veda-data-read-staging",
-      "arn:aws:s3:::veda-data-read-staging/*",
-      "arn:aws:s3:::veda-data-store-staging",
-      "arn:aws:s3:::veda-data-store-staging/*",
-      "arn:aws:s3:::nex-gddp-cmip6-cog",
-      "arn:aws:s3:::nex-gddp-cmip6-cog/*",
-
+      "arn:aws:s3:::*",
     ]
   }
 
@@ -105,14 +93,7 @@ data "aws_iam_policy_document" "mwaa_executor_policies" {
       "s3:List*"
     ]
     resources = [
-      "arn:aws:s3:::climatedashboard-data",
-      "arn:aws:s3:::climatedashboard-data/*",
-      "arn:aws:s3:::veda-data-store-staging",
-      "arn:aws:s3:::veda-data-store-staging/*",
-      "arn:aws:s3:::nasa-maap-data-store",
-      "arn:aws:s3:::nasa-maap-data-store/*",
-      "arn:aws:s3:::covid-eo-blackmarble",
-      "arn:aws:s3:::covid-eo-blackmarble/*"
+      "*",
     ]
   }
 
@@ -120,9 +101,7 @@ data "aws_iam_policy_document" "mwaa_executor_policies" {
     effect    = "Allow"
     actions   = ["airflow:CreateCliToken"]
     resources = [var.mwaa_arn]
-
   }
-
 }
 
 

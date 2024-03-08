@@ -11,8 +11,9 @@ variable "prefix" {
   description = "Deployment prefix"
 }
 
-variable "iam_role_permissions_boundary" {
+variable "iam_policy_permissions_boundary_name" {
   description = "Permission boundaries"
+  default     = null
 }
 
 variable "assume_role_arns" {
@@ -37,21 +38,7 @@ variable "cognito_app_secret" {
   type = string
 }
 
-variable "jwks_url" {
-  type = string
-}
-
-variable "cognito_userpool_id" {
-  type = string
-}
-
-variable "cognito_client_id" {
-  type = string
-}
-
-variable "cognito_client_secret" {
-  description = "Optional secret, if required by cognito user pool"
-  default = ""
+variable "workflows_client_secret" {
   type = string
 }
 
@@ -73,19 +60,11 @@ variable "vector_security_group" {
   type = string
 }
 variable "vector_vpc" {
-  type = string
+  type    = string
+  default = "null"
 }
 
 variable "data_access_role_arn" {
-  type = string
-}
-
-variable "workflow_root_path" {
-  type = string
-  default = "/api/workflows"
-}
-
-variable "ingest_url" {
   type = string
 }
 
@@ -95,6 +74,11 @@ variable "raster_url" {
 
 variable "stac_url" {
   type = string
+}
+
+variable "workflow_root_path" {
+  type    = string
+  default = "/api/workflows"
 }
 
 variable "cloudfront_id" {

@@ -10,6 +10,7 @@ on:
       - main
       - dev
       - production
+      - fix/deployment
   pull_request:
     branches:
       - main

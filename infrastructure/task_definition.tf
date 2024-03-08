@@ -4,7 +4,7 @@ resource "aws_ecs_task_definition" "veda_task_definition" {
   container_definitions = jsonencode([
 
     {
-      name      = "${var.prefix}-veda-build_stac"
+      name      = "${var.prefix}-veda-stac-build"
       image     = "${local.account_id}.dkr.ecr.${local.aws_region}.amazonaws.com/${var.prefix}-veda-build_stac"
       essential = true,
       logConfiguration = {

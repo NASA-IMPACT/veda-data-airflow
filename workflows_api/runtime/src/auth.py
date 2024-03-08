@@ -67,8 +67,7 @@ def get_username(claims: security.HTTPBasicCredentials = Depends(decode_token)):
     return claims["sub"]
 
 
-def get_and_validate_token(
+def get_token(
     token: security.HTTPAuthorizationCredentials = Depends(token_scheme),
 ):
-    decode_token(token)
     return token

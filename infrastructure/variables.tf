@@ -38,6 +38,10 @@ variable "cognito_app_secret" {
   type = string
 }
 
+variable "workflows_client_secret" {
+  type = string
+}
+
 variable "stac_ingestor_api_url" {
   type = string
 }

@@ -166,7 +166,7 @@ resource "aws_iam_policy" "lambda_access" {
           "secretsmanager:GetSecretValue"
         ],
         Resource = [
-          "arn:aws:secretsmanager:${var.aws_region}:${local.account_id}:secret:${var.cognito_app_secret}*"
+          "arn:aws:secretsmanager:${var.aws_region}:${local.account_id}:secret:${var.workflows_client_secret}*"
         ],
       },
       {
@@ -204,7 +204,7 @@ resource "aws_lambda_function" "workflows_api_handler" {
   image_uri = "${aws_ecr_repository.workflows_api_lambda_repository.repository_url}:latest"
   environment {
     variables = {
-      WORKFLOWS_CLIENT_SECRET_ID = var.cognito_app_secret
+      WORKFLOWS_CLIENT_SECRET_ID = var.workflows_client_secret
       STAGE                      = var.stage
       DATA_ACCESS_ROLE_ARN       = var.data_access_role_arn
       WORKFLOW_ROOT_PATH         = var.workflow_root_path

@@ -163,13 +163,17 @@ resource "aws_iam_policy" "lambda_access" {
       {
         Effect = "Allow",
         Action = [
-
           "secretsmanager:GetSecretValue"
         ],
         Resource = [
           "arn:aws:secretsmanager:${var.aws_region}:${local.account_id}:secret:${var.cognito_app_secret}*"
         ],
       },
+      {
+        Effect: "Allow",
+        Action: "sts:AssumeRole",
+        Resource: var.data_access_role_arn
+      }
     ],
   })
 }

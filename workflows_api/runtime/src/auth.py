@@ -57,7 +57,7 @@ def decode_token(
             claims.setdefault("aud", claims["client_id"])
 
         claims.validate()
-        return claims, token
+        return claims
     except errors.JoseError:  #
         logger.exception("Unable to decode token")
         raise HTTPException(status_code=403, detail="Bad auth token")

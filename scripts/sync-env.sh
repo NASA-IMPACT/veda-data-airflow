@@ -11,7 +11,7 @@ export PREFIX=veda-pipeline-${STAGE}
 cat << EXPORT_ENVS >> .env
 PREFIX=$PREFIX
 AWS_REGION=us-west-2
-STATE_BUCKET_NAME=${PREFIX}-tf-state-shared
+STATE_BUCKET_NAME=veda-tf-state-${ACCOUNT_ID}
 STATE_BUCKET_KEY=veda-mwaa/${PREFIX}-mwaa/terraform.tfstate
 STATE_DYNAMO_TABLE=${PREFIX}-shared-state-mwaa-lock-state
 EXPORT_ENVS

@@ -107,7 +107,7 @@ resource "local_file" "mwaa_variables" {
 
 # ECR repository to host workflows API image
 resource "aws_ecr_repository" "workflows_api_lambda_repository" {
-  name = "veda_${var.stage}_workflows-api-lambda-repository"
+  name = "${var.prefix}_workflows-api-lambda-repository"
 }
 
 resource "null_resource" "if_change_run_provisioner" {
@@ -126,7 +126,7 @@ resource "null_resource" "if_change_run_provisioner" {
 
 # IAM Role for Lambda Execution
 resource "aws_iam_role" "lambda_execution_role" {
-  name                 = "veda_${var.stage}_lambda_execution_role"
+  name                 = "${var.prefix}_lambda_execution_role"
   permissions_boundary = var.iam_policy_permissions_boundary_name == "null" ? null : "arn:aws:iam::${local.account_id}:policy/${var.iam_policy_permissions_boundary_name}"
 
   assume_role_policy = jsonencode({
@@ -144,7 +144,7 @@ resource "aws_iam_role" "lambda_execution_role" {
 }
 
 resource "aws_iam_policy" "lambda_access" {
-  name        = "veda_${var.stage}_Access_For_Lambda"
+  name        = "${var.prefix}_Access_For_Lambda"
   path        = "/"
   description = "Access policy for Lambda function"
   policy = jsonencode({
@@ -197,7 +197,7 @@ resource "aws_iam_role_policy_attachment" "lambda_basic_execution" {
 
 
 resource "aws_lambda_function" "workflows_api_handler" {
-  function_name = "veda_${var.stage}_workflows_api_handler"
+  function_name = "${var.prefix}_workflows_api_handler"
   role          = aws_iam_role.lambda_execution_role.arn
   package_type  = "Image"
   timeout       = 30
@@ -219,7 +219,7 @@ resource "aws_lambda_function" "workflows_api_handler" {
 
 # API Gateway HTTP API
 resource "aws_apigatewayv2_api" "workflows_http_api" {
-  name          = "veda_${var.stage}_workflows_http_api"
+  name          = "${var.prefix}_workflows_http_api"
   protocol_type = "HTTP"
 }
 

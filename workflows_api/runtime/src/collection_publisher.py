@@ -21,14 +21,12 @@ class CollectionPublisher:
         does necessary preprocessing,
         and loads into the PgSTAC collection table
         """
-        collection = collection.json(by_alias=True)
-
         url = f"{ingest_api}/collections"
         headers = {
             "Authorization": f"Bearer {token}",
             "Content-Type": "application/json",
         }
-        response = requests.post(url, json=collection, headers=headers)
+        response = requests.post(url, data=collection.json(by_alias=True), headers=headers)
         if response.status_code == 200:
             print("Success:", response.json())
         else:
@@ -161,14 +159,13 @@ class Publisher:
         does necessary preprocessing,
         and loads into the PgSTAC collection table
         """
-        collection = collection.json(by_alias=True)
-
+        
         url = f"{ingest_api}/collections"
         headers = {
             "Authorization": f"Bearer {token}",
             "Content-Type": "application/json",
         }
-        response = requests.post(url, json=collection, headers=headers)
+        response = requests.post(url, data=collection.json(by_alias=True), headers=headers)
         if response.status_code == 200:
             print("Success:", response.json())
         else:

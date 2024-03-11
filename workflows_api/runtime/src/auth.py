@@ -70,4 +70,4 @@ def get_username(claims: security.HTTPBasicCredentials = Depends(decode_token)):
 def get_token(
     token: security.HTTPAuthorizationCredentials = Depends(token_scheme),
 ):
-    return token
+    return token.credentials

@@ -64,7 +64,7 @@ resource "aws_ecs_task_definition" "veda_transfer_task_definition" {
 
     {
       name      = "${var.prefix}-veda-cogify-transfer"
-      image     = "${local.account_id}.dkr.ecr.${local.aws_region}.amazonaws.com/${var.prefix}-veda-cogify-transfer"
+      image     = "${local.account_id}.dkr.ecr.${local.aws_region}.amazonaws.com/${var.prefix}-veda-cogify_transfer"
       essential = true,
       logConfiguration = {
         "logDriver" : "awslogs",

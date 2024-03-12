@@ -10,6 +10,7 @@ module "mwaa" {
   mwaa_variables_json_file_id_path = { file_path = local_file.mwaa_variables.filename, file_id = local_file.mwaa_variables.id }
   stage                            = var.stage
   airflow_version                  = "2.4.3"
+  environment_class                = lookup(var.mwaa_environment_class, var.stage, "mw1.small")
   min_workers                      = lookup(var.min_workers, var.stage, 1)
   ecs_containers = [
     {

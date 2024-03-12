@@ -49,7 +49,7 @@ def subdag_transfer():
             task_id="cogify_and_copy_data",
             trigger_rule="none_failed",
             cluster=f"{mwaa_stack_conf.get('PREFIX')}-cluster",
-            task_definition=f"{mwaa_stack_conf.get('PREFIX')}-tasks",
+            task_definition=f"{mwaa_stack_conf.get('PREFIX')}-transfer-tasks",
             launch_type="FARGATE",
             do_xcom_push=True,
             execution_timeout=timedelta(minutes=120),

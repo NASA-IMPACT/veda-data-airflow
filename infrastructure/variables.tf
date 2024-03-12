@@ -53,6 +53,15 @@ variable "min_workers" {
     production = 3
   }
 }
+
+variable "mwaa_environment_class" {
+  type = map(string)
+  default = {
+    dev        = "mw1.small"
+    staging    = "mw1.medium"
+    production = "mw1.medium"
+  }
+}
 variable "vector_secret_name" {
   type = string
 }

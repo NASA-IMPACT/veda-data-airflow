@@ -65,9 +65,13 @@ def subdag_transfer():
                         ],
                         "environment": [
                             {
-                                "name": "EXTERNAL_ROLE_ARN",
+                                "name": "ASSUME_ROLE_READ_ARN",
                                 "value": Variable.get(
                                     "ASSUME_ROLE_READ_ARN", default_var=""
+                                ),
+                                "name": "ASSUME_ROLE_WRITE_ARN",
+                                "value": Variable.get(
+                                    "ASSUME_ROLE_WRITE_ARN", default_var=""
                                 ),
                             },
                         ],

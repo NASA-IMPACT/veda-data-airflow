@@ -3,6 +3,7 @@ import re
 import tempfile
 
 import boto3
+from rio_cogeo.cogeo import cog_translate
 
 
 def assume_role(role_arn, session_name="veda-airflow-pipelines_transfer_files"):
@@ -48,45 +49,36 @@ def transfer_file(s3_client, file_key, local_file_path, destination_bucket, coll
 
 
 def cogify_transfer_handler(event, context):
-    kwargs_read = {}
-    if external_role_read_arn := os.environ["ASSUME_ROLE_READ_ARN"]:
-        creds = assume_role(external_role_read_arn, "veda-data-pipelines_data-transfer-read")
-        kwargs_read = {
-            "aws_access_key_id": creds["aws_access_key_id"],
-            "aws_secret_access_key": creds["aws_secret_access_key"],
-            "aws_session_token": creds["aws_session_token"],
+    kwargs = {}
+    if external_role_arn := os.environ["EXTERNAL_ROLE_ARN"]:
+        creds = assume_role(external_role_arn, "veda-data-pipelines_data-transfer")
+        kwargs = {
+            "aws_access_key_id": creds["AccessKeyId"],
+            "aws_secret_access_key": creds["SecretAccessKey"],
+            "aws_session_token": creds["SessionToken"],
         }
-    
-    kwargs_write = {}
-    if external_role_write_arn := os.environ["ASSUME_ROLE_WRITE_ARN"]:
-        creds = assume_role(external_role_write_arn, "veda-data-pipelines_data-transfer-read")
-        kwargs_write = {
-            "aws_access_key_id": creds["aws_access_key_id"],
-            "aws_secret_access_key": creds["aws_secret_access_key"],
-            "aws_session_token": creds["aws_session_token"],
-        }
-        
-    source_s3 = boto3.client("s3", **kwargs_read)
-    target_s3 = boto3.client("s3", **kwargs_write)
+    source_s3 = boto3.client("s3")
+    target_s3 = boto3.client("s3", **kwargs)
 
     origin_bucket = event.get("origin_bucket")
     origin_prefix = event.get("origin_prefix")
     regex_pattern = event.get("filename_regex")
     target_bucket = event.get("target_bucket", "veda-data-store-staging")
     collection = event.get("collection")
-    dry_run = event.get("dry_run")
 
     matching_files = get_matching_files(
         source_s3, origin_bucket, origin_prefix, regex_pattern
     )
-    if not dry_run:
+    if not event.get("dry_run"):
         for origin_key in matching_files:
-            with tempfile.NamedTemporaryFile() as local_tif:
+            with tempfile.NamedTemporaryFile() as local_tif, tempfile.NamedTemporaryFile() as local_cog:
                 local_tif_path = local_tif.name
+                local_cog_path = local_cog.name
                 source_s3.download_file(origin_bucket, origin_key, local_tif_path)
+                cog_translate(local_tif_path, local_cog_path, quiet=True)
                 filename = origin_key.split("/")[-1]
                 destination_key = f"{collection}/{filename}"
-                target_s3.upload_file(local_tif_path, target_bucket, destination_key)
+                target_s3.upload_file(local_cog_path, target_bucket, destination_key)
     else:
         print(
             f"Would have copied {len(matching_files)} files from {origin_bucket} to {target_bucket}"

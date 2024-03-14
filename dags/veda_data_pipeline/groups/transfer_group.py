@@ -29,7 +29,7 @@ def transfer_data(ti):
     # (event, chunk_size=2800, role_arn=None, bucket_output=None):
     return data_transfer_handler(event=config, role_arn=role_arn)
 
-
+# TODO: cogify_transfer handler is missing arg parser so this subdag will not work
 def subdag_transfer():
     with TaskGroup(**group_kwgs) as discover_grp:
         cogify_branching = BranchPythonOperator(

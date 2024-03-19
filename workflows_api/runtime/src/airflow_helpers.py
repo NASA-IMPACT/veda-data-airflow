@@ -5,6 +5,7 @@ from uuid import uuid4
 
 import boto3
 import requests
+import json
 from fastapi import HTTPException
 
 try:
@@ -56,7 +57,7 @@ def trigger_discover(input: Dict) -> Dict:
     )
 
     unique_key = str(uuid4())
-    raw_data = f"dags trigger veda_discover --conf '{input.json()}' -r {unique_key}"
+    raw_data = f"dags trigger veda_discover --conf '{json.dumps(input)}' -r {unique_key}"
     mwaa_response = requests.post(
         mwaa_webserver_hostname,
         headers={

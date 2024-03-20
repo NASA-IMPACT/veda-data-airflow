@@ -86,7 +86,7 @@ async def publish_dataset(
         workflow_runs = []
         for discovery in dataset.discovery_items:
             discovery.collection = dataset.collection
-            response = await start_discovery_workflow_execution(discovery)
+            response = await start_discovery_workflow_execution(discovery.dict())
             workflow_runs.append(response.id)
         if workflow_runs:
             return_dict["message"] += f" {len(workflow_runs)} workflows initiated."  # type: ignore

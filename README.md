@@ -35,14 +35,6 @@ See [terraform-getting-started](https://developer.hashicorp.com/terraform/tutori
 
 See [getting-started-install](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)
 
-### Poetry
-
-See [poetry-landing-page](https://pypi.org/project/poetry/)
-
-```bash
-pip install poetry
-```
-
 ## Deployment
 
 This project uses Terraform modules to deploy Apache Airflow and related AWS resources using Amazon's managed Airflow provider.

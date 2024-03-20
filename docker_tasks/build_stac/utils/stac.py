@@ -5,12 +5,10 @@ import rasterio
 from pystac.utils import datetime_to_str
 from rasterio.session import AWSSession
 from rio_stac import stac
+from rio_stac.stac import PROJECTION_EXT_VERSION, RASTER_EXT_VERSION
+
 
 from . import events, regex, role
-
-
-PROJECTION_EXT_VERSION = "v1.1.0"
-RASTER_EXT_VERSION = "v1.1.0"
 
 
 def get_sts_session():
@@ -132,7 +130,7 @@ def generate_stac(event: events.RegexEvent) -> pystac.Item:
 
         minx, miny, maxx, maxy = zip(*bboxes)
         bbox = [min(minx), min(miny), max(maxx), max(maxy)]
-        
+
         create_item_response = create_item(
             item_id=event.item_id,
             bbox=bbox,

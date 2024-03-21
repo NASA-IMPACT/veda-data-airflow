@@ -86,7 +86,7 @@ async def publish_dataset(
         workflow_runs = []
         for discovery in dataset.discovery_items:
             discovery.collection = dataset.collection
-            response = await start_discovery_workflow_execution(discovery.dict())
+            response = await start_discovery_workflow_execution(discovery)
             workflow_runs.append(response.id)
         if workflow_runs:
             return_dict["message"] += f" {len(workflow_runs)} workflows initiated."  # type: ignore
@@ -103,12 +103,12 @@ async def publish_dataset(
     dependencies=[Depends(auth.get_username)],
 )
 async def start_discovery_workflow_execution(
-    input=Body(..., discriminator="discovery"),
+    input: Union[schemas.S3Input, schemas.CmrInput]=Body(..., discriminator="discovery"),
 ) -> schemas.WorkflowExecutionResponse:
     """
     Triggers the ingestion workflow
     """
-    return airflow_helpers.trigger_discover(input)
+    return airflow_helpers.trigger_discover(input.dict())
 
 
 @workflows_app.get(

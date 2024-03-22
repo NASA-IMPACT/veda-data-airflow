@@ -1,4 +1,3 @@
-import logging
 from typing import Union
 
 import requests
@@ -7,14 +6,16 @@ import src.auth as auth
 import src.config as config
 import src.schemas as schemas
 from src.collection_publisher import CollectionPublisher, Publisher
+from src.monitoring import LoggerRouteHandler, logger, metrics, tracer
+from aws_lambda_powertools.metrics import MetricUnit
 
-from fastapi import Body, Depends, FastAPI, HTTPException
+from fastapi import Body, Depends, FastAPI, HTTPException, APIRouter
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from starlette.requests import Request
+
 
 settings = config.Settings()
-
-logger = logging.getLogger(__name__)
 
 collection_publisher = CollectionPublisher()
 publisher = Publisher()
@@ -31,6 +32,7 @@ workflows_app = FastAPI(
     root_path=settings.workflow_root_path,
     openapi_url="/openapi.json",
     docs_url="/docs",
+    router = APIRouter(route_class=LoggerRouteHandler)
 )
 
 
@@ -149,7 +151,42 @@ async def send_cli_command(cli_command: str):
     return airflow_helpers.send_cli_command(cli_command)
 
 
+
+# If the correlation header is used in the UI, we can analyze traces that originate from a given user or client
+@app.middleware("http")
+async def add_correlation_id(request: Request, call_next):
+    """Add correlation ids to all requests and subsequent logs/traces"""
+    # Get correlation id from X-Correlation-Id header if provided
+    corr_id = request.headers.get("x-correlation-id")
+    if not corr_id:
+        try:
+            # If empty, use request id from aws context
+            corr_id = request.scope["aws.context"].aws_request_id
+        except KeyError:
+            # If empty, use uuid
+            corr_id = "local"
+
+    # Add correlation id to logs
+    logger.set_correlation_id(corr_id)
+
+    # Add correlation id to traces
+    tracer.put_annotation(key="correlation_id", value=corr_id)
+
+    response = await tracer.capture_method(call_next)(request)
+    # Return correlation header in response
+    response.headers["X-Correlation-Id"] = corr_id
+    logger.info("Request completed")
+    return response
+
 # exception handling
 @workflows_app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request, exc):
+    metrics.add_metric(name="ValidationErrors", unit=MetricUnit.Count, value=1)
     return JSONResponse(str(exc), status_code=422)
+
+@app.exception_handler(Exception)
+async def general_exception_handler(request, err):
+    """Handle exceptions that aren't caught elsewhere"""
+    metrics.add_metric(name="UnhandledExceptions", unit=MetricUnit.Count, value=1)
+    logger.exception(f"Unhandled exception: {err}")
+    return JSONResponse(status_code=500, content={"detail": "Internal Server Error"})

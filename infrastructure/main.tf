@@ -178,7 +178,7 @@ resource "aws_iam_policy" "lambda_access" {
       {
         Action: "airflow:CreateCliToken",
         Resource: [
-          "arn:aws:airflow:${var.aws_region}:${local.account_id}:environment/veda-pipeline-${var.stage}-mwaa"
+          "arn:aws:airflow:${var.aws_region}:${local.account_id}:environment/${var.prefix}-mwaa"
         ],
         Effect: "Allow"
       }
@@ -212,7 +212,7 @@ resource "aws_lambda_function" "workflows_api_handler" {
       INGEST_URL                 = var.stac_ingestor_api_url
       RASTER_URL                 = var.raster_url
       STAC_URL                   = var.stac_url
-      MWAA_ENV                   = "veda-pipeline-${var.stage}-mwaa"
+      MWAA_ENV                   = "${var.prefix}-mwaa"
     }
   }
 }

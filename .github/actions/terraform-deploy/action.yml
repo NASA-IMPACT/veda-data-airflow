@@ -47,7 +47,7 @@ runs:
         echo ${{ inputs.backend_stack_name}}
         python ${{ inputs.script_path }} --secret-id ${{ inputs.env_aws_secret_name }} --stack-names ${{ inputs.auth_stack_name}},${{ inputs.backend_stack_name}}
         source .env
-        echo "PREFIX=data-pipeline-$STAGE" >> ${{ inputs.env-file }}
+        echo "PREFIX=veda-pipeline-$STAGE" >> ${{ inputs.env-file }}
         cat .env
         fi
 

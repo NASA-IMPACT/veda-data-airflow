@@ -42,7 +42,7 @@ module "custom_policy" {
   mwaa_arn           = module.mwaa.mwaa_arn
   assume_role_arns   = var.assume_role_arns
   region             = local.aws_region
-  cognito_app_secret = var.cognito_app_secret
+  cognito_app_secret = var.workflows_client_secret
   vector_secret_name = var.vector_secret_name
 }
 
@@ -95,7 +95,7 @@ resource "local_file" "mwaa_variables" {
       mwaa_execution_role_arn = module.mwaa.mwaa_role_arn
       account_id              = local.account_id
       aws_region              = local.aws_region
-      cognito_app_secret      = var.cognito_app_secret
+      cognito_app_secret      = var.workflows_client_secret
       stac_ingestor_api_url   = var.stac_ingestor_api_url
       vector_secret_name      = var.vector_secret_name
   })
@@ -167,7 +167,7 @@ resource "aws_iam_policy" "lambda_access" {
           "secretsmanager:GetSecretValue"
         ],
         Resource = [
-          "arn:aws:secretsmanager:${var.aws_region}:${local.account_id}:secret:${var.workflows_client_secret}*"
+          "arn:aws:secretsmanager:${var.aws_region}:${local.account_id}:secret:${var.cognito_app_secret}*"
         ],
       },
       {
@@ -205,7 +205,7 @@ resource "aws_lambda_function" "workflows_api_handler" {
   image_uri = "${aws_ecr_repository.workflows_api_lambda_repository.repository_url}:latest"
   environment {
     variables = {
-      WORKFLOWS_CLIENT_SECRET_ID = var.workflows_client_secret
+      WORKFLOWS_CLIENT_SECRET_ID = var.cognito_app_secret
       STAGE                      = var.stage
       DATA_ACCESS_ROLE_ARN       = var.data_access_role_arn
       WORKFLOW_ROOT_PATH         = var.workflow_root_path

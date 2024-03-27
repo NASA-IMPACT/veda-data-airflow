@@ -43,7 +43,7 @@ class TemporalExtent(BaseModel):
     startdate: datetime
     enddate: datetime
 
-    @root_validator
+    @root_validator(pre=True)
     def check_dates(cls, v):
         if v["startdate"] >= v["enddate"]:
             raise ValueError("Invalid extent - startdate must be before enddate")

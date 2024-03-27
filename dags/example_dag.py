@@ -38,7 +38,7 @@ def push_to_cmr_task(text):
 
 
 with DAG(
-    dag_id="example_etl_flow",
+    dag_id="example_etl_flow_test",
     start_date=pendulum.today("UTC").add(days=-1),
     schedule_interval=None,
     tags=["example"],

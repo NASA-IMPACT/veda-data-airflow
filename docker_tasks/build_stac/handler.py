@@ -26,23 +26,27 @@ def handler(event: Dict[str, Any]) -> Union[S3LinkOutput, StacItemOutput]:
     Handler for STAC Collection Item generation
 
     Arguments:
-    event - object with event parameters to be provided in one of 2 formats.
-        Format option 1 (with Granule ID defined to retrieve all metadata from CMR):
+    event - object with event parameters
         {
             "collection": "OMDOAO3e",
-            "s3_filename": "s3://climatedashboard-data/OMDOAO3e/OMI-Aura_L3-OMDOAO3e_2022m0120_v003-2022m0122t021759.he5.tif",
-            "granule_id": "G2205784904-GES_DISC",
-        }
-        Format option 2 (with regex provided to parse datetime from the filename:
-        {
-            "collection": "OMDOAO3e",
-            "s3_filename": "s3://climatedashboard-data/OMSO2PCA/OMSO2PCA_LUT_SCD_2005.tif",
+            "id_regex": "_(.*).tif",
+            "assets": {
+                "OMDOAO3e_LUT": {
+                    "title": "OMDOAO3e_LUT",
+                    "description": "OMDOAO3e_LUT, described",
+                    "href": "s3://climatedashboard-data/OMDOAO3e/OMDOAO3e_LUT.tif",
+                },
+                "OMDOAO3e_LUT": {
+                    "title": "OMDOAO3e_LUT",
+                    "description": "OMDOAO3e_LUT, described",
+                    "href": "s3://climatedashboard-data/OMDOAO3e/OMDOAO3e_LUT.tif",
+                }
+            }
         }
 
     """
 
-    EventType = events.CmrEvent if event.get("granule_id") else events.RegexEvent
-    parsed_event = EventType.parse_obj(event)
+    parsed_event = events.RegexEvent.parse_obj(event)
     try:
         stac_item = stac.generate_stac(parsed_event).to_dict()
     except Exception as ex:
@@ -112,6 +116,12 @@ def stac_handler(payload_event):
     success_key, dead_letter_key = write_outputs_to_s3(
         key=key, payload_success=payload_success, payload_failures=payload_failures
     )
+
+    # Silent dead letters are nice, but we want the Airflow UI to quickly alert us if something went wrong.
+    if len(payload_failures) != 0:
+        raise ValueError(
+            f"Some items failed to be processed. Failures logged here: {dead_letter_key}"
+        )
 
     return {
         "payload": {

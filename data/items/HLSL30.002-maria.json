@@ -1,8 +1,0 @@
-{
-    "mode": "stac",
-    "queue_messages": "true",
-    "collection": "HLSL30",
-    "version": "2.0",
-    "bounding_box": [-67.2716765, 17.9121390, -65.5747876, 18.5156946],
-    "temporal": ["2017-07-21T00:00:00Z","2018-03-20T23:59:59Z"]
-}

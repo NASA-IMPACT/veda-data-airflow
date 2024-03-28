@@ -217,6 +217,21 @@ resource "aws_lambda_function" "workflows_api_handler" {
   }
 }
 
+resource "null_resource" "update_workflows_lambda_image" {
+  triggers = {
+    always_run = "${timestamp()}"
+  }
+
+  depends_on = [aws_lambda_function.workflows_api_handler, null_resource.if_change_run_provisioner]
+  provisioner "local-exec" {
+    command = <<-EOT
+      set -e
+      aws lambda update-function-code \
+           --function-name ${aws_lambda_function.workflows_api_handler.function_name} \
+           --image-uri ${aws_ecr_repository.workflows_api_lambda_repository.repository_url}:latest
+    EOT
+  }
+}
 
 # API Gateway HTTP API
 resource "aws_apigatewayv2_api" "workflows_http_api" {

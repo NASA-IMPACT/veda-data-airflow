@@ -153,7 +153,7 @@ async def send_cli_command(cli_command: str):
 
 
 # If the correlation header is used in the UI, we can analyze traces that originate from a given user or client
-@app.middleware("http")
+@workflows_app.middleware("http")
 async def add_correlation_id(request: Request, call_next):
     """Add correlation ids to all requests and subsequent logs/traces"""
     # Get correlation id from X-Correlation-Id header if provided
@@ -184,7 +184,7 @@ async def validation_exception_handler(request, exc):
     metrics.add_metric(name="ValidationErrors", unit=MetricUnit.Count, value=1)
     return JSONResponse(str(exc), status_code=422)
 
-@app.exception_handler(Exception)
+@workflows_app.exception_handler(Exception)
 async def general_exception_handler(request, err):
     """Handle exceptions that aren't caught elsewhere"""
     metrics.add_metric(name="UnhandledExceptions", unit=MetricUnit.Count, value=1)

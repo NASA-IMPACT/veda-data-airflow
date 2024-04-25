@@ -196,7 +196,10 @@ resource "aws_iam_role_policy_attachment" "lambda_basic_execution" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
 
-
+# Function to build the JWKS URL
+locals {
+  build_jwks_url = "${format("https://cognito-idp.%s.amazonaws.com/%s/.well-known/jwks.json", local.aws_region, var.userpool_id)}"
+}
 resource "aws_lambda_function" "workflows_api_handler" {
   function_name = "${var.prefix}_workflows_api_handler"
   role          = aws_iam_role.lambda_execution_role.arn
@@ -213,6 +216,9 @@ resource "aws_lambda_function" "workflows_api_handler" {
       RASTER_URL                 = var.raster_url
       STAC_URL                   = var.stac_url
       MWAA_ENV                   = "${var.prefix}-mwaa"
+      COGNITO_DOMAIN             = var.cognito_domain
+      CLIENT_ID                  = var.client_id
+      JWKS_URL                   = local.build_jwks_url
     }
   }
 }

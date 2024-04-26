@@ -92,6 +92,7 @@ def collection_exists(collection_id: str) -> bool:
         f"{response.status_code} response code from STAC API"
     )
 
+
 def time_density_is_valid(is_periodic: bool, time_density: Union[str, None]):
     """
     Ensures that the time_density is valid based on the value of is_periodic

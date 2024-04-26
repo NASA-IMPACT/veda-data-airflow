@@ -1,15 +1,23 @@
 import logging
 
-import requests
+import jwt
 import src.config as config
-from authlib.jose import JsonWebKey, JsonWebToken, JWTClaims, KeySet, errors
-from cachetools import TTLCache, cached
 
-from fastapi import Depends, HTTPException, security
+from fastapi import Depends, HTTPException, Security, security, status
+from typing import Annotated, Any, Dict
+
 
 logger = logging.getLogger(__name__)
 
-token_scheme = security.HTTPBearer()
+settings = config.Settings()
+
+oauth2_scheme = security.OAuth2AuthorizationCodeBearer(
+    authorizationUrl=settings.cognito_authorization_url,
+    tokenUrl=settings.cognito_token_url,
+    refreshUrl=settings.cognito_token_url,
+)
+
+jwks_client = jwt.PyJWKClient(settings.jwks_url)
 
 
 def get_settings() -> config.Settings:
@@ -18,56 +26,40 @@ def get_settings() -> config.Settings:
     return main.settings
 
 
-def get_jwks_url(settings: config.Settings = Depends(get_settings)) -> str:
-    import boto3
-    import json
-    client = boto3.client("secretsmanager")
-    response = client.get_secret_value(SecretId=settings.workflows_client_secret_id)
-    secrets = json.loads(response["SecretString"])
-
-    return f"https://cognito-idp.{secrets['aws_region']}.amazonaws.com/{secrets['userpool_id']}/.well-known/jwks.json"
-
-
-@cached(TTLCache(maxsize=1, ttl=3600))
-def get_jwks(jwks_url: str = Depends(get_jwks_url)) -> KeySet:
-    with requests.get(jwks_url) as response:
-        response.raise_for_status()
-        return JsonWebKey.import_key_set(response.json())
-
-
-def decode_token(
-    token: security.HTTPAuthorizationCredentials = Depends(token_scheme),
-    jwks: KeySet = Depends(get_jwks),
-) -> JWTClaims:
+def validated_token(
+    token_str: Annotated[str, Security(oauth2_scheme)],
+    required_scopes: security.SecurityScopes,
+) -> Dict[str, Any]:
     """
-    Validate & decode JWT
+    Returns an access token payload, see: https://docs.aws.amazon.com/cognito/latest/developerguide/amazon-cognito-user-pools-using-the-access-token.html
     """
+    # Parse & validate token
     try:
-        claims = JsonWebToken(["RS256"]).decode(
-            s=token.credentials,
-            key=jwks,
-            claims_options={
-                # # Example of validating audience to match expected value
-                # "aud": {"essential": True, "values": [APP_CLIENT_ID]}
-            },
+        token = jwt.decode(
+            token_str,
+            jwks_client.get_signing_key_from_jwt(token_str).key,
+            algorithms=["RS256"],
         )
+    except jwt.exceptions.InvalidTokenError as e:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Could not validate credentials",
+            headers={"WWW-Authenticate": "Bearer"},
+        ) from e
 
-        if "client_id" in claims:
-            # Insert Cognito's `client_id` into `aud` claim if `aud` claim is unset
-            claims.setdefault("aud", claims["client_id"])
+    # Validate scopes (if required)
+    for scope in required_scopes.scopes:
+        if scope not in token["scope"]:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Not enough permissions",
+                headers={
+                    "WWW-Authenticate": f'Bearer scope="{required_scopes.scope_str}"'
+                },
+            )
 
-        claims.validate()
-        return claims
-    except errors.JoseError:  #
-        logger.exception("Unable to decode token")
-        raise HTTPException(status_code=403, detail="Bad auth token")
+    return token
 
 
-def get_username(claims: security.HTTPBasicCredentials = Depends(decode_token)):
-    return claims["sub"]
-
-
-def get_token(
-    token: security.HTTPAuthorizationCredentials = Depends(token_scheme),
-):
-    return token.credentials
+def get_username(token: Annotated[Dict[Any, Any], Depends(validated_token)]) -> str:
+    return token["username"]

@@ -94,3 +94,14 @@ variable "cloudfront_id" {
   type = string
 }
 
+variable "cognito_domain" {
+  type = string
+}
+
+variable "client_id" {
+  type = string
+}
+
+variable "userpool_id" {
+  type = string
+}

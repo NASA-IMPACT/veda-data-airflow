@@ -32,7 +32,12 @@ workflows_app = FastAPI(
     root_path=settings.workflow_root_path,
     openapi_url="/openapi.json",
     docs_url="/docs",
-    router = APIRouter(route_class=LoggerRouteHandler)
+    swagger_ui_init_oauth={
+        "appName": "Cognito",
+        "clientId": settings.client_id,
+        "usePkceWithAuthorizationCodeGrant": True,
+    },
+    router=APIRouter(route_class=LoggerRouteHandler),
 )
 
 
@@ -42,7 +47,7 @@ workflows_app = FastAPI(
 @workflows_app.post(
     "/dataset/validate",
     tags=["Dataset"],
-    dependencies=[Depends(auth.get_username)],
+    dependencies=[Depends(auth.validated_token)],
 )
 def validate_dataset(dataset: schemas.COGDataset):
     # for all sample files in dataset, test access using raster /validate endpoint
@@ -69,7 +74,7 @@ def validate_dataset(dataset: schemas.COGDataset):
     "/dataset/publish", tags=["Dataset"], dependencies=[Depends(auth.get_username)]
 )
 async def publish_dataset(
-    token=Depends(auth.get_token),
+    token=Depends(auth.oauth2_scheme),
     dataset: Union[schemas.ZarrDataset, schemas.COGDataset] = Body(
         ..., discriminator="data_type"
     ),
@@ -102,10 +107,12 @@ async def publish_dataset(
     response_model=schemas.WorkflowExecutionResponse,
     tags=["Workflow-Executions"],
     status_code=201,
-    dependencies=[Depends(auth.get_username)],
+    dependencies=[Depends(auth.validated_token)],
 )
 async def start_discovery_workflow_execution(
-    input: Union[schemas.S3Input, schemas.CmrInput]=Body(..., discriminator="discovery"),
+    input: Union[schemas.S3Input, schemas.CmrInput] = Body(
+        ..., discriminator="discovery"
+    ),
 ) -> schemas.WorkflowExecutionResponse:
     """
     Triggers the ingestion workflow
@@ -117,7 +124,7 @@ async def start_discovery_workflow_execution(
     "/discovery-executions/{workflow_execution_id}",
     response_model=Union[schemas.ExecutionResponse, schemas.WorkflowExecutionResponse],
     tags=["Workflow-Executions"],
-    dependencies=[Depends(auth.get_username)],
+    dependencies=[Depends(auth.validated_token)],
 )
 async def get_discovery_workflow_execution_status(
     workflow_execution_id: str,
@@ -131,7 +138,7 @@ async def get_discovery_workflow_execution_status(
 @workflows_app.get(
     "/list-workflows",
     tags=["Workflow-Executions"],
-    dependencies=[Depends(auth.get_username)],
+    dependencies=[Depends(auth.validated_token)],
 )
 async def get_workflow_list() -> (
     Union[schemas.ExecutionResponse, schemas.WorkflowExecutionResponse]
@@ -145,11 +152,10 @@ async def get_workflow_list() -> (
 @workflows_app.post(
     "/cli-input",
     tags=["Admin"],
-    dependencies=[Depends(auth.get_username)],
+    dependencies=[Depends(auth.validated_token)],
 )
 async def send_cli_command(cli_command: str):
     return airflow_helpers.send_cli_command(cli_command)
-
 
 
 # If the correlation header is used in the UI, we can analyze traces that originate from a given user or client
@@ -178,11 +184,21 @@ async def add_correlation_id(request: Request, call_next):
     logger.info("Request completed")
     return response
 
+
+@workflows_app.get("/auth/me", tags=["Auth"])
+def who_am_i(claims=Depends(auth.validated_token)):
+    """
+    Return claims for the provided JWT
+    """
+    return claims
+
+
 # exception handling
 @workflows_app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request, exc):
     metrics.add_metric(name="ValidationErrors", unit=MetricUnit.Count, value=1)
     return JSONResponse(str(exc), status_code=422)
+
 
 @workflows_app.exception_handler(Exception)
 async def general_exception_handler(request, err):

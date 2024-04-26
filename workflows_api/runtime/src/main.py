@@ -37,7 +37,7 @@ workflows_app = FastAPI(
         "clientId": settings.client_id,
         "usePkceWithAuthorizationCodeGrant": True,
     },
-    router = APIRouter(route_class=LoggerRouteHandler)
+    router=APIRouter(route_class=LoggerRouteHandler),
 )
 
 
@@ -158,7 +158,6 @@ async def send_cli_command(cli_command: str):
     return airflow_helpers.send_cli_command(cli_command)
 
 
-
 # If the correlation header is used in the UI, we can analyze traces that originate from a given user or client
 @workflows_app.middleware("http")
 async def add_correlation_id(request: Request, call_next):
@@ -185,19 +184,21 @@ async def add_correlation_id(request: Request, call_next):
     logger.info("Request completed")
     return response
 
+
 @workflows_app.get("/auth/me", tags=["Auth"])
 def who_am_i(claims=Depends(auth.validated_token)):
     """
     Return claims for the provided JWT
     """
-    print(f"\n CLAIMS {claims}")
     return claims
-  
+
+
 # exception handling
 @workflows_app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request, exc):
     metrics.add_metric(name="ValidationErrors", unit=MetricUnit.Count, value=1)
     return JSONResponse(str(exc), status_code=422)
+
 
 @workflows_app.exception_handler(Exception)
 async def general_exception_handler(request, err):
@@ -205,4 +206,3 @@ async def general_exception_handler(request, err):
     metrics.add_metric(name="UnhandledExceptions", unit=MetricUnit.Count, value=1)
     logger.exception(f"Unhandled exception: {err}")
     return JSONResponse(status_code=500, content={"detail": "Internal Server Error"})
-

@@ -29,7 +29,10 @@ def get_settings() -> config.Settings:
 def validated_token(
     token_str: Annotated[str, Security(oauth2_scheme)],
     required_scopes: security.SecurityScopes,
-):
+) -> Dict[str, Any]:
+    """
+    Returns an access token payload, see: https://docs.aws.amazon.com/cognito/latest/developerguide/amazon-cognito-user-pools-using-the-access-token.html
+    """
     # Parse & validate token
     try:
         token = jwt.decode(
@@ -58,5 +61,5 @@ def validated_token(
     return token
 
 
-def get_username(token: Annotated[Dict[Any, Any], Depends(validated_token)]):
+def get_username(token: Annotated[Dict[Any, Any], Depends(validated_token)]) -> str:
     return token["username"]

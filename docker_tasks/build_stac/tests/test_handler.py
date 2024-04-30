@@ -58,7 +58,7 @@ def test_routing_regex_event():
         events.CmrEvent,
         MagicMock(),
     ) as not_called_mock:
-        handler.handler(regex_event, None)
+        handler.handler(regex_event)
 
     called_mock.assert_called_once_with(events.RegexEvent.parse_obj(regex_event))
     assert not not_called_mock.call_count
@@ -83,7 +83,7 @@ def test_routing_cmr_event():
         events.RegexEvent,
         MagicMock(),
     ) as not_called_mock:
-        handler.handler(cmr_event, None)
+        handler.handler(cmr_event)
 
     called_mock.assert_called_once_with(events.CmrEvent.parse_obj(cmr_event))
     assert not not_called_mock.call_count
@@ -98,4 +98,4 @@ def test_routing_unexpected_event(bad_event):
     Ensure that a malformatted event raises a validation error
     """
     with pytest.raises(ValidationError):
-        handler.handler(bad_event, None)
+        handler.handler(bad_event)

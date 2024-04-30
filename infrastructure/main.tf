@@ -200,6 +200,30 @@ resource "aws_iam_role_policy_attachment" "lambda_basic_execution" {
 locals {
   build_jwks_url = "${format("https://cognito-idp.%s.amazonaws.com/%s/.well-known/jwks.json", local.aws_region, var.userpool_id)}"
 }
+
+data "aws_subnets" "lambda_private" {
+  filter {
+    name   = "vpc-id"
+    values = [var.vpc_id]
+  }
+  tags = {
+    "Scope" = "private"
+  }
+}
+
+resource "aws_security_group" "lambda_sg" {
+  name   = "${var.prefix}_lambda_workflows_sg"
+  vpc_id = var.vpc_id
+
+  egress {
+    from_port        = 0
+    to_port          = 0
+    protocol         = "-1"
+    cidr_blocks      = ["0.0.0.0/0"]
+    ipv6_cidr_blocks = ["::/0"]
+  }
+}
+
 resource "aws_lambda_function" "workflows_api_handler" {
   function_name = "${var.prefix}_workflows_api_handler"
   role          = aws_iam_role.lambda_execution_role.arn
@@ -220,6 +244,10 @@ resource "aws_lambda_function" "workflows_api_handler" {
       CLIENT_ID                  = var.client_id
       JWKS_URL                   = local.build_jwks_url
     }
+  }
+  vpc_config {
+    subnet_ids = data.aws_subnets.lambda_private.ids
+    security_group_ids = [aws_security_group.lambda_sg.id]
   }
 }
 

@@ -3,6 +3,12 @@
 variable "subnet_tagname" {
   description = "Private subnet tagname to use for MWAA"
 }
+
+variable "subnet_ids" {
+  type        = list(string)
+  description = "Private subnets to be used for workflows api lambdas"
+}
+
 variable "vpc_id" {
   description = "Account VPC to use"
 }

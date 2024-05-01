@@ -181,6 +181,17 @@ resource "aws_iam_policy" "lambda_access" {
           "arn:aws:airflow:${var.aws_region}:${local.account_id}:environment/${var.prefix}-mwaa"
         ],
         Effect: "Allow"
+      },
+      {
+          "Effect": "Allow",
+          "Action": [
+            "ec2:DescribeNetworkInterfaces",
+            "ec2:CreateNetworkInterface",
+            "ec2:DeleteNetworkInterface",
+            "ec2:DescribeInstances",
+            "ec2:AttachNetworkInterface"
+          ],
+          "Resource": "*"
       }
     ],
   })
@@ -196,6 +207,21 @@ resource "aws_iam_role_policy_attachment" "lambda_basic_execution" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
 
+resource "aws_security_group" "workflows_api_handler_sg" {
+  name        = "${var.prefix}_workflows_security_group"
+  description = "Security group for Lambda function"
+
+  vpc_id = var.vpc_id
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks      = ["0.0.0.0/0"]
+    ipv6_cidr_blocks = ["::/0"]
+  }
+}
+
 # Function to build the JWKS URL
 locals {
   build_jwks_url = "${format("https://cognito-idp.%s.amazonaws.com/%s/.well-known/jwks.json", local.aws_region, var.userpool_id)}"
@@ -206,6 +232,12 @@ resource "aws_lambda_function" "workflows_api_handler" {
   package_type  = "Image"
   timeout       = 30
   image_uri = "${aws_ecr_repository.workflows_api_lambda_repository.repository_url}:latest"
+
+  vpc_config {
+    subnet_ids = var.subnet_ids
+    security_group_ids = [aws_security_group.workflows_api_handler_sg.id]
+  }
+
   environment {
     variables = {
       WORKFLOWS_CLIENT_SECRET_ID = var.cognito_app_secret

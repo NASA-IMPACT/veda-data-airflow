@@ -211,7 +211,7 @@ resource "aws_security_group" "workflows_api_handler_sg" {
   name        = "${var.prefix}_workflows_security_group"
   description = "Security group for Lambda function"
 
-  vpc_id = var.vpc_id
+  vpc_id = var.backend_vpc_id
 
   egress {
     from_port   = 0
@@ -220,6 +220,8 @@ resource "aws_security_group" "workflows_api_handler_sg" {
     cidr_blocks      = ["0.0.0.0/0"]
     ipv6_cidr_blocks = ["::/0"]
   }
+
+  lifecycle { create_before_destroy = true }
 }
 
 # Function to build the JWKS URL

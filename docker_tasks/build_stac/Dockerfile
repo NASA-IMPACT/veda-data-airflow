@@ -16,11 +16,11 @@ ENV GDAL_DISABLE_READDIR_ON_OPEN=EMPTY_DIR GDAL_MAX_DATASET_POOL_SIZE=1024 GDAL_
 
 
 ## Test target
-#FROM production AS test
-#
-#COPY requirements-test.txt requirements-test.txt
-#RUN pip install -r requirements-test.txt
-#RUN rm requirements-test.txt
-#
-#COPY tests ./tests
-#CMD ["pytest", "tests"]
+FROM production AS test
+
+COPY requirements-test.txt requirements-test.txt
+RUN pip install -r requirements-test.txt
+RUN rm requirements-test.txt
+
+COPY tests ./tests
+CMD ["pytest", "tests"]

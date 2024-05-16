@@ -12,6 +12,7 @@ from aws_lambda_powertools.metrics import MetricUnit
 from fastapi import Body, Depends, FastAPI, HTTPException, APIRouter
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from fastapi.encoders import jsonable_encoder
 from starlette.requests import Request
 
 
@@ -117,7 +118,7 @@ async def start_discovery_workflow_execution(
     """
     Triggers the ingestion workflow
     """
-    return airflow_helpers.trigger_discover(input.dict())
+    return airflow_helpers.trigger_discover(jsonable_encoder(input))
 
 
 @workflows_app.get(

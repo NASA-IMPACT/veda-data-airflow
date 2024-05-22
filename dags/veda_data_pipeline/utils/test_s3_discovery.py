@@ -39,5 +39,34 @@ def test_s3_discovery_dry_run(aws_credentials, capsys):
 
   captured = capsys.readouterr()
   assert "Running discovery in dry run mode" in captured.out
+  assert "-DRYRUN- Example item" in captured.out
   
+  assert isinstance(res, dict)
+  assert res["discovered"] == 2
+  
+@mock_s3
+def test_s3_discovery(aws_credentials, capsys):
+  s3 = boto3.resource('s3')
+  bucket = s3.Bucket("test")
+  # Create the bucket first, as we're interacting with an empty mocked 'AWS account'
+  bucket.create(
+      CreateBucketConfiguration={'LocationConstraint': 'us-west-2'}
+  )
+
+  # Create some example files that are representative of what the S3 bucket would look like in production
+  client = boto3.client('s3', region_name='us-west-2')
+  client.put_object(Bucket="test", Key="file1.cog", Body="stuff")
+  client.put_object(Bucket="test", Key="file2.tif", Body="stuff")
+  client.put_object(Bucket="test", Key="file2.txt", Body="stuff")
+  fake_event = {
+    "bucket": "test",
+    "filename_regex": r"^.*\.(cog|tif)$"
+  }
+
+  res = s3_discovery.s3_discovery_handler(fake_event)
+
+  captured = capsys.readouterr()
+  assert "Running discovery in dry run mode" not in captured.out
+  
+  assert isinstance(res, dict)
   assert res["discovered"] == 2

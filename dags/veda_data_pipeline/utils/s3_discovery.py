@@ -111,12 +111,10 @@ def construct_single_asset_items(discovered_files: List[str]) -> dict:
     for uri in discovered_files:
         # Each file gets its matched asset type and id
         filename = uri.split("/")[-1]
-        filename_without_extensions = Path(filename)
-        while filename_without_extensions.suffix: #for filenames that have multiple extensions i.e. *.tif.cog
-             filename_without_extensions=filename_without_extensions.with_suffix('')
+        filename_without_extension = Path(filename).stem
         prefix = "/".join(uri.split("/")[:-1])
         item = {
-            "item_id": str(filename_without_extensions),
+            "item_id": filename_without_extension,
             "assets": {
                 "default": {
                     "title": "Default COG Layer",

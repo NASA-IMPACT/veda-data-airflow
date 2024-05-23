@@ -150,45 +150,7 @@ resource "aws_iam_policy" "lambda_access" {
   description = "Access policy for Lambda function"
   policy = jsonencode({
     Version = "2012-10-17",
-    Statement = [
-      {
-        Effect = "Allow",
-        Action = [
-          "ecr:GetDownloadUrlForLayer",
-          "ecr:BatchGetImage"
-        ],
-        Resource = [
-          "${aws_ecr_repository.workflows_api_lambda_repository.arn}",
-        ],
-      },
-      {
-        Effect = "Allow",
-        Action = [
-          "secretsmanager:GetSecretValue"
-        ],
-        Resource = [
-          "arn:aws:secretsmanager:${var.aws_region}:${local.account_id}:secret:${var.cognito_app_secret}*"
-        ],
-      },
-      {
-        Action: "airflow:CreateCliToken",
-        Resource: [
-          "arn:aws:airflow:${var.aws_region}:${local.account_id}:environment/${var.prefix}-mwaa"
-        ],
-        Effect: "Allow"
-      },
-      {
-          "Effect": "Allow",
-          "Action": [
-            "ec2:DescribeNetworkInterfaces",
-            "ec2:CreateNetworkInterface",
-            "ec2:DeleteNetworkInterface",
-            "ec2:DescribeInstances",
-            "ec2:AttachNetworkInterface"
-          ],
-          "Resource": "*"
-      }
-    ],
+    Statement = var.conditional_workflows_lambda_policy,
   })
 }
 

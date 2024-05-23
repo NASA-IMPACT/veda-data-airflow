@@ -140,7 +140,9 @@ variable "workflows_lambda_policy" {
         ],
       },
       {
-        Action: "airflow:CreateCliToken",
+        Action: [
+          "airflow:CreateCliToken"
+        ],
         Resource: [
           "arn:aws:airflow:${var.aws_region}:${local.account_id}:environment/${var.prefix}-mwaa"
         ],
@@ -155,7 +157,7 @@ variable "workflows_lambda_policy" {
             "ec2:DescribeInstances",
             "ec2:AttachNetworkInterface"
           ],
-          "Resource": "*"
+          "Resource": ["*"]
       }
     ]
 }
@@ -169,8 +171,8 @@ variable "conditional_workflows_lambda_policy" {
   default = var.data_access_role_arn ? concat(var.workflows_lambda_policy, [
     {
       Effect: "Allow",
-      Action: "sts:AssumeRole",
-      Resource: var.data_access_role_arn
+      Action: ["sts:AssumeRole"],
+      Resource: [var.data_access_role_arn]
     }
   ]) : var.workflows_lambda_policy
 }

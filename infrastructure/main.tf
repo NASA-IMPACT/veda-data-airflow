@@ -150,7 +150,7 @@ resource "aws_iam_policy" "lambda_access" {
   description = "Access policy for Lambda function"
   policy = jsonencode({
     Version = "2012-10-17",
-    Statement = var.conditional_workflows_lambda_policy,
+    Statement = local.conditional_workflows_lambda_policy,
   })
 }
 
@@ -181,10 +181,7 @@ resource "aws_security_group" "workflows_api_handler_sg" {
   lifecycle { create_before_destroy = true }
 }
 
-# Function to build the JWKS URL
-locals {
-  build_jwks_url = "${format("https://cognito-idp.%s.amazonaws.com/%s/.well-known/jwks.json", local.aws_region, var.userpool_id)}"
-}
+
 resource "aws_lambda_function" "workflows_api_handler" {
   function_name = "${var.prefix}_workflows_api_handler"
   role          = aws_iam_role.lambda_execution_role.arn

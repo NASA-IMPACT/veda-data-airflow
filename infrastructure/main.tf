@@ -171,11 +171,6 @@ resource "aws_iam_policy" "lambda_access" {
         ],
       },
       {
-        Effect: "Allow",
-        Action: "sts:AssumeRole",
-        Resource: var.data_access_role_arn
-      },
-      {
         Action: "airflow:CreateCliToken",
         Resource: [
           "arn:aws:airflow:${var.aws_region}:${local.account_id}:environment/${var.prefix}-mwaa"
@@ -211,7 +206,7 @@ resource "aws_security_group" "workflows_api_handler_sg" {
   name        = "${var.prefix}_workflows_security_group"
   description = "Security group for Lambda function"
 
-  vpc_id = var.backend_vpc_id
+  vpc_id = var.vpc_id
 
   egress {
     from_port   = 0

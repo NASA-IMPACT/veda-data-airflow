@@ -112,7 +112,7 @@ variable "userpool_id" {
   type = string
 }
 
-variable "backend_vpc_id" {
+variable "vpc_id" {
   type        = string
   description = "VPC ID used for VEDA Backend lambdas"
 }

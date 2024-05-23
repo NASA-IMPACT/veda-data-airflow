@@ -10,7 +10,7 @@ variable "subnet_ids" {
 }
 
 variable "vpc_id" {
-  description = "Account VPC to use"
+  description = "Account VPC to use, this should be the same between airflow and backend"
 }
 
 variable "prefix" {
@@ -110,9 +110,4 @@ variable "client_id" {
 
 variable "userpool_id" {
   type = string
-}
-
-variable "vpc_id" {
-  type        = string
-  description = "VPC ID used for VEDA Backend lambdas"
 }

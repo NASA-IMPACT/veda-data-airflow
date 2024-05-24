@@ -10,7 +10,7 @@ variable "subnet_ids" {
 }
 
 variable "vpc_id" {
-  description = "Account VPC to use, this should be the same between airflow and backend"
+  description = "Account VPC to use"
 }
 
 variable "prefix" {

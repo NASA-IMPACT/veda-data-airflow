@@ -41,7 +41,7 @@ locals {
       }
     ]
 
-    conditional_workflows_lambda_policy = var.data_access_role_arn ? concat(local.workflows_lambda_policy, [
+    conditional_workflows_lambda_policy = var.data_access_role_arn != "" ? concat(local.workflows_lambda_policy, [
         {
         Effect: "Allow",
         Action: ["sts:AssumeRole"],

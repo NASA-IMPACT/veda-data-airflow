@@ -47,7 +47,7 @@ locals {
         Action: ["sts:AssumeRole"],
         Resource: [var.data_access_role_arn]
         }
-    ]) : var.workflows_lambda_policy
+    ]) : local.workflows_lambda_policy
 
   build_jwks_url = "${format("https://cognito-idp.%s.amazonaws.com/%s/.well-known/jwks.json", local.aws_region, var.userpool_id)}"
 }

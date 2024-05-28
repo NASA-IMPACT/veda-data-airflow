@@ -1,12 +1,12 @@
 aws_region="${AWS_REGION}"
-backend_vpc_id="${BACKEND_VPC_ID}"
 prefix="${PREFIX}"
 vpc_id="${VPC_ID}"
+backend_vpc_id="${BACKEND_VPC_ID}"
 subnet_ids=$SUBNET_IDS
 subnet_tagname="${SUBNET_TAGNAME}"
 iam_policy_permissions_boundary_name="${PERMISSIONS_BOUNDARY_POLICY_NAME:-null}"
 stage="${STAGE:-dev}"
-assume_role_arns=$ASSUME_ROLE_ARNS
+assume_role_arns=${ASSUME_ROLE_ARNS:-"[]"}
 cognito_app_secret="${VEDA_PROGRAMMATIC_CLIENT_SECRET_ID}"
 workflows_client_secret="${VEDA_WORKFLOWS_CLIENT_SECRET_ID}"
 stac_ingestor_api_url="${VEDA_STAC_INGESTOR_API_URL}"

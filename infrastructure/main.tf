@@ -150,50 +150,7 @@ resource "aws_iam_policy" "lambda_access" {
   description = "Access policy for Lambda function"
   policy = jsonencode({
     Version = "2012-10-17",
-    Statement = [
-      {
-        Effect = "Allow",
-        Action = [
-          "ecr:GetDownloadUrlForLayer",
-          "ecr:BatchGetImage"
-        ],
-        Resource = [
-          "${aws_ecr_repository.workflows_api_lambda_repository.arn}",
-        ],
-      },
-      {
-        Effect = "Allow",
-        Action = [
-          "secretsmanager:GetSecretValue"
-        ],
-        Resource = [
-          "arn:aws:secretsmanager:${var.aws_region}:${local.account_id}:secret:${var.cognito_app_secret}*"
-        ],
-      },
-      {
-        Effect: "Allow",
-        Action: "sts:AssumeRole",
-        Resource: var.data_access_role_arn
-      },
-      {
-        Action: "airflow:CreateCliToken",
-        Resource: [
-          "arn:aws:airflow:${var.aws_region}:${local.account_id}:environment/${var.prefix}-mwaa"
-        ],
-        Effect: "Allow"
-      },
-      {
-          "Effect": "Allow",
-          "Action": [
-            "ec2:DescribeNetworkInterfaces",
-            "ec2:CreateNetworkInterface",
-            "ec2:DeleteNetworkInterface",
-            "ec2:DescribeInstances",
-            "ec2:AttachNetworkInterface"
-          ],
-          "Resource": "*"
-      }
-    ],
+    Statement = local.conditional_workflows_lambda_policy,
   })
 }
 
@@ -211,7 +168,7 @@ resource "aws_security_group" "workflows_api_handler_sg" {
   name        = "${var.prefix}_workflows_security_group"
   description = "Security group for Lambda function"
 
-  vpc_id = var.backend_vpc_id
+  vpc_id = var.backend_vpc_id != "" ? var.backend_vpc_id : var.vpc_id
 
   egress {
     from_port   = 0
@@ -224,10 +181,7 @@ resource "aws_security_group" "workflows_api_handler_sg" {
   lifecycle { create_before_destroy = true }
 }
 
-# Function to build the JWKS URL
-locals {
-  build_jwks_url = "${format("https://cognito-idp.%s.amazonaws.com/%s/.well-known/jwks.json", local.aws_region, var.userpool_id)}"
-}
+
 resource "aws_lambda_function" "workflows_api_handler" {
   function_name = "${var.prefix}_workflows_api_handler"
   role          = aws_iam_role.lambda_execution_role.arn

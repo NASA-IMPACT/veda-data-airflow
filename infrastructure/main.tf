@@ -235,6 +235,9 @@ resource "aws_lambda_function" "workflows_api_handler" {
   timeout       = 30
   image_uri = "${aws_ecr_repository.workflows_api_lambda_repository.repository_url}:latest"
 
+  # prevents handler from instantiating if provisioner has not created an image
+  depends_on = [ null_resource.if_change_run_provisioner ]
+
   vpc_config {
     subnet_ids = var.subnet_ids
     security_group_ids = [aws_security_group.workflows_api_handler_sg.id]

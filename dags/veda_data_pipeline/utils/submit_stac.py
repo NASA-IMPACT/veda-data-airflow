@@ -9,7 +9,6 @@ else:
     from typing_extensions import TypedDict
 
 from typing import Any, Dict, Optional, Union
-from src.schemas import DashboardCollection
 
 import boto3
 import requests
@@ -80,12 +79,6 @@ class IngestionApi:
             raise f"Error, {ex}"
         return response.json()
 
-    def post_item(self, stac_item: Dict[str, Any]):
-        return self.submit('/ingestions', stac_item)
-    
-    def post_collection(self, collection: DashboardCollection):
-        return self.submit('/collections', collection)
-
     def submit(self, endpoint: str, event: Dict[str, Any]) -> Dict[str, Any]:
         headers = {
             "Authorization": f"Bearer {self.token}",
@@ -105,7 +98,8 @@ class IngestionApi:
 
 
 def submission_handler(
-        event: Union[S3LinkInput, StacItemInput, DashboardCollection], 
+        event: Union[S3LinkInput, StacItemInput],
+        endpoint: str="/ingestions",
         cognito_app_secret=None, 
         stac_ingestor_api_url=None, 
         context=None
@@ -123,10 +117,7 @@ def submission_handler(
         secret_id=os.getenv("COGNITO_APP_SECRET", cognito_app_secret),
         base_url=os.getenv("STAC_INGESTOR_API_URL", stac_ingestor_api_url),
     )
-    if isinstance(stac_item, DashboardCollection):
-        ingestor.post_collection(stac_item)
-    else:
-        ingestor.post_item(stac_item)
+    ingestor.submit(stac_item, endpoint)
     # print("Successfully submitted STAC item")
 
 

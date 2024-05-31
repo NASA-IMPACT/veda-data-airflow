@@ -1,40 +1,12 @@
-from typing import Union
+from typing import Dict, Any
 
-import requests
 import fsspec
-import xarray as xr
 import xstac
-from src.schemas import (
-    COGDataset,
-    DashboardCollection,
-    DataType,
-    SpatioTemporalExtent,
-    ZarrDataset,
-)
-from src.validators import get_s3_credentials
+import xarray as xr
 
+from utils.schemas import SpatioTemporalExtent
 
-class CollectionPublisher:
-    def ingest(self, collection: DashboardCollection, token: str, ingest_api: str):
-        """
-        Takes a collection model,
-        does necessary preprocessing,
-        and loads into the PgSTAC collection table
-        """
-        url = f"{ingest_api}/collections"
-        headers = {
-            "Authorization": f"Bearer {token}",
-            "Content-Type": "application/json",
-        }
-        response = requests.post(url, data=collection.json(by_alias=True), headers=headers)
-        if response.status_code == 200:
-            print("Success:", response.json())
-        else:
-            print("Error:", response.status_code, response.text)
-
-
-# TODO refactor
-class Publisher:
+class GenerateCollection:
     common_fields = [
         "title",
         "description",
@@ -53,26 +25,19 @@ class Publisher:
         "stac_version": "1.0.0",
     }
 
-    def __init__(self) -> None:
-        self.func_map = {
-            DataType.zarr: self.create_zarr_collection,
-            DataType.cog: self.create_cog_collection,
-        }
-
-    def get_template(self, dataset: Union[ZarrDataset, COGDataset]) -> dict:
-        dataset_dict = dataset.dict()
+    def get_template(self, dataset: Dict[str, Any]) -> dict:
         collection_dict = {
-            "id": dataset_dict["collection"],
-            **Publisher.common,
+            "id": dataset["collection"],
+            **GenerateCollection.common,
             **{
-                key: dataset_dict[key]
-                for key in Publisher.common_fields
-                if key in dataset_dict.keys()
+                key: dataset[key]
+                for key in GenerateCollection.common_fields
+                if key in dataset.keys()
             },
         }
         return collection_dict
 
-    def _create_zarr_template(self, dataset: ZarrDataset, store_path: str) -> dict:
+    def _create_zarr_template(self, dataset: Dict[str, Any], store_path: str) -> dict:
         template = self.get_template(dataset)
         template["assets"] = {
             "zarr": {
@@ -90,15 +55,16 @@ class Publisher:
         }
         return template
 
-    def create_zarr_collection(self, dataset: ZarrDataset) -> dict:
+    def create_zarr_collection(self, dataset: Dict[str, Any], role_arn: str) -> dict:
         """
         Creates a zarr stac collection based off of the user input
         """
-        s3_creds = get_s3_credentials()
         discovery = dataset.discovery_items[0]
         store_path = f"s3://{discovery.bucket}/{discovery.prefix}{discovery.zarr_store}"
         template = self._create_zarr_template(dataset, store_path)
-        store = fsspec.get_mapper(store_path, client_kwargs=s3_creds)
+
+        fs = fsspec.filesystem("s3", anon=False, role_arn=role_arn)
+        store = fs.get_mapper(store_path)
         ds = xr.open_zarr(
             store, consolidated=bool(dataset.xarray_kwargs.get("consolidated"))
         )
@@ -113,7 +79,7 @@ class Publisher:
         )
         return collection.to_dict()
 
-    def create_cog_collection(self, dataset: COGDataset) -> dict:
+    def create_cog_collection(self, dataset: Dict[str, Any]) -> dict:
         collection_stac = self.get_template(dataset)
         collection_stac["extent"] = SpatioTemporalExtent.parse_obj(
             {
@@ -148,25 +114,11 @@ class Publisher:
         return collection_stac
 
     def generate_stac(
-        self, dataset: Union[COGDataset, ZarrDataset], data_type: str
+        self, dataset: Dict[str, Any], data_type: str, role_arn: str = None
     ) -> dict:
-        create_function = self.func_map.get(data_type, self.create_cog_collection)
-        return create_function(dataset)
-
-    def ingest(self, collection: DashboardCollection, token: str, ingest_api: str):
-        """
-        Takes a collection model,
-        does necessary preprocessing,
-        and loads into the PgSTAC collection table
-        """
-        
-        url = f"{ingest_api}/collections"
-        headers = {
-            "Authorization": f"Bearer {token}",
-            "Content-Type": "application/json",
-        }
-        response = requests.post(url, data=collection.json(by_alias=True), headers=headers)
-        if response.status_code == 200:
-            print("Success:", response.json())
+        if data_type == "zarr":
+            return self.create_zarr_collection(dataset, role_arn)
+        elif data_type == "cog":
+            return self.create_cog_collection(dataset)
         else:
-            print("Error:", response.status_code, response.text)
+            raise ValueError(f"Data type {data_type} not supported")

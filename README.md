@@ -39,6 +39,11 @@ See [getting-started-install](https://docs.aws.amazon.com/cli/latest/userguide/g
 
 This project uses Terraform modules to deploy Apache Airflow and related AWS resources using Amazon's managed Airflow provider.
 
+### Configure AWS Profile
+Ensure that you have an AWS profile configured with the necessary permissions to deploy resources. The profile should be configured in the `~/.aws/credentials` file with the profile name being called `veda`, to match existing .env files.
+
+```bash
+
 ### Make sure that environment variables are set
 
 [.env.example`](./.env.example) contains the environment variables which are necessary to deploy. Copy this file and update its contents with actual values. The deploy script will `source` and use this file during deployment when provided through the command line:
@@ -47,6 +52,9 @@ This project uses Terraform modules to deploy Apache Airflow and related AWS res
 # Copy .env.example to a new file
 $cp .env.example .env
 # Fill values for the environments variables
+
+# Install the deploy requirements
+$pip install -r deploy_requirements.txt
 
 # Init terraform modules
 $bash ./scripts/deploy.sh .env <<< init

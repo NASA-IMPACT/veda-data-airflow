@@ -1,44 +1,47 @@
-from typing import Union
-from fastapi import Body
+from typing import Dict, Any
 
+from airflow.models.variable import Variable
 from airflow.operators.python import PythonOperator
 from airflow.utils.task_group import TaskGroup
 from airflow.utils.trigger_rule import TriggerRule
-from src.schemas import (
-    DashboardCollection,
-    ZarrDataset,
-    COGDataset,
-)
-from utils.collection_publisher import Publisher
 
+from veda_data_pipeline.utils.collection_generation import GenerateCollection
 from veda_data_pipeline.utils.submit_stac import (
     submission_handler
 )
 
-publisher = Publisher()
+generator = GenerateCollection()
 
 def ingest_collection(
-        dataset: Union[ZarrDataset, COGDataset]
+        dataset: Dict[str, Any],
+        data_type: str = "cog",
+        role_arn: str = None
     ):
     """
-    Ingests a dataset collection
+    Ingest a collection into the STAC catalog
 
     Args:
-        dataset (Union[ZarrDataset, COGDataset]): The dataset to ingest
+        dataset (Dict[str, Any]): dataset dictionary (JSON)
+        data_type (str): collection data type, defaults to "cog"
+        role_arn (str): role arn for Zarr collection generation
     """
-    collection_data = publisher.generate_stac(dataset, dataset.data_type or "cog")
-    collection = DashboardCollection.parse_obj(collection_data)
+    collection = generator.generate_stac(dataset, data_type, role_arn)
 
     return submission_handler(
-        event=collection
+        event=collection,
+        endpoint="/collections"
     )
 
 group_kwgs = {"group_id": "Collection", "tooltip": "Collection"}
 
 def generate_collection_task(ti):
     config = ti.dag_run.conf
-
-    return ingest_collection(dataset=config)
+    role_arn = Variable.get("ASSUME_ROLE_READ_ARN", default_var=None)
+    return ingest_collection(
+        dataset=config.get("dataset"), 
+        data_type=config.get("data_type"),
+        role_arn=role_arn
+    )
 
 def generate_collection():
     with TaskGroup(**group_kwgs) as collection_grp:

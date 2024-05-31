@@ -67,6 +67,7 @@ def group_by_item(discovered_files: List[str], id_regex: str, assets: dict) -> d
         # Each file gets its matched asset type and id
         filename = uri.split("/")[-1]
         prefix = "/".join(uri.split("/")[:-1])
+        asset_type = None
         if match := re.match(id_regex, filename):
             # At least one match; can use the match here to construct an ID (match groups separated by '-')
             item_id = "-".join(match.groups())
@@ -75,14 +76,15 @@ def group_by_item(discovered_files: List[str], id_regex: str, assets: dict) -> d
                 if re.match(regex, filename):
                     asset_type = asset_name
                     break
-            grouped_files.append(
-                {
-                    "prefix": prefix,
-                    "filename": filename,
-                    "asset_type": asset_type,
-                    "item_id": item_id,
-                }
-            )
+            if asset_type:
+                grouped_files.append(
+                    {
+                        "prefix": prefix,
+                        "filename": filename,
+                        "asset_type": asset_type,
+                        "item_id": item_id,
+                    }
+                )
         else:
             print(f"Warning: skipping file. No id match found: {filename}")
     # At this point, files are labeled with type and id. Now, group them by id

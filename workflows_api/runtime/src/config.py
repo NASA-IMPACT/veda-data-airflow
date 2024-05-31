@@ -10,7 +10,7 @@ class Settings(BaseSettings):
         description="The base url of the Cognito domain for authorization and token urls"
     )
     client_id: str = Field(description="The Cognito APP client ID")
-    data_access_role_arn: AwsArn = Field(  # type: ignore
+    data_access_role_arn: Optional[AwsArn] = Field(  # type: ignore
         description="ARN of AWS Role used to validate access to S3 data"
     )
     jwks_url: Optional[AnyHttpUrl] = Field(

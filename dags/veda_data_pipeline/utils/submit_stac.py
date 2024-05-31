@@ -9,6 +9,7 @@ else:
     from typing_extensions import TypedDict
 
 from typing import Any, Dict, Optional, Union
+from src.schemas import DashboardCollection
 
 import boto3
 import requests
@@ -79,32 +80,42 @@ class IngestionApi:
             raise f"Error, {ex}"
         return response.json()
 
-    def submit(self, stac_item: Dict[str, Any]):
-        response = requests.post(
-            f"{self.base_url.rstrip('/')}/ingestions",
-            json=stac_item,
-            headers={"Authorization": f"bearer {self.token}"},
-        )
+    def post_item(self, stac_item: Dict[str, Any]):
+        return self.submit('/ingestions', stac_item)
+    
+    def post_collection(self, collection: DashboardCollection):
+        return self.submit('/collections', collection)
 
+    def submit(self, endpoint: str, event: Dict[str, Any]) -> Dict[str, Any]:
+        headers = {
+            "Authorization": f"Bearer {self.token}",
+            "Content-Type": "application/json",
+        }
+        response = requests.post(
+            f"{self.base_url.rstrip('/')}{endpoint}",
+            json=event,
+            headers=headers,
+        )
         try:
             response.raise_for_status()
         except Exception as e:
             print(response.text)
             raise e
-
         return response.json()
 
 
 def submission_handler(
-    event: Union[S3LinkInput, StacItemInput],
-    cognito_app_secret=None,
-    stac_ingestor_api_url=None,
-    context={},
-) -> None:
-    # print(f"SUBMISSION EVENT {event}")
+        event: Union[S3LinkInput, StacItemInput, DashboardCollection], 
+        cognito_app_secret=None, 
+        stac_ingestor_api_url=None, 
+        context=None
+    ) -> None:
+    if context is None:
+        context = {}
+
     stac_item = event
 
-    if event.get("dry_run"):
+    if stac_item.get("dry_run"):
         print("Dry run, not inserting, would have inserted:")
         print(json.dumps(stac_item, indent=2))
         return
@@ -112,7 +123,10 @@ def submission_handler(
         secret_id=os.getenv("COGNITO_APP_SECRET", cognito_app_secret),
         base_url=os.getenv("STAC_INGESTOR_API_URL", stac_ingestor_api_url),
     )
-    ingestor.submit(stac_item)
+    if isinstance(stac_item, DashboardCollection):
+        ingestor.post_collection(stac_item)
+    else:
+        ingestor.post_item(stac_item)
     # print("Successfully submitted STAC item")
 
 

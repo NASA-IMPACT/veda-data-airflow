@@ -4,7 +4,7 @@ import fsspec
 import xstac
 import xarray as xr
 
-from utils.schemas import SpatioTemporalExtent
+from veda_data_pipeline.utils.schemas import SpatioTemporalExtent
 
 class GenerateCollection:
     common_fields = [

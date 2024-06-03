@@ -5,7 +5,7 @@ import src.airflow_helpers as airflow_helpers
 import src.auth as auth
 import src.config as config
 import src.schemas as schemas
-
+from src.collection_publisher import CollectionPublisher, Publisher
 from src.monitoring import LoggerRouteHandler, logger, metrics, tracer
 from aws_lambda_powertools.metrics import MetricUnit
 
@@ -17,6 +17,9 @@ from starlette.requests import Request
 
 
 settings = config.Settings()
+
+collection_publisher = CollectionPublisher()
+publisher = Publisher()
 
 # App for managing Processes and DAG executions (workflows)
 
@@ -66,6 +69,38 @@ def validate_dataset(dataset: schemas.COGDataset):
     return {
         f"Dataset metadata is valid and ready to be published - {dataset.collection}"
     }
+
+
+@workflows_app.post(
+    "/dataset/publish", tags=["Dataset"], dependencies=[Depends(auth.get_username)]
+)
+async def publish_dataset(
+    token=Depends(auth.oauth2_scheme),
+    dataset: Union[schemas.ZarrDataset, schemas.COGDataset] = Body(
+        ..., discriminator="data_type"
+    ),
+):
+    # Construct and load collection
+    collection_data = publisher.generate_stac(dataset, dataset.data_type or "cog")
+    collection = schemas.DashboardCollection.parse_obj(collection_data)
+    collection_publisher.ingest(collection, token, settings.ingest_url)
+
+    # TODO improve typing
+    return_dict = {
+        "message": f"Successfully published collection: {dataset.collection}."
+    }
+
+    if dataset.data_type == schemas.DataType.cog:
+        workflow_runs = []
+        for discovery in dataset.discovery_items:
+            discovery.collection = dataset.collection
+            response = await start_discovery_workflow_execution(discovery)
+            workflow_runs.append(response.id)
+        if workflow_runs:
+            return_dict["message"] += f" {len(workflow_runs)} workflows initiated."  # type: ignore
+            return_dict["workflows_ids"] = workflow_runs  # type: ignore
+
+    return return_dict
 
 
 @workflows_app.post(

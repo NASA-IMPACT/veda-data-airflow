@@ -1,56 +1,85 @@
-from typing import Dict, Any
+from typing import Any, Dict
 
+import requests
 from airflow.models.variable import Variable
-from airflow.operators.python import PythonOperator
+from airflow.operators.empty import EmptyOperator
+from airflow.operators.python import BranchPythonOperator, PythonOperator
 from airflow.utils.task_group import TaskGroup
-from airflow.utils.trigger_rule import TriggerRule
-
 from veda_data_pipeline.utils.collection_generation import GenerateCollection
-from veda_data_pipeline.utils.submit_stac import (
-    submission_handler
-)
+from veda_data_pipeline.utils.submit_stac import submission_handler
 
 generator = GenerateCollection()
 
-def ingest_collection(
-        dataset: Dict[str, Any],
-        data_type: str = "cog",
-        role_arn: str = None
-    ):
+
+def check_collection_exists(endpoint: str, collection_id: str):
+    """
+    Check if a collection exists in the STAC catalog
+
+    Args:
+        endpoint (str): STAC catalog endpoint
+        collection_id (str): collection id
+    """
+    response = requests.get(f"{endpoint}/collections/{collection_id}")
+    return (
+        "Collection.existing_collection"
+        if (response.status_code == 200)
+        else "Collection.generate_collection"
+    )
+
+
+def ingest_collection(dataset_config: Dict[str, Any], role_arn: str = None):
     """
     Ingest a collection into the STAC catalog
 
     Args:
         dataset (Dict[str, Any]): dataset dictionary (JSON)
-        data_type (str): collection data type, defaults to "cog"
         role_arn (str): role arn for Zarr collection generation
     """
-    collection = generator.generate_stac(dataset, data_type, role_arn)
+    collection = generator.generate_stac(
+        dataset_config=dataset_config, role_arn=role_arn
+    )
 
     return submission_handler(
         event=collection,
-        endpoint="/collections"
+        endpoint="/collections",
+        cognito_app_secret=Variable.get("COGNITO_APP_SECRET"),
+        stac_ingestor_api_url=Variable.get("STAC_INGESTOR_API_URL"),
     )
 
-group_kwgs = {"group_id": "Collection", "tooltip": "Collection"}
+
+def check_collection_exists_task(ti):
+    config = ti.dag_run.conf
+    return check_collection_exists(
+        endpoint=Variable.get("STAC_URL", default_var=None),
+        collection_id=config.get("collection"),
+    )
+
 
 def generate_collection_task(ti):
     config = ti.dag_run.conf
     role_arn = Variable.get("ASSUME_ROLE_READ_ARN", default_var=None)
     return ingest_collection(
-        dataset=config.get("dataset"), 
-        data_type=config.get("data_type"),
-        role_arn=role_arn
+        dataset_config=config,
+        role_arn=role_arn,
     )
 
-def generate_collection():
-    with TaskGroup(**group_kwgs) as collection_grp:
-        run_generate_collection = PythonOperator(
-            task_id="generate_collection",
-            python_callable=generate_collection_task,
-            trigger_rule=TriggerRule.ONE_SUCCESS
+
+group_kwgs = {"group_id": "Collection", "tooltip": "Collection"}
+
+
+def collection_task_group():
+    with TaskGroup(**group_kwgs) as collection_task_grp:
+        check_collection = BranchPythonOperator(
+            task_id="check_collection_exists",
+            python_callable=check_collection_exists_task,
         )
 
-        run_generate_collection
+        generate_collection = PythonOperator(
+            task_id="generate_collection", python_callable=generate_collection_task
+        )
 
-        return collection_grp
+        existing_collection = EmptyOperator(task_id="existing_collection")
+
+        (check_collection >> [existing_collection, generate_collection])
+
+        return collection_task_grp

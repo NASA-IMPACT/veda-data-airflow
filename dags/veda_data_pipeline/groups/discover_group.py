@@ -59,6 +59,7 @@ def subdag_discover():
             task_id="discover_from_s3",
             python_callable=discover_from_s3_task,
             op_kwargs={"text": "Discover from S3"},
+            trigger_rule=TriggerRule.NONE_FAILED,
         )
 
         raster_vector_branching = BranchPythonOperator(

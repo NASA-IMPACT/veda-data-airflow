@@ -1,10 +1,10 @@
-from typing import Dict, Any
+from typing import Any, Dict
 
 import fsspec
-import xstac
 import xarray as xr
-
+import xstac
 from veda_data_pipeline.utils.schemas import SpatioTemporalExtent
+
 
 class GenerateCollection:
     common_fields = [
@@ -35,6 +35,13 @@ class GenerateCollection:
                 if key in dataset.keys()
             },
         }
+
+        # Default REQUIRED fields
+        if not collection_dict.get("title"):
+            collection_dict["description"] = dataset["collection"]
+        if not collection_dict.get("license"):
+            collection_dict["license"] = "proprietary"
+
         return collection_dict
 
     def _create_zarr_template(self, dataset: Dict[str, Any], store_path: str) -> dict:
@@ -81,28 +88,26 @@ class GenerateCollection:
 
     def create_cog_collection(self, dataset: Dict[str, Any]) -> dict:
         collection_stac = self.get_template(dataset)
-        collection_stac["extent"] = SpatioTemporalExtent.parse_obj(
-            {
-                "spatial": {
-                    "bbox": [
-                        list(dataset.spatial_extent.dict(exclude_unset=True).values())
-                    ]
-                },
-                "temporal": {
-                    "interval": [
-                        # most of our data uses the Z suffix for UTC - isoformat() doesn't
-                        [
-                            x.isoformat().replace("+00:00", "Z")
-                            for x in list(
-                                dataset.temporal_extent.dict(
-                                    exclude_unset=True
-                                ).values()
-                            )
+
+        # Override the extents if they exists
+        if (spatial_extent := dataset.get("spatial_extent")) or (
+            temporal_extent := dataset.get("temporal_extent")
+        ):
+            collection_stac["extent"] = SpatioTemporalExtent.parse_obj(
+                {
+                    "spatial": {"bbox": [list(spatial_extent)]},
+                    "temporal": {
+                        "interval": [
+                            # most of our data uses the Z suffix for UTC - isoformat() doesn't
+                            [
+                                x.isoformat().replace("+00:00", "Z")
+                                for x in list(temporal_extent)
+                            ]
                         ]
-                    ]
-                },
-            }
-        )
+                    },
+                }
+            )
+
         collection_stac["item_assets"] = {
             "cog_default": {
                 "type": "image/tiff; application=geotiff; profile=cloud-optimized",
@@ -114,11 +119,17 @@ class GenerateCollection:
         return collection_stac
 
     def generate_stac(
-        self, dataset: Dict[str, Any], data_type: str, role_arn: str = None
+        self, dataset_config: Dict[str, Any], role_arn: str = None
     ) -> dict:
+        """
+        Generates a STAC collection based on the dataset and data type
+
+        Args:
+            dataset_config (Dict[str, Any]): dataset configuration
+            role_arn (str): role arn for Zarr collection generation
+        """
+        data_type = dataset_config.get("data_type", "cog")
         if data_type == "zarr":
-            return self.create_zarr_collection(dataset, role_arn)
-        elif data_type == "cog":
-            return self.create_cog_collection(dataset)
+            return self.create_zarr_collection(dataset_config, role_arn)
         else:
-            raise ValueError(f"Data type {data_type} not supported")
+            return self.create_cog_collection(dataset_config)

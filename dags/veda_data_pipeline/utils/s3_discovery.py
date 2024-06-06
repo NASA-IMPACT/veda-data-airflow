@@ -4,6 +4,7 @@ import os
 import re
 from typing import List
 from uuid import uuid4
+from pathlib import Path
 
 import boto3
 from smart_open import open as smrt_open
@@ -66,6 +67,7 @@ def group_by_item(discovered_files: List[str], id_regex: str, assets: dict) -> d
         # Each file gets its matched asset type and id
         filename = uri.split("/")[-1]
         prefix = "/".join(uri.split("/")[:-1])
+        asset_type = None
         if match := re.match(id_regex, filename):
             # At least one match; can use the match here to construct an ID (match groups separated by '-')
             item_id = "-".join(match.groups())
@@ -74,14 +76,15 @@ def group_by_item(discovered_files: List[str], id_regex: str, assets: dict) -> d
                 if re.match(regex, filename):
                     asset_type = asset_name
                     break
-            grouped_files.append(
-                {
-                    "prefix": prefix,
-                    "filename": filename,
-                    "asset_type": asset_type,
-                    "item_id": item_id,
-                }
-            )
+            if asset_type:
+                grouped_files.append(
+                    {
+                        "prefix": prefix,
+                        "filename": filename,
+                        "asset_type": asset_type,
+                        "item_id": item_id,
+                    }
+                )
         else:
             print(f"Warning: skipping file. No id match found: {filename}")
     # At this point, files are labeled with type and id. Now, group them by id
@@ -110,9 +113,10 @@ def construct_single_asset_items(discovered_files: List[str]) -> dict:
     for uri in discovered_files:
         # Each file gets its matched asset type and id
         filename = uri.split("/")[-1]
+        filename_without_extension = Path(filename).stem
         prefix = "/".join(uri.split("/")[:-1])
         item = {
-            "item_id": filename,
+            "item_id": filename_without_extension,
             "assets": {
                 "default": {
                     "title": "Default COG Layer",
@@ -172,7 +176,7 @@ def s3_discovery_handler(event, chunk_size=2800, role_arn=None, bucket_output=No
     properties = event.get("properties", {})
     assets = event.get("assets")
     id_regex = event.get("id_regex")
-    id_template = event.get("id_template", collection + "-{}")
+    id_template = event.get("id_template", "{}")
     date_fields = propagate_forward_datetime_args(event)
     dry_run = event.get("dry_run", False)
     if dry_run:

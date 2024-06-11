@@ -10,7 +10,6 @@ on:
       - main
       - dev
       - production
-      - ghc-deploy-dev-mcp
   pull_request:
     branches:
       - main
@@ -69,7 +68,7 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v2
         with:
           role-to-assume: ${{ secrets.DEPLOYMENT_ROLE_ARN }}
-          role-session-name: "ghgc-airflow-github-${{ needs.define-environment.outputs.env_name }}-deployment"
+          role-session-name: "veda-airflow-github-${{ needs.define-environment.outputs.env_name }}-deployment"
           aws-region: "us-west-2"
 
       - name: Run deployment

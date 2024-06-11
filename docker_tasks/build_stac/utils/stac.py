@@ -2,14 +2,13 @@ import os
 
 import pystac
 import rasterio
+from pystac.utils import datetime_to_str
 from rasterio.session import AWSSession
 from rio_stac import stac
+from rio_stac.stac import PROJECTION_EXT_VERSION, RASTER_EXT_VERSION
+
 
 from . import events, regex, role
-
-
-PROJECTION_EXT_VERSION = "v1.1.0"
-RASTER_EXT_VERSION = "v1.1.0"
 
 
 def get_sts_session():
@@ -92,8 +91,8 @@ def generate_stac(event: events.RegexEvent) -> pystac.Item:
 
     properties = event.properties or {}
     if start_datetime and end_datetime:
-        properties["start_datetime"] = start_datetime.strftime("%Y-%m-%dT%H:%M:%SZ")
-        properties["end_datetime"] = end_datetime.strftime("%Y-%m-%dT%H:%M:%SZ")
+        properties["start_datetime"] = datetime_to_str(start_datetime)
+        properties["end_datetime"] = datetime_to_str(end_datetime)
         single_datetime = None
     assets = {}
 
@@ -117,6 +116,9 @@ def generate_stac(event: events.RegexEvent) -> pystac.Item:
                 }
                 raster_info = {"raster:bands": stac.get_raster_info(src, max_size=1024)}
 
+            # The default asset name for cogs is "cog_default", so we need to intercept 'default'
+            if asset_name == "default":
+                asset_name = "cog_default"
             assets[asset_name] = pystac.Asset(
                 title=asset_definition["title"],
                 description=asset_definition["description"],
@@ -128,6 +130,7 @@ def generate_stac(event: events.RegexEvent) -> pystac.Item:
 
         minx, miny, maxx, maxy = zip(*bboxes)
         bbox = [min(minx), min(miny), max(maxx), max(maxy)]
+
         create_item_response = create_item(
             item_id=event.item_id,
             bbox=bbox,

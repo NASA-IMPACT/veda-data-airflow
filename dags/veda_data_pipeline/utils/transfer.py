@@ -2,7 +2,7 @@ import os
 import re
 
 import boto3
-from botocore.exceptions import ClientError
+from airflow.exceptions import AirflowException
 
 
 def assume_role(role_arn, session_name="veda-data-airflow_s3-discovery"):
@@ -47,6 +47,7 @@ def transfer_files_within_s3(
 ):
     for file_key in matching_files:
         filename = file_key.split("/")[-1]
+        print(f"Transferring file: {filename}")
         target_key = f"{collection}/{filename}"
         copy_source = {"Bucket": origin_bucket, "Key": file_key}
 
@@ -57,29 +58,30 @@ def transfer_files_within_s3(
                 Bucket=destination_bucket, Key=target_key
             )
             target_etag = target_metadata["ETag"]
-        except (s3_client.exceptions.NoSuchKey, ClientError):
-            target_etag = ""
-
-        try:
+            print(f"File already exists, checking Etag: {filename}")
             s3_client.copy_object(
-                CopySource=copy_source,
-                Bucket=destination_bucket,
-                Key=target_key,
-                CopySourceIfNoneMatch=target_etag,
-            )
-        except s3_client.ClientError:
-            # If the file with same etag already exits, it throws a ClientError; it's okay
-            pass
+                    CopySource=copy_source,
+                    Bucket=destination_bucket,
+                    Key=target_key,
+                    CopySourceIfNoneMatch=target_etag,
+                )
+        except s3_client.exceptions.ClientError as err:
+            if err.response["Error"]["Code"] == "404":
+                print(f"Copying file: {filename}")
+                s3_client.copy_object(
+                    CopySource=copy_source,
+                    Bucket=destination_bucket,
+                    Key=target_key
+                )
 
 
-def data_transfer_handler(event, role_arn=None, bucket_output=None):
+def data_transfer_handler(event, role_arn=None):
     origin_bucket = event.get("origin_bucket")
     origin_prefix = event.get("origin_prefix")
     filename_regex = event.get("filename_regex")
     target_bucket = event.get("target_bucket")
     collection = event.get("collection")
 
-    role_arn = os.environ.get("ASSUME_ROLE_ARN", role_arn)
     kwargs = assume_role(role_arn=role_arn) if role_arn else {}
     s3client = boto3.client("s3", **kwargs)
     matching_files = get_matching_files(
@@ -88,6 +90,10 @@ def data_transfer_handler(event, role_arn=None, bucket_output=None):
         prefix=origin_prefix,
         regex_pattern=filename_regex,
     )
+
+    if len(matching_files)==0:
+        raise AirflowException("No matching files found")
+
     if not event.get("dry_run"):
         transfer_files_within_s3(
             s3_client=s3client,

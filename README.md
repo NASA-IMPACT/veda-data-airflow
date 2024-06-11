@@ -1,4 +1,4 @@
-# veda-data-pipelines
+# veda-data-airflow
 
 This repo houses function code and deployment code for producing cloud-optimized
 data products and STAC metadata for interfaces such as https://github.com/NASA-IMPACT/delta-ui.
@@ -27,21 +27,13 @@ Afterwards:
 
 See [get-docker](https://docs.docker.com/get-docker/)
 
-### Terraform 
+### Terraform
 
 See [terraform-getting-started](https://developer.hashicorp.com/terraform/tutorials/aws-get-started/install-cli)
 
 ### AWS CLI
 
 See [getting-started-install](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)
-
-### Poetry
-
-See [poetry-landing-page](https://pypi.org/project/poetry/)
-
-```bash
-pip install poetry
-```
 
 ## Deployment
 
@@ -65,8 +57,10 @@ $bash ./scripts/deploy.sh .env <<< deploy
 
 **Note:** Be careful not to check in `.env` (or whatever you called your env file) when committing work.
 
+Currently, the client id and domain of an existing Cognito user pool programmatic client must be supplied in [configuration](ingest_api/infrastructure/config.py) as `VEDA_CLIENT_ID` and `VEDA_COGNITO_DOMAIN` (the [veda-auth project](https://github.com/NASA-IMPACT/veda-auth) can be used to deploy a Cognito user pool and client). To dispense auth tokens via the workflows API swagger docs, an administrator must add the ingest API lambda URL to the allowed callbacks of the Cognito client.
+
 # Gitflow Model
-[VEDA pipeline gitflow](./GITFLOW.md) 
+[VEDA pipeline gitflow](./GITFLOW.md)
 # License
 This project is licensed under **Apache 2**, see the [LICENSE](LICENSE) file for more details.
 

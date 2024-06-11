@@ -81,8 +81,7 @@ data "aws_iam_policy_document" "mwaa_executor_policies" {
       "s3:Put*",
     ]
     resources = [
-      "arn:aws:s3:::ghgc-*",
-      "arn:aws:s3:::ghgc-*/*"
+      "arn:aws:s3:::*",
     ]
   }
 

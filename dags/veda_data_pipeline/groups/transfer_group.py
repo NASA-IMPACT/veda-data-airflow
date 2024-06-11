@@ -29,7 +29,7 @@ def transfer_data(ti):
     # (event, chunk_size=2800, role_arn=None, bucket_output=None):
     return data_transfer_handler(event=config, role_arn=role_arn)
 
-
+# TODO: cogify_transfer handler is missing arg parser so this subdag will not work
 def subdag_transfer():
     with TaskGroup(**group_kwgs) as discover_grp:
         cogify_branching = BranchPythonOperator(
@@ -49,7 +49,7 @@ def subdag_transfer():
             task_id="cogify_and_copy_data",
             trigger_rule="none_failed",
             cluster=f"{mwaa_stack_conf.get('PREFIX')}-cluster",
-            task_definition=f"{mwaa_stack_conf.get('PREFIX')}-tasks",
+            task_definition=f"{mwaa_stack_conf.get('PREFIX')}-transfer-tasks",
             launch_type="FARGATE",
             do_xcom_push=True,
             execution_timeout=timedelta(minutes=120),

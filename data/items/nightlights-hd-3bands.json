@@ -1,9 +1,0 @@
-{
-    "collection": "nightlights-hd-3bands",
-    "prefix": "delivery/FinalBMHD_Ida2021/",
-    "bucket": "climatedashboard-data",
-    "filename_regex": "^(.*).tif$",
-    "discovery": "s3",
-    "datetime_range": "year",
-    "upload": true
-}

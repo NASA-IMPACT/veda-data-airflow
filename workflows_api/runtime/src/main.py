@@ -156,7 +156,7 @@ async def get_workflow_list() -> (
     dependencies=[Depends(auth.validated_token)],
 )
 async def send_cli_command(cli_command: str):
-    return airflow_helpers.send_cli_command(cli_command)
+    return airflow_helpers.cli_input(cli_command)
 
 
 # If the correlation header is used in the UI, we can analyze traces that originate from a given user or client

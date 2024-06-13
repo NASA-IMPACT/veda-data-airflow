@@ -46,7 +46,7 @@ dag_args = {
     "is_paused_upon_creation": False,
 }
 
-templat_dag_run_conf = {
+template_dag_run_conf = {
     "collection": "<coll_name>",
     "bucket": "<bucket>",
     "prefix": "<prefix>/",
@@ -70,7 +70,7 @@ templat_dag_run_conf = {
 
 
 def get_discover_dag(id, event={}):
-    params_dag_run_conf = event or templat_dag_run_conf
+    params_dag_run_conf = event or template_dag_run_conf
     with DAG(
         id,
         schedule_interval=event.get("schedule"),

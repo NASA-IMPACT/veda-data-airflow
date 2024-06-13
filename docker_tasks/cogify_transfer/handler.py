@@ -1,6 +1,13 @@
 import os
 import re
 import tempfile
+import ast
+import json
+import os
+from argparse import ArgumentParser
+from time import sleep, time
+
+from utils import stac as stac
 
 import boto3
 from rio_cogeo.cogeo import cog_translate
@@ -84,3 +91,28 @@ def cogify_transfer_handler(event, context):
             f"Would have copied {len(matching_files)} files from {origin_bucket} to {target_bucket}"
         )
         print(f"Files matched: {matching_files}")
+
+
+if __name__ == "__main__":
+    parser = ArgumentParser(
+        prog="cogify_transfer",
+        description="Cogify and transfer files in s3",
+        epilog="Contact Abdelhak Marouane for extra help",
+    )
+    parser.add_argument(
+        "--event", dest="event", help="event passed to stac_handler function"
+    )
+    args = parser.parse_args()
+    # For cloud watch log to work the task should stay alife for at least 30 s
+    start = time()
+    print(f"Start at {start}")
+
+    payload_event = ast.literal_eval(args.event)
+    building_stac_response = cogify_transfer_handler(event=payload_event)
+    response = json.dumps({**payload_event, **building_stac_response})
+    end = time() - start
+    print(f"Actual processing took {end:.2f} seconds")
+    # Check if it took less than 50 seconds
+    if end - start < 50:
+        sleep(50)
+    print(response)

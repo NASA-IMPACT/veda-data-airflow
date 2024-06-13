@@ -45,6 +45,14 @@ def cli_input(cli_string: str) -> Dict:
         return WorkflowExecutionResponse(**mwaa_response)
 
 
+def json_serial_backup(obj):
+    """JSON serializer for objects not serializable by default json code"""
+
+    if isinstance(obj, (datetime, date)):
+        return obj.isoformat()
+    raise TypeError ("Type %s not serializable" % type(obj))
+
+
 def trigger_discover(input: Dict) -> Dict:
     if not (MWAA_ENV := os.environ.get("MWAA_ENV")):
         raise HTTPException(status_code=400, detail="MWAA environment not set")
@@ -57,7 +65,7 @@ def trigger_discover(input: Dict) -> Dict:
     )
 
     unique_key = str(uuid4())
-    raw_data = f"dags trigger veda_discover --conf '{json.dumps(input)}' -r {unique_key}"
+    raw_data = f"dags trigger veda_discover --conf '{json.dumps(input, default=json_serial_backup)}' -r {unique_key}"
     mwaa_response = requests.post(
         mwaa_webserver_hostname,
         headers={

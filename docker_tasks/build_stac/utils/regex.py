@@ -41,6 +41,8 @@ def extract_dates(
     Extracts start & end or single date string from filename.
     """
     DATE_REGEX_STRATEGIES = [
+        (r"_(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})", "%Y-%m-%dT%H:%M:%S"),
+        (r"_(\d{8}T\d{6})", "%Y%m%dT%H%M%S"),
         (r"_(\d{4}_\d{2}_\d{2})", "%Y_%m_%d"),
         (r"_(\d{4}-\d{2}-\d{2})", "%Y-%m-%d"),
         (r"_(\d{8})", "%Y%m%d"),

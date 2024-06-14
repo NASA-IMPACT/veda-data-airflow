@@ -18,8 +18,10 @@ The DAG `veda_ingest` will run in parallel processing (2800 files per each DAG)
     "prefix": "s3-prefix/",
     "filename_regex": "^(.*).tif$",
     "id_regex": ".*_(.*).tif$",
+    "process_from_yyyy_mm_dd": "YYYY-MM-DD",
     "id_template": "example-id-prefix-{}",
     "datetime_range": "month",
+    "last_successful_execution": datetime(2015,01,01),
     "assets": {
         "asset1": {
             "title": "Asset type 1",
@@ -39,9 +41,9 @@ The DAG `veda_ingest` will run in parallel processing (2800 files per each DAG)
 
 dag_args = {
     "start_date": pendulum.today("UTC").add(days=-1),
-    "schedule_interval": None,
     "catchup": False,
     "doc_md": dag_doc_md,
+    "is_paused_upon_creation": False,
 }
 
 templat_dag_run_conf = {
@@ -66,10 +68,25 @@ templat_dag_run_conf = {
     },
 }
 
-with DAG("veda_discover", params=templat_dag_run_conf, **dag_args) as dag:
-    start = DummyOperator(task_id="Start", dag=dag)
-    end = DummyOperator(task_id="End", trigger_rule=TriggerRule.ONE_SUCCESS, dag=dag)
 
-    discover_grp = subdag_discover()
+def get_discover_dag(id, event={}):
+    params_dag_run_conf = event or templat_dag_run_conf
+    with DAG(
+        id,
+        schedule_interval=event.get("schedule"),
+        params=params_dag_run_conf,
+        **dag_args
+    ) as dag:
+        start = DummyOperator(task_id="Start", dag=dag)
+        end = DummyOperator(
+            task_id="End", trigger_rule=TriggerRule.ONE_SUCCESS, dag=dag
+        )
 
-    start >> discover_grp >> end
+        discover_grp = subdag_discover(event)
+
+        start >> discover_grp >> end
+
+        return dag
+
+
+get_discover_dag("veda_discover")

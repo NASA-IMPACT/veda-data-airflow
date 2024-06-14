@@ -59,7 +59,9 @@ def subdag_process():
                         "environment": [
                             {
                                 "name": "EXTERNAL_ROLE_ARN",
-                                "value": Variable.get("ASSUME_ROLE_READ_ARN", default_var=''),
+                                "value": Variable.get(
+                                    "ASSUME_ROLE_READ_ARN", default_var=""
+                                ),
                             },
                             {
                                 "name": "BUCKET",

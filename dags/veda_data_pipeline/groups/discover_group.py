@@ -13,11 +13,17 @@ from veda_data_pipeline.utils.s3_discovery import (
 group_kwgs = {"group_id": "Discover", "tooltip": "Discover"}
 
 
-def discover_from_s3_task(ti):
+def discover_from_s3_task(ti, event={}, **kwargs):
     """Discover grouped assets/files from S3 in batches of 2800. Produce a list of such files stored on S3 to process.
     This task is used as part of the discover_group subdag and outputs data to EVENT_BUCKET.
     """
-    config = ti.dag_run.conf
+    config = {
+        **event,
+        **ti.dag_run.conf,
+    }
+    last_successful_execution = kwargs.get("prev_start_date_success")
+    if last_successful_execution:
+        config["last_successful_execution"] = last_successful_execution.isoformat()
     # (event, chunk_size=2800, role_arn=None, bucket_output=None):
     MWAA_STAC_CONF = Variable.get("MWAA_STACK_CONF", deserialize_json=True)
     read_assume_arn = Variable.get("ASSUME_ROLE_READ_ARN", default_var=None)
@@ -53,12 +59,13 @@ def vector_raster_choice(ti):
     return f"{group_kwgs['group_id']}.parallel_run_process_rasters"
 
 
-def subdag_discover():
+def subdag_discover(event):
     with TaskGroup(**group_kwgs) as discover_grp:
         discover_from_s3 = PythonOperator(
             task_id="discover_from_s3",
             python_callable=discover_from_s3_task,
-            op_kwargs={"text": "Discover from S3"},
+            op_kwargs={"text": "Discover from S3", "event": event},
+            provide_context=True,
         )
 
         raster_vector_branching = BranchPythonOperator(

@@ -1,9 +1,6 @@
-from typing import Any, Dict
-
 import requests
 from airflow.models.variable import Variable
-from airflow.operators.empty import EmptyOperator
-from airflow.operators.python import BranchPythonOperator, PythonOperator
+from airflow.operators.python import PythonOperator
 from airflow.utils.task_group import TaskGroup
 from veda_data_pipeline.utils.collection_generation import GenerateCollection
 from veda_data_pipeline.utils.submit_stac import submission_handler
@@ -27,7 +24,7 @@ def check_collection_exists(endpoint: str, collection_id: str):
     )
 
 
-def ingest_collection(dataset_config: Dict[str, Any], role_arn: str = None):
+def ingest_collection(ti):
     """
     Ingest a collection into the STAC catalog
 
@@ -35,9 +32,7 @@ def ingest_collection(dataset_config: Dict[str, Any], role_arn: str = None):
         dataset (Dict[str, Any]): dataset dictionary (JSON)
         role_arn (str): role arn for Zarr collection generation
     """
-    collection = generator.generate_stac(
-        dataset_config=dataset_config, role_arn=role_arn
-    )
+    collection = ti.xcom_pull(task_ids='Collection.generate_collection')
 
     return submission_handler(
         event=collection,
@@ -47,6 +42,7 @@ def ingest_collection(dataset_config: Dict[str, Any], role_arn: str = None):
     )
 
 
+# NOTE unused, but useful for item ingests, since collections are a dependency for items
 def check_collection_exists_task(ti):
     config = ti.dag_run.conf
     return check_collection_exists(
@@ -58,10 +54,13 @@ def check_collection_exists_task(ti):
 def generate_collection_task(ti):
     config = ti.dag_run.conf
     role_arn = Variable.get("ASSUME_ROLE_READ_ARN", default_var=None)
-    return ingest_collection(
-        dataset_config=config,
-        role_arn=role_arn,
+
+    # TODO it would be ideal if this also works with complete collections where provided - this would make the collection ingest more re-usable
+    collection = generator.generate_stac(
+        dataset_config=config, role_arn=role_arn
     )
+    return collection
+
 
 
 group_kwgs = {"group_id": "Collection", "tooltip": "Collection"}
@@ -69,17 +68,12 @@ group_kwgs = {"group_id": "Collection", "tooltip": "Collection"}
 
 def collection_task_group():
     with TaskGroup(**group_kwgs) as collection_task_grp:
-        check_collection = BranchPythonOperator(
-            task_id="check_collection_exists",
-            python_callable=check_collection_exists_task,
-        )
-
         generate_collection = PythonOperator(
             task_id="generate_collection", python_callable=generate_collection_task
         )
-
-        existing_collection = EmptyOperator(task_id="existing_collection")
-
-        (check_collection >> [existing_collection, generate_collection])
+        ingest_collection = PythonOperator(
+            task_id="ingest_collection", python_callable=ingest_collection
+        )
+        generate_collection >> ingest_collection
 
         return collection_task_grp

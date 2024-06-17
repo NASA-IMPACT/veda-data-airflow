@@ -22,7 +22,7 @@ class Settings(BaseSettings):
         description="The Cognito APP Secret that contains cognito creds"
     )
     stage: str = Field(description="API stage")
-    workflow_root_path: str = Field(description="Root path of API")
+    workflow_root_path: str = Field("/api/workflows", description="Root path of API")
     ingest_url: str = Field(description="URL of ingest API")
     raster_url: str = Field(description="URL of raster API")
     stac_url: str = Field(description="URL of STAC API")

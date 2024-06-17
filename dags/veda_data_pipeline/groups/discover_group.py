@@ -22,7 +22,7 @@ def discover_from_s3_task(ti, event={}, **kwargs):
         **ti.dag_run.conf,
     }
     last_successful_execution = kwargs.get("prev_start_date_success")
-    if last_successful_execution:
+    if event.get("schedule") and last_successful_execution:
         config["last_successful_execution"] = last_successful_execution.isoformat()
     # (event, chunk_size=2800, role_arn=None, bucket_output=None):
     MWAA_STAC_CONF = Variable.get("MWAA_STACK_CONF", deserialize_json=True)

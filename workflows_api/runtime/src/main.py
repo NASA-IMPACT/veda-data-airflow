@@ -111,9 +111,7 @@ async def publish_dataset(
     dependencies=[Depends(auth.validated_token)],
 )
 async def start_discovery_workflow_execution(
-    input: Union[schemas.S3Input, schemas.CmrInput] = Body(
-        ..., discriminator="discovery"
-    ),
+    input: schemas.S3Input = Body(...),
 ) -> schemas.WorkflowExecutionResponse:
     """
     Triggers the ingestion workflow

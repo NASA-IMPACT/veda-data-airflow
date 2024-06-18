@@ -59,7 +59,7 @@ def vector_raster_choice(ti):
     return f"{group_kwgs['group_id']}.parallel_run_process_rasters"
 
 
-def subdag_discover(event):
+def subdag_discover(event={}):
     with TaskGroup(**group_kwgs) as discover_grp:
         discover_from_s3 = PythonOperator(
             task_id="discover_from_s3",

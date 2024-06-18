@@ -1,4 +1,4 @@
---constraint /usr/local/airflow/dags/requirements-constraints.txt
+#--constraint /usr/local/airflow/dags/requirements-constraints.txt
 affine==2.4.0
 netCDF4==1.6.2
 pydantic==1.10.4

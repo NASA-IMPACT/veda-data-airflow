@@ -6,6 +6,8 @@ from typing import List
 from uuid import uuid4
 from pathlib import Path
 
+from datetime import datetime
+from dateutil.tz import tzlocal
 import boto3
 from smart_open import open as smrt_open
 
@@ -39,7 +41,9 @@ def get_s3_resp_iterator(bucket_name, prefix, s3_client, page_size=1000):
     )
 
 
-def discover_from_s3(response_iterator, filename_regex: str) -> dict:
+def discover_from_s3(
+    response_iterator, filename_regex: str, last_execution: datetime
+) -> dict:
     """Iterate through pages of S3 objects returned by a ListObjectsV2 operation.
     The discover_from_s3 function takes in an iterator over the pages of S3 objects returned
     by a ListObjectsV2 operation. It iterates through the pages and yields each S3 object in the page as a dictionary.
@@ -56,7 +60,11 @@ def discover_from_s3(response_iterator, filename_regex: str) -> dict:
     for page in response_iterator:
         for s3_object in page.get("Contents", {}):
             key = s3_object["Key"]
-            if re.match(filename_regex, key):
+            conditionals = [re.match(filename_regex, key)]
+            if last_execution:
+                last_modified = s3_object["LastModified"]
+                conditionals.append(last_modified > last_execution)
+            if all(conditionals):
                 yield s3_object
 
 
@@ -179,6 +187,12 @@ def s3_discovery_handler(event, chunk_size=2800, role_arn=None, bucket_output=No
     id_template = event.get("id_template", "{}")
     date_fields = propagate_forward_datetime_args(event)
     dry_run = event.get("dry_run", False)
+    if process_from := event.get("process_from_yyyy_mm_dd"):
+        process_from = datetime.strptime(process_from, "%Y-%m-%d").replace(
+            tzinfo=tzlocal()
+        )
+    if last_execution := event.get("last_successful_execution"):
+        last_execution = datetime.fromisoformat(last_execution)
     if dry_run:
         print("Running discovery in dry run mode")
 
@@ -198,7 +212,9 @@ def s3_discovery_handler(event, chunk_size=2800, role_arn=None, bucket_output=No
     )
     file_uris = [
         f"s3://{bucket}/{obj['Key']}"
-        for obj in discover_from_s3(s3_iterator, filename_regex)
+        for obj in discover_from_s3(
+            s3_iterator, filename_regex, last_execution=process_from or last_execution
+        )
     ]
 
     if len(file_uris) == 0:

@@ -2,7 +2,6 @@ import base64
 import os
 from typing import Dict
 from uuid import uuid4
-from src.monitoring import logger
 
 import boto3
 import requests
@@ -85,7 +84,6 @@ def list_dags() -> str:
     if not (MWAA_ENV := os.environ.get("MWAA_ENV")):
         raise HTTPException(status_code=400, detail="MWAA environment not set")
 
-    logger.debug(":::::Creating airflow client")
     airflow_client = boto3.client("mwaa")
     mwaa_cli_token = airflow_client.create_cli_token(Name=MWAA_ENV)
 
@@ -94,7 +92,6 @@ def list_dags() -> str:
     )
 
     raw_data = "dags list"
-    logger.debug(":::::Making request to get list of DAGs")
     mwaa_response = requests.post(
         mwaa_webserver_hostname,
         headers={
@@ -103,7 +100,6 @@ def list_dags() -> str:
         },
         data=raw_data,
     )
-    logger.debug(f":::::MWAA RESPONSE {mwaa_response}")
     if mwaa_response.raise_for_status():
         raise Exception(
             f"Failed to trigger airflow: {mwaa_response.status_code} "

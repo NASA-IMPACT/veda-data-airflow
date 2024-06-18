@@ -147,7 +147,10 @@ async def get_workflow_list() -> (
     """
     Returns the status of the workflow execution
     """
-    return airflow_helpers.list_dags()
+    logger.info("Getting workflows list")
+    result = airflow_helpers.list_dags()
+    logger.info(f"::::::RESULT {result}")
+    return result
 
 
 @workflows_app.post(

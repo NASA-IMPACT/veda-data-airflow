@@ -24,7 +24,7 @@ def check_collection_exists(endpoint: str, collection_id: str):
     )
 
 
-def ingest_collection(ti):
+def ingest_collection_task(ti):
     """
     Ingest a collection into the STAC catalog
 
@@ -72,7 +72,7 @@ def collection_task_group():
             task_id="generate_collection", python_callable=generate_collection_task
         )
         ingest_collection = PythonOperator(
-            task_id="ingest_collection", python_callable=ingest_collection
+            task_id="ingest_collection", python_callable=ingest_collection_task
         )
         generate_collection >> ingest_collection
 

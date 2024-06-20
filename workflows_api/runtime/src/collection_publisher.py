@@ -145,7 +145,7 @@ class Publisher:
                     k: v for k, v in asset.dict().items() if k != "regex"
                 }
         # if none discovered, add default COG
-        if not collection_stac["item_assets"].keys():
+        if not collection_stac.get("item_assets"):
             collection_stac["item_assets"] = {
                 "cog_default": {
                     "type": "image/tiff; application=geotiff; profile=cloud-optimized",

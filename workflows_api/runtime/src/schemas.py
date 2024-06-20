@@ -5,6 +5,7 @@ from typing import Dict, List, Literal, Optional, Union
 from urllib.parse import urlparse
 
 import src.validators as validators
+from src.utils import regex
 from pydantic import (
     BaseModel,
     Field,
@@ -242,7 +243,7 @@ class COGDataset(Dataset):
                 ):
                     if item.datetime_range:
                         try:
-                            validators.extract_dates(fname, item.datetime_range)
+                            regex.extract_dates(fname, item.datetime_range)
                         except Exception:
                             raise ValueError(
                                 f"Invalid sample file - {fname} does not align"

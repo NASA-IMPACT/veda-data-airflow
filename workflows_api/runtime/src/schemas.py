@@ -142,7 +142,13 @@ class WorkflowInputBase(BaseModel):
         Returns:
         - str: Name of the collection.
         """
-        validators.collection_exists(collection_id=collection)
+        if not re.match(r"[a-z]+(?:-[a-z]+)*", collection):
+            try:
+                validators.collection_exists(collection_id=collection)
+            except ValueError:
+                raise ValueError(
+                    "Invalid id - id must be all lowercase, with optional '-' delimiters"
+                )
         return collection
 
 
@@ -190,14 +196,13 @@ class Dataset(BaseModel):
     def check_id(cls, collection):
         if not re.match(r"[a-z]+(?:-[a-z]+)*", collection):
             # allow collection id to "break the rules" if an already-existing collection matches
-            # try:
-                # validators.collection_exists(collection_id=collection)
-            # except ValueError:
+            try:
+                validators.collection_exists(collection_id=collection)
+            except ValueError:
                 # overwrite error - the issue isn't the non-existing function, it's the new id
-                
-            raise ValueError(
-                "Invalid id - id must be all lowercase, with optional '-' delimiters"
-            )
+                raise ValueError(
+                    "Invalid id - id must be all lowercase, with optional '-' delimiters"
+                )
         return collection
 
     @root_validator

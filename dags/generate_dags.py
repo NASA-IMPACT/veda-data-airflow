@@ -2,6 +2,7 @@
 Builds a DAG for each collection (indicated by a .json file) in the <BUCKET>/collections/ folder.
 These DAGs are used to discover and ingest items for each collection.
 """
+
 from airflow.models.variable import Variable
 
 
@@ -18,7 +19,7 @@ def generate_dags():
     client = boto3.client("s3")
     response = client.list_objects_v2(Bucket=bucket, Prefix="collections/")
 
-    for file_ in response["Contents"]:
+    for file_ in response.get("Contents", []):
         key = file_["Key"]
         if key.endswith("/"):
             continue

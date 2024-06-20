@@ -137,13 +137,23 @@ class Publisher:
                 },
             }
         )
+
         collection_stac["item_assets"] = {}
         for discovery in dataset.discovery_items:
             for key, asset in discovery.assets.items():
                 collection_stac["item_assets"][key] = {
                     k: v for k, v in asset.dict().items() if k != "regex"
                 }
-
+        # if none discovered, add default COG
+        if not collection_stac["item_assets"].keys():
+            collection_stac["item_assets"] = {
+                "cog_default": {
+                    "type": "image/tiff; application=geotiff; profile=cloud-optimized",
+                    "roles": ["data", "layer"],
+                    "title": "Default COG Layer",
+                    "description": "Cloud optimized default layer to display on map",
+                }
+            }
         return collection_stac
 
     def generate_stac(

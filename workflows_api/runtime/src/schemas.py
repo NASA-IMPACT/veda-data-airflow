@@ -1,7 +1,7 @@
 import enum
 import re
 from datetime import datetime
-from typing import Dict, List, Literal, Optional, Union
+from typing import Dict, List, Literal, Optional, Union, Any
 from urllib.parse import urlparse
 
 import src.validators as validators
@@ -124,6 +124,9 @@ class WorkflowExecutionResponse(BaseModel):
 class ExecutionResponse(WorkflowExecutionResponse):
     message: str = Field(..., description="Message returned from the step function.")
     discovered_files: List[str] = Field(..., description="List of discovered files.")
+
+class ListWorkflowsResponse(BaseModel):
+    resp: Any 
 
 
 class WorkflowInputBase(BaseModel):

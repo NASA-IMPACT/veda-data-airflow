@@ -9,9 +9,9 @@ import json
 from fastapi import HTTPException
 
 try:
-    from src.schemas import WorkflowExecutionResponse, Status
+    from src.schemas import WorkflowExecutionResponse, Status, ListWorkflowsResponse
 except ImportError:
-    from src.schemas import WorkflowExecutionResponse, Status
+    from src.schemas import WorkflowExecutionResponse, Status, ListWorkflowsResponse
 
 
 def cli_input(cli_string: str) -> Dict:
@@ -106,7 +106,11 @@ def list_dags() -> str:
             f"{mwaa_response.text}"
         )
     else:
-        return mwaa_response.text
+        ## removed .text for testing purposes
+        ## todo: introduce mwaa_response.text later on 
+        return ListWorkflowsResponse(
+            resp= mwaa_response
+        )
 
 
 def get_status(dag_run_id: str) -> Dict:

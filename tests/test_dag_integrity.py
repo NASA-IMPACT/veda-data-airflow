@@ -36,7 +36,7 @@ def dag_bag(aws_credentials):
     bucket.create(
       CreateBucketConfiguration={'LocationConstraint': 'us-west-2'}
     ) 
-    return DagBag(dag_folder="dags", include_examples=False)
+    return DagBag(dag_folder="dags/veda_data_pipeline", include_examples=False)
 
 def test_import_dags(dag_bag, ):
     """

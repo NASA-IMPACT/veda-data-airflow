@@ -145,7 +145,13 @@ async def get_workflow_list() -> (
     """
     Returns the status of the workflow execution
     """
-    return airflow_helpers.list_dags()
+    try: 
+        resp = airflow_helpers.list_dags()
+    except Exception as e: 
+        resp = {
+            "error": f"Error: {e}"
+        }
+    return resp 
 
 
 @workflows_app.post(

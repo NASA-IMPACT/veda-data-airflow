@@ -80,7 +80,7 @@ def trigger_discover(input: Dict) -> Dict:
         )
 
 
-def list_dags() -> str:
+def list_dags() -> Dict:
     if not (MWAA_ENV := os.environ.get("MWAA_ENV")):
         raise HTTPException(status_code=400, detail="MWAA environment not set")
 
@@ -100,6 +100,7 @@ def list_dags() -> str:
         },
         data=raw_data,
     )
+
     if mwaa_response.raise_for_status():
         raise Exception(
             f"Failed to trigger airflow: {mwaa_response.status_code} "

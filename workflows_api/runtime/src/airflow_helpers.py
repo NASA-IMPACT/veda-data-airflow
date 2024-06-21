@@ -80,7 +80,7 @@ def trigger_discover(input: Dict) -> Dict:
         )
 
 
-def list_dags() -> str:
+def list_dags() -> Dict:
     if not (MWAA_ENV := os.environ.get("MWAA_ENV")):
         raise HTTPException(status_code=400, detail="MWAA environment not set")
 
@@ -106,7 +106,10 @@ def list_dags() -> str:
             f"{mwaa_response.text}"
         )
     else:
-        return mwaa_response.text
+        ## mwaa_response.text 
+        return {
+            "response": mwaa_response,
+        }
 
 
 def get_status(dag_run_id: str) -> Dict:

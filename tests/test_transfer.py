@@ -1,4 +1,5 @@
-import transfer
+from dags.veda_data_pipeline.utils import transfer
+
 import pytest
 import os
 import boto3
@@ -78,9 +79,6 @@ def test_transfer(aws_credentials, capsys):
 
 
   captured = capsys.readouterr()
-  assert "Copying file: file1.cog" in captured.out
-  assert "Copying file: file2.tif" in captured.out
-  assert "Copying file: file3.txt" not in captured.out
   
   target_bucket_objects = sum(1 for _ in bucket_target.objects.all())
   

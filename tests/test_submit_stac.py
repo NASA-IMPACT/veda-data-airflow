@@ -1,9 +1,10 @@
+from dags.veda_data_pipeline.utils import submit_stac
+
 import os
 import boto3
 import pytest
 from moto import mock_secretsmanager
 import requests_mock
-import submit_stac
 
 @pytest.fixture(scope="function")
 def aws_credentials():

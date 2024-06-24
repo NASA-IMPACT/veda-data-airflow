@@ -1,5 +1,5 @@
 module "mwaa" {
-  source                           = "https://github.com/NASA-IMPACT/mwaa_tf_module/releases/download/v1.1.9/mwaa_tf_module.zip"
+  source                           = "https://github.com/NASA-IMPACT/mwaa_tf_module/releases/download/v1.1.10/mwaa_tf_module.zip"
   prefix                           = var.prefix
   vpc_id                           = var.vpc_id
   iam_role_additional_arn_policies = merge(module.custom_policy.custom_policy_arns_map)
@@ -10,7 +10,7 @@ module "mwaa" {
   mwaa_variables_json_file_id_path = { file_path = local_file.mwaa_variables.filename, file_id = local_file.mwaa_variables.id }
   stage                            = var.stage
   airflow_version                  = "2.4.3"
-  airflow_configuration_options    = { webserver.instance_name = "${var.prefix} DAGs" }
+  airflow_configuration_options    = { "webserver.instance_name" = "${var.prefix} DAGs" }
   environment_class                = lookup(var.mwaa_environment_class, var.stage, "mw1.small")
   min_workers                      = lookup(var.min_workers, var.stage, 1)
   ecs_containers = [

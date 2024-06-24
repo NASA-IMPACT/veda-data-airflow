@@ -115,6 +115,8 @@ class Publisher:
 
     def create_cog_collection(self, dataset: COGDataset) -> dict:
         collection_stac = self.get_template(dataset)
+        print("from collection stac",collection_stac)
+        print("from dataset",dataset.is_periodic)
         collection_stac["extent"] = SpatioTemporalExtent.parse_obj(
             {
                 "spatial": {
@@ -137,10 +139,6 @@ class Publisher:
                 },
             }
         )
-
-        # Excluding the dashboard key from renders to resolve inconsistencies.
-        if dataset.renders is not None:
-            collection_stac["renders"] = {key: value for key, value in dataset.renders.items() if key != "dashboard"}
 
 
         collection_stac["item_assets"] = {}

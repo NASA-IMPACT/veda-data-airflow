@@ -14,6 +14,12 @@ class GenerateCollection:
         "links",
         "time_density",
         "is_periodic",
+        "renders",
+        "stac_extensions",
+        "assets",
+        "item_assets",
+        "summaries",
+        "providers"
     ]
     common = {
         "links": [],

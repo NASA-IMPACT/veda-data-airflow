@@ -126,7 +126,7 @@ class ExecutionResponse(WorkflowExecutionResponse):
     discovered_files: List[str] = Field(..., description="List of discovered files.")
 
 class ListWorkflowsResponse(BaseModel):
-    resp: Any 
+    dags: List
 
 
 class WorkflowInputBase(BaseModel):

@@ -136,6 +136,7 @@ async def get_discovery_workflow_execution_status(
 
 @workflows_app.get(
     "/list-workflows",
+    response_model = schemas.ListWorkflowsResponse,
     tags=["Workflow-Executions"],
     dependencies=[Depends(auth.validated_token)],
 )
@@ -144,14 +145,8 @@ async def get_workflow_list() -> (
 ):
     """
     Returns the status of the workflow execution
-    """
-    try: 
-        resp = airflow_helpers.list_dags()
-    except Exception as e: 
-        resp = {
-            "error": f"Error: {e}"
-        }
-    return resp 
+    """   
+    return airflow_helpers.list_dags() 
 
 
 @workflows_app.post(

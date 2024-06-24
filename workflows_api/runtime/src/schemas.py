@@ -55,6 +55,7 @@ class DashboardCollection(Collection):
     links: Optional[List[Link]]
     assets: Optional[Dict]
     extent: SpatioTemporalExtent
+    renders: Optional[Dict]
 
     class Config:
         allow_population_by_field_name = True
@@ -225,6 +226,7 @@ class COGDataset(Dataset):
     temporal_extent: TemporalExtent
     sample_files: List[str]  # unknown how this will work with CMR
     data_type: Literal[DataType.cog]
+    renders: Optional[Dict]
 
     @root_validator
     def check_sample_files(cls, values):

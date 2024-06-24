@@ -138,6 +138,7 @@ class Publisher:
             }
         )
 
+
         collection_stac["item_assets"] = {}
         for discovery in dataset.discovery_items:
             for key, asset in discovery.assets.items():

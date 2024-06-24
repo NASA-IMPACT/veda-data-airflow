@@ -37,7 +37,7 @@ class GenerateCollection:
         }
 
         # Default REQUIRED fields
-        if not collection_dict.get("title"):
+        if not collection_dict.get("description"):
             collection_dict["description"] = dataset["collection"]
         if not collection_dict.get("license"):
             collection_dict["license"] = "proprietary"

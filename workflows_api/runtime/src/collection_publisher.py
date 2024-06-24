@@ -115,8 +115,6 @@ class Publisher:
 
     def create_cog_collection(self, dataset: COGDataset) -> dict:
         collection_stac = self.get_template(dataset)
-        print("from collection stac",collection_stac)
-        print("from dataset",dataset.is_periodic)
         collection_stac["extent"] = SpatioTemporalExtent.parse_obj(
             {
                 "spatial": {

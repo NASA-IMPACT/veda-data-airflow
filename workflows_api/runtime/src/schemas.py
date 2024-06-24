@@ -191,8 +191,8 @@ class Dataset(BaseModel):
     title: str
     description: str
     license: str
-    is_periodic: Optional[bool] = False
-    time_density: Optional[str] = None
+    is_periodic: Optional[bool] = Field(default=False, alias='dashboard:is_periodic')
+    time_density: Optional[str] = Field(default=None, alias='dashboard:time_density')
     links: Optional[List[Link]] = []
     discovery_items: List[S3Input]
 

@@ -138,6 +138,11 @@ class Publisher:
             }
         )
 
+        # Excluding the dashboard key from renders to resolve inconsistencies.
+        if dataset.renders is not None:
+            collection_stac["renders"] = {key: value for key, value in dataset.renders.items() if key != "dashboard"}
+
+
         collection_stac["item_assets"] = {}
         for discovery in dataset.discovery_items:
             for key, asset in discovery.assets.items():

@@ -7,20 +7,6 @@ from veda_data_pipeline.utils.schemas import SpatioTemporalExtent
 
 
 class GenerateCollection:
-    common_fields = [
-        "title",
-        "description",
-        "license",
-        "links",
-        "time_density",
-        "is_periodic",
-        "renders",
-        "stac_extensions",
-        "assets",
-        "item_assets",
-        "summaries",
-        "providers"
-    ]
     common = {
         "links": [],
         "extent": {
@@ -43,11 +29,6 @@ class GenerateCollection:
         collection_dict = {
             "id": dataset["collection"],
             **GenerateCollection.common,
-            **{
-                key: dataset[key]
-                for key in GenerateCollection.common_fields
-                if key in dataset.keys()
-            },
             **extra_fields,
         }
 

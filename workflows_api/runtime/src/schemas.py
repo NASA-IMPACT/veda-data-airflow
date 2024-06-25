@@ -56,6 +56,7 @@ class DashboardCollection(Collection):
     assets: Optional[Dict]
     extent: SpatioTemporalExtent
     renders: Optional[Dict]
+    stac_extensions: Optional[List[str]]
 
     class Config:
         allow_population_by_field_name = True
@@ -222,6 +223,7 @@ class COGDataset(Dataset):
     data_type: Literal[DataType.cog]
     item_assets: Optional[Dict]
     renders: Optional[Dict]
+    stac_extensions: Optional[List[str]]
 
     @root_validator
     def check_sample_files(cls, values):

@@ -43,6 +43,8 @@ class Publisher:
         "links",
         "time_density",
         "is_periodic",
+        "renders",
+        "stac_extensions"
     ]
     common = {
         "links": [],

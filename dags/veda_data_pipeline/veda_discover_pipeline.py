@@ -34,7 +34,7 @@ The DAG `veda_ingest` will run in parallel processing (2800 files per each DAG)
             "regex": ".*asset2.*",
         },
     }
-}	
+}
 ```
 - [Supports linking to external content](https://github.com/NASA-IMPACT/veda-data-pipelines)
 """
@@ -71,10 +71,12 @@ template_dag_run_conf = {
 
 def get_discover_dag(id, event={}):
     params_dag_run_conf = event or template_dag_run_conf
+    tags = ['automated'] if event else []
     with DAG(
         id,
         schedule_interval=event.get("schedule"),
         params=params_dag_run_conf,
+        tags=tags,
         **dag_args
     ) as dag:
         start = DummyOperator(task_id="Start", dag=dag)

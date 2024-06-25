@@ -30,17 +30,15 @@ class GenerateCollection:
         "type": "Collection",
         "stac_version": "1.0.0",
     }
+    keys_to_ignore = ["collection", "data_type", "sample_files", "discovery_items", "spatial_extent", "temporal_extent", "is_periodic", "time_density"]
 
             
     def get_template(self, dataset: Dict[str, Any]) -> dict:
         extra_fields = {
                 key: dataset[key]
                 for key in dataset.keys()
-                if key not in GenerateCollection.common_fields and key not in ["collection", "data_type", "sample_files", "discovery_items"]
+                if (key not in GenerateCollection.common_fields) and (key not in GenerateCollection.keys_to_ignore)
             }
-        if extra_fields:
-            # elevated potential for ingestion issues with extra fields, so we log them out here
-            print(f"Extra fields: {extra_fields}")
 
         collection_dict = {
             "id": dataset["collection"],

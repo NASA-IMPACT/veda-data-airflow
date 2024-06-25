@@ -13,6 +13,7 @@ from src.schemas import (
 )
 from src.validators import get_s3_credentials
 
+import json
 
 class CollectionPublisher:
     def ingest(self, collection: DashboardCollection, token: str, ingest_api: str):
@@ -137,23 +138,33 @@ class Publisher:
                 },
             }
         )
-
         collection_stac["item_assets"] = {}
-        for discovery in dataset.discovery_items:
-            for key, asset in discovery.assets.items():
-                collection_stac["item_assets"][key] = {
-                    k: v for k, v in asset.dict().items() if k != "regex"
-                }
-        # if none discovered, add default COG
-        if not collection_stac.get("item_assets"):
+
+        dataset_dict = dataset.dict(exclude_unset=True)
+
+        discovery_items_assets = []
+        if (dataset_dict.get("discovery_items")):
+            discovery_items_assets = [discovery_item.get("assets") for discovery_item in dataset_dict.get("discovery_items")]
+
+        if dataset_dict.get("item_assets"):
+            collection_stac["item_assets"] = dataset_dict.get("item_assets")
+        elif discovery_items_assets:
+            for discovery_asset in discovery_items_assets:
+                for key, asset in discovery_asset.items():
+                    collection_stac["item_assets"][key] = {
+                        k: v for k, v in asset.items() if k != "regex"
+                    }
+        else:
             collection_stac["item_assets"] = {
                 "cog_default": {
                     "type": "image/tiff; application=geotiff; profile=cloud-optimized",
                     "roles": ["data", "layer"],
                     "title": "Default COG Layer",
                     "description": "Cloud optimized default layer to display on map",
+                    "regex": "*"
                 }
             }
+
         return collection_stac
 
     def generate_stac(

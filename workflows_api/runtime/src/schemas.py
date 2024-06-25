@@ -163,7 +163,7 @@ class S3Input(WorkflowInputBase):
     single_datetime: Optional[datetime]
     id_regex: Optional[str]
     id_template: Optional[str]
-    assets: Dict[str, DiscoveryItemAsset]
+    assets: Optional[Dict[str, DiscoveryItemAsset]]
     zarr_store: Optional[str]
 
     @root_validator
@@ -175,12 +175,6 @@ class S3Input(WorkflowInputBase):
             bucket=bucket, prefix=prefix, zarr_store=zarr_store
         )
         return values
-
-    @validator("assets", always=True, pre=True)
-    def item_assets_required(cls, assets):
-        if not assets:
-            raise ValueError("Specify at least one asset.")
-        return assets
 
 class Dataset(BaseModel):
     collection: str
@@ -222,6 +216,7 @@ class COGDataset(Dataset):
     temporal_extent: TemporalExtent
     sample_files: List[str]  # unknown how this will work with CMR
     data_type: Literal[DataType.cog]
+    item_assets: Optional[Dict]
 
     @root_validator
     def check_sample_files(cls, values):

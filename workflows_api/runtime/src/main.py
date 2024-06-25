@@ -94,6 +94,16 @@ async def publish_dataset(
         workflow_runs = []
         for discovery in dataset.discovery_items:
             discovery.collection = dataset.collection
+            if (not bool(discovery.get("assets"))):
+                discovery.assets = {
+                    "cog_default": {
+                        "type": "image/tiff; application=geotiff; profile=cloud-optimized",
+                        "roles": ["data", "layer"],
+                        "title": "Default COG Layer",
+                        "description": "Cloud optimized default layer to display on map",
+                        "regex": "*",
+                    }
+                }
             response = await start_discovery_workflow_execution(discovery)
             workflow_runs.append(response.id)
         if workflow_runs:

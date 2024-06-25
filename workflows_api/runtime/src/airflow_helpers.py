@@ -9,9 +9,9 @@ import json
 from fastapi import HTTPException
 
 try:
-    from src.schemas import WorkflowExecutionResponse, Status
+    from src.schemas import WorkflowExecutionResponse, Status, ListWorkflowsResponse
 except ImportError:
-    from src.schemas import WorkflowExecutionResponse, Status
+    from src.schemas import WorkflowExecutionResponse, Status, ListWorkflowsResponse
 
 
 def cli_input(cli_string: str) -> Dict:
@@ -80,7 +80,7 @@ def trigger_discover(input: Dict) -> Dict:
         )
 
 
-def list_dags() -> str:
+def list_dags() -> Dict:
     if not (MWAA_ENV := os.environ.get("MWAA_ENV")):
         raise HTTPException(status_code=400, detail="MWAA environment not set")
 
@@ -100,13 +100,31 @@ def list_dags() -> str:
         },
         data=raw_data,
     )
+
     if mwaa_response.raise_for_status():
         raise Exception(
             f"Failed to trigger airflow: {mwaa_response.status_code} "
             f"{mwaa_response.text}"
         )
     else:
-        return mwaa_response.text
+        # decode base64 encoded string output and parse the text
+        decoded_response = base64.b64decode(mwaa_response.json()["stdout"]).decode("utf-8")
+        dags_response = []
+        for item in decoded_response.split("\n")[2:]:
+            if (row := item.replace(" ", "")) == "":
+                continue
+            
+            columns = row.split("|")
+            dags_response.append({
+                "dag_id": columns[0],
+                "filepath":columns[1],
+                "owner": columns[2],
+                "paused": columns[3]
+            })
+        
+        return ListWorkflowsResponse(
+            dags= dags_response
+        )
 
 
 def get_status(dag_run_id: str) -> Dict:

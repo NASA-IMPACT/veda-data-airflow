@@ -1,7 +1,7 @@
 import enum
 import re
 from datetime import datetime
-from typing import Dict, List, Literal, Optional, Union
+from typing import Dict, List, Literal, Optional, Union, Any
 from urllib.parse import urlparse
 
 import src.validators as validators
@@ -55,6 +55,7 @@ class DashboardCollection(Collection):
     links: Optional[List[Link]]
     assets: Optional[Dict]
     extent: SpatioTemporalExtent
+    renders: Optional[Dict]
 
     class Config:
         allow_population_by_field_name = True
@@ -125,6 +126,9 @@ class ExecutionResponse(WorkflowExecutionResponse):
     message: str = Field(..., description="Message returned from the step function.")
     discovered_files: List[str] = Field(..., description="List of discovered files.")
 
+class ListWorkflowsResponse(BaseModel):
+    dags: List
+
 
 class WorkflowInputBase(BaseModel):
     collection: str = ""
@@ -181,8 +185,8 @@ class Dataset(BaseModel):
     title: str
     description: str
     license: str
-    is_periodic: Optional[bool] = False
-    time_density: Optional[str] = None
+    is_periodic: Optional[bool] = Field(default=False, alias='dashboard:is_periodic')
+    time_density: Optional[str] = Field(default=None, alias='dashboard:time_density')
     links: Optional[List[Link]] = []
     discovery_items: List[S3Input]
 
@@ -217,6 +221,7 @@ class COGDataset(Dataset):
     sample_files: List[str]  # unknown how this will work with CMR
     data_type: Literal[DataType.cog]
     item_assets: Optional[Dict]
+    renders: Optional[Dict]
 
     @root_validator
     def check_sample_files(cls, values):

@@ -146,7 +146,7 @@ class Publisher:
 
         discovery_items_assets = []
         if (dataset_dict.get("discovery_items")):
-            discovery_items_assets = [discovery_item.get("assets") for discovery_item in dataset_dict.get("discovery_items")]
+            discovery_items_assets = [discovery_item.get("assets") for discovery_item in dataset_dict.get("discovery_items") if discovery_item.get("assets") is not None]
 
         if dataset_dict.get("item_assets"):
             collection_stac["item_assets"] = dataset_dict.get("item_assets")

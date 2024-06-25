@@ -94,7 +94,7 @@ async def publish_dataset(
         workflow_runs = []
         for discovery in dataset.discovery_items:
             discovery.collection = dataset.collection
-            if (not bool(discovery.get("assets"))):
+            if (not bool(discovery.dict(exclude_unset=True).get("assets"))):
                 discovery.assets = {
                     "cog_default": {
                         "type": "image/tiff; application=geotiff; profile=cloud-optimized",

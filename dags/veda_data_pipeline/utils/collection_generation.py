@@ -23,7 +23,7 @@ class GenerateCollection:
         extra_fields = {
                 key: dataset[key]
                 for key in dataset.keys()
-                if (key not in GenerateCollection.common_fields) and (key not in GenerateCollection.keys_to_ignore)
+                if key not in GenerateCollection.keys_to_ignore
             }
 
         collection_dict = {

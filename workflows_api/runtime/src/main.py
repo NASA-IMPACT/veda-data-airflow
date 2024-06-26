@@ -101,7 +101,7 @@ async def publish_dataset(
                         "roles": ["data", "layer"],
                         "title": "Default COG Layer",
                         "description": "Cloud optimized default layer to display on map",
-                        "regex": "*",
+                        "regex": ".*",
                     }
                 }
             response = await start_discovery_workflow_execution(discovery)

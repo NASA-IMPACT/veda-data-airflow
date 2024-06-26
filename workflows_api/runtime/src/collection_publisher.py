@@ -163,7 +163,7 @@ class Publisher:
                     "roles": ["data", "layer"],
                     "title": "Default COG Layer",
                     "description": "Cloud optimized default layer to display on map",
-                    "regex": "*"
+                    "regex": ".*"
                 }
             }
 

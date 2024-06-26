@@ -27,8 +27,9 @@ def discover_from_s3_task(ti, event={}, **kwargs):
     # (event, chunk_size=2800, role_arn=None, bucket_output=None):
     MWAA_STAC_CONF = Variable.get("MWAA_STACK_CONF", deserialize_json=True)
     read_assume_arn = Variable.get("ASSUME_ROLE_READ_ARN", default_var=None)
-    chunk_size = config.get("chunk_size", 2800)
-    print(f"Chunk it to {chunk_size}")
+    # Making the chunk size small, this helped us process large data faster than
+    # passing a large chunk of 2800
+    chunk_size = config.get("chunk_size", 500)
     return s3_discovery_handler(
         event=config,
         role_arn=read_assume_arn,

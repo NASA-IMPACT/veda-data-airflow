@@ -85,3 +85,4 @@ resource "aws_ecs_task_definition" "veda_transfer_task_definition" {
   cpu                      = var.ecs_task_cpu
   memory                   = var.ecs_task_memory
 }
+

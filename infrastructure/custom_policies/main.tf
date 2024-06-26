@@ -68,7 +68,7 @@ data "aws_iam_policy_document" "mwaa_executor_policies" {
     actions = [
       "sts:AssumeRole"
     ]
-    resources = length(var.assume_role_arns) > 0 ? var.assume_role_arns: ["*"]
+    resources = length(var.assume_role_arns) > 0 ? var.assume_role_arns : ["*"]
   }
 
   statement {

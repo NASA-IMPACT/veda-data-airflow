@@ -12,8 +12,8 @@ module "mwaa" {
   stage                            = var.stage
   airflow_version                  = "2.4.3"
   airflow_configuration_options    = { "webserver.instance_name" = "${var.prefix} DAGs" }
-  environment_class                = lookup(var.mwaa_environment_class, var.stage, "mw1.small")
-  min_workers                      = lookup(var.min_workers, var.stage, 1)
+  environment_class                = var.mwaa_environment_class
+  min_workers                      = var.min_workers
   ecs_containers = [
     {
       handler_file_path         = "${path.module}/../docker_tasks/build_stac/handler.py"
@@ -151,7 +151,7 @@ resource "aws_iam_policy" "lambda_access" {
   path        = "/"
   description = "Access policy for Lambda function"
   policy = jsonencode({
-    Version = "2012-10-17",
+    Version   = "2012-10-17",
     Statement = local.conditional_workflows_lambda_policy,
   })
 }
@@ -173,9 +173,9 @@ resource "aws_security_group" "workflows_api_handler_sg" {
   vpc_id = var.backend_vpc_id != "" ? var.backend_vpc_id : var.vpc_id
 
   egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
+    from_port        = 0
+    to_port          = 0
+    protocol         = "-1"
     cidr_blocks      = ["0.0.0.0/0"]
     ipv6_cidr_blocks = ["::/0"]
   }
@@ -189,13 +189,13 @@ resource "aws_lambda_function" "workflows_api_handler" {
   role          = aws_iam_role.lambda_execution_role.arn
   package_type  = "Image"
   timeout       = 30
-  image_uri = "${aws_ecr_repository.workflows_api_lambda_repository.repository_url}:latest"
+  image_uri     = "${aws_ecr_repository.workflows_api_lambda_repository.repository_url}:latest"
 
   # prevents handler from instantiating if provisioner has not created an image
-  depends_on = [ null_resource.if_change_run_provisioner ]
+  depends_on = [null_resource.if_change_run_provisioner]
 
   vpc_config {
-    subnet_ids = var.subnet_ids
+    subnet_ids         = var.subnet_ids
     security_group_ids = [aws_security_group.workflows_api_handler_sg.id]
   }
 

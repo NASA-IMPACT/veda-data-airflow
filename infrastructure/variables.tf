@@ -52,21 +52,14 @@ variable "stac_ingestor_api_url" {
   type = string
 }
 variable "min_workers" {
-  type = map(number)
-  default = {
-    dev        = 2
-    staging    = 3
-    production = 3
-  }
+  type    = number
+  default = 2
 }
 
 variable "mwaa_environment_class" {
-  type = map(string)
-  default = {
-    dev        = "mw1.small"
-    staging    = "mw1.medium"
-    production = "mw1.medium"
-  }
+  type        = string
+  description = "MWAA class, options are mw1.small,mw1.large, mw1.xlarge,mw1.2xlarge"
+  default     = "mw1.small"
 }
 variable "vector_secret_name" {
   type = string
@@ -115,4 +108,13 @@ variable "userpool_id" {
 variable "backend_vpc_id" {
   type        = string
   description = "VPC ID used for VEDA Backend lambdas"
+}
+
+variable "ecs_task_cpu" {
+  type    = number
+  default = 2048
+}
+variable "ecs_task_memory" {
+  type    = number
+  default = 4096
 }

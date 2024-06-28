@@ -116,3 +116,8 @@ variable "backend_vpc_id" {
   type        = string
   description = "VPC ID used for VEDA Backend lambdas"
 }
+
+variable "provision_s3_access_block" {
+  type        = bool
+  description = "Boolean used to control creation of s3_access_block"
+}

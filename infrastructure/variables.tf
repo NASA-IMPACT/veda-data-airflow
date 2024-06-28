@@ -118,6 +118,7 @@ variable "provision_s3_access_block" {
   type        = bool
   description = "Boolean used to control creation of s3_access_block"
   default     = "true"
+}
 
 variable "ecs_task_cpu" {
   type    = number

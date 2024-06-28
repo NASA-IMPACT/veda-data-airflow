@@ -3,9 +3,9 @@ from typing import Union
 import requests
 import src.airflow_helpers as airflow_helpers
 import src.auth as auth
-import src.config as config
 import src.schemas as schemas
 from src.collection_publisher import CollectionPublisher, Publisher
+from src.config import settings
 from src.monitoring import LoggerRouteHandler, logger, metrics, tracer
 from aws_lambda_powertools.metrics import MetricUnit
 
@@ -15,8 +15,6 @@ from fastapi.responses import JSONResponse
 from fastapi.encoders import jsonable_encoder
 from starlette.requests import Request
 
-
-settings = config.Settings()
 
 collection_publisher = CollectionPublisher()
 publisher = Publisher()

@@ -7,7 +7,7 @@ import requests
 
 @functools.lru_cache
 def get_s3_credentials():
-    from src.main import settings
+    from src.config import settings
 
     print("Fetching S3 Credentials...")
 

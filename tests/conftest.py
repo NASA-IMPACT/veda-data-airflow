@@ -5,7 +5,7 @@ Define any env variables expected in test files.
 Airflow variables are in format AIRFLOW_VAR_XXX
 """
 TEST_ENV_VARS = {
-    'AIRFLOW_VAR_MWAA_STACK_CONF': "{\"foo\": \"bar\"}",
+    'AIRFLOW_VAR_MWAA_STACK_CONF': "{\"EVENT_BUCKET\": \"test\"}",
     'AIRFLOW_VAR_VECTOR_SECRET_NAME': "{\"foo\": \"bar\"}"
 }
 

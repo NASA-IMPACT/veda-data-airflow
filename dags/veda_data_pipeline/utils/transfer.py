@@ -1,4 +1,3 @@
-import os
 import re
 
 import boto3
@@ -47,7 +46,7 @@ def transfer_files_within_s3(
 ):
     for file_key in matching_files:
         filename = file_key.split("/")[-1]
-        print(f"Transferring file: {filename}")
+        # print(f"Transferring file: {filename}")
         target_key = f"{collection}/{filename}"
         copy_source = {"Bucket": origin_bucket, "Key": file_key}
 
@@ -58,16 +57,16 @@ def transfer_files_within_s3(
                 Bucket=destination_bucket, Key=target_key
             )
             target_etag = target_metadata["ETag"]
-            print(f"File already exists, checking Etag: {filename}")
+            # print(f"File already exists, checking Etag: {filename}")
             s3_client.copy_object(
-                    CopySource=copy_source,
-                    Bucket=destination_bucket,
-                    Key=target_key,
-                    CopySourceIfNoneMatch=target_etag,
-                )
+                CopySource=copy_source,
+                Bucket=destination_bucket,
+                Key=target_key,
+                CopySourceIfNoneMatch=target_etag,
+            )
         except s3_client.exceptions.ClientError as err:
             if err.response["Error"]["Code"] == "404":
-                print(f"Copying file: {filename}")
+                # print(f"Copying file: {filename}")
                 s3_client.copy_object(
                     CopySource=copy_source,
                     Bucket=destination_bucket,
@@ -91,7 +90,7 @@ def data_transfer_handler(event, role_arn=None):
         regex_pattern=filename_regex,
     )
 
-    if len(matching_files)==0:
+    if len(matching_files) == 0:
         raise AirflowException("No matching files found")
 
     if not event.get("dry_run"):

@@ -51,29 +51,26 @@ variable "workflows_client_secret" {
 variable "stac_ingestor_api_url" {
   type = string
 }
+
 variable "min_workers" {
-  type = map(number)
-  default = {
-    dev        = 2
-    staging    = 3
-    production = 3
-  }
+  type    = number
+  default = 2
 }
 
 variable "mwaa_environment_class" {
-  type = map(string)
-  default = {
-    dev        = "mw1.small"
-    staging    = "mw1.medium"
-    production = "mw1.medium"
-  }
+  type        = string
+  description = "MWAA class, options are mw1.small,mw1.large, mw1.xlarge,mw1.2xlarge"
+  default     = "mw1.small"
 }
+
 variable "vector_secret_name" {
   type = string
 }
+
 variable "vector_security_group" {
   type = string
 }
+
 variable "vector_vpc" {
   type    = string
   default = "null"
@@ -115,4 +112,20 @@ variable "userpool_id" {
 variable "backend_vpc_id" {
   type        = string
   description = "VPC ID used for VEDA Backend lambdas"
+}
+
+variable "provision_s3_access_block" {
+  type        = bool
+  description = "Boolean used to control creation of s3_access_block"
+  default     = "true"
+}
+
+variable "ecs_task_cpu" {
+  type    = number
+  default = 2048
+}
+
+variable "ecs_task_memory" {
+  type    = number
+  default = 4096
 }

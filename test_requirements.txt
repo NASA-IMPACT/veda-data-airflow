@@ -1,0 +1,3 @@
+pytest
+apache-airflow
+coverage

@@ -162,8 +162,7 @@ class Publisher:
                     "type": "image/tiff; application=geotiff; profile=cloud-optimized",
                     "roles": ["data", "layer"],
                     "title": "Default COG Layer",
-                    "description": "Cloud optimized default layer to display on map",
-                    "regex": ".*"
+                    "description": "Cloud optimized default layer to display on map"
                 }
             }
 

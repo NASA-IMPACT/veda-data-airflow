@@ -1,5 +1,6 @@
 import pendulum
 from airflow import DAG
+from airflow.decorators import task
 from airflow.operators.dummy_operator import DummyOperator as EmptyOperator
 from airflow.utils.trigger_rule import TriggerRule
 from veda_data_pipeline.groups.collection_group import collection_task_group
@@ -18,11 +19,20 @@ dag_args = {
     "tags": ["collection", "discovery"],
 }
 
+@task
+def extract_discovery_items(ti, **kwargs):
+    # use ti dag run conf
+    discovery_items = ti.dag_run.conf.get("discovery_items")
+    return discovery_items
+
 with DAG("veda_dataset_pipeline", **dag_args) as dag:
     start = EmptyOperator(task_id="start", dag=dag)
     end = EmptyOperator(task_id="end", trigger_rule=TriggerRule.ONE_SUCCESS, dag=dag)
 
     collection_grp = collection_task_group()
+
+    subdag_discover.expand(event=extract_discovery_items())
+
     discover_grp = subdag_discover()
 
     start >> collection_grp >> discover_grp >> end

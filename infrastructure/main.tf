@@ -10,7 +10,7 @@ module "mwaa" {
   mwaa_variables_json_file_id_path = { file_path = local_file.mwaa_variables.filename, file_id = local_file.mwaa_variables.id }
   provision_s3_access_block        = var.provision_s3_access_block
   stage                            = var.stage
-  airflow_version                  = "2.4.3"
+  airflow_version                  = "2.5.1"
   airflow_configuration_options    = { "webserver.instance_name" = "${var.prefix} DAGs" }
   environment_class                = var.mwaa_environment_class
   min_workers                      = var.min_workers

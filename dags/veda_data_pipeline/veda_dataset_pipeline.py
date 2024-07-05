@@ -20,19 +20,18 @@ dag_args = {
 }
 
 @task
-def extract_discovery_items(ti, **kwargs):
-    # use ti dag run conf
+def extract_discovery_items(**kwargs):
+    ti = kwargs.get("ti")
     discovery_items = ti.dag_run.conf.get("discovery_items")
+    print(discovery_items)
     return discovery_items
 
 with DAG("veda_dataset_pipeline", **dag_args) as dag:
     start = EmptyOperator(task_id="start", dag=dag)
-    end = EmptyOperator(task_id="end", trigger_rule=TriggerRule.ONE_SUCCESS, dag=dag)
+    end = EmptyOperator(task_id="end", dag=dag)
 
     collection_grp = collection_task_group()
-
-    subdag_discover.expand(event=extract_discovery_items())
-
-    discover_grp = subdag_discover()
+    discover_grp = subdag_discover.expand(event=extract_discovery_items())
 
     start >> collection_grp >> discover_grp >> end
+

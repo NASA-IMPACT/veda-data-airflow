@@ -14,12 +14,12 @@ dag_args = {
     "schedule_interval": None,
     "catchup": False,
     "doc_md": dag_doc_md,
-    "tags": ["collection", "discovery"],
+    "tags": ["collection"],
 }
 
-with DAG("veda_dataset_pipeline", **dag_args) as dag:
+with DAG("veda_collection_pipeline", **dag_args) as dag:
     start = EmptyOperator(task_id="start", dag=dag)
-    end = EmptyOperator(task_id="end", trigger_rule=TriggerRule.ONE_SUCCESS, dag=dag)
+    end = EmptyOperator(task_id="end", trigger_rule=TriggerRule.NONE_FAILED_MIN_ONE_SUCCESS, dag=dag)
 
     collection_grp = collection_task_group()
 

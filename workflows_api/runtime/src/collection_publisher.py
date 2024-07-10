@@ -170,6 +170,11 @@ class Publisher:
                 }
             }
 
+        # if the dataset has the attributes provided already in the request json, use them instead of the generated ones
+        for key, _ in collection_stac.items():
+            if key in dataset_dict:
+                collection_stac[key] = dataset_dict[key]
+
         return collection_stac
 
     def generate_stac(

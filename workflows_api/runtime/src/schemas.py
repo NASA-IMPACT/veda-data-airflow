@@ -268,9 +268,6 @@ class COGDataset(Dataset):
             )
         return values
 
-    class Config:
-        extra = Extra.allow
-
 class ZarrDataset(Dataset):
     xarray_kwargs: Optional[Dict] = dict()
     x_dimension: Optional[str]
@@ -288,6 +285,3 @@ class ZarrDataset(Dataset):
                 "Zarr dataset should include zarr_store in its discovery item"
             )
         return discovery_items
-
-    class Config:
-        extra = Extra.allow

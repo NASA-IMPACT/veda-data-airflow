@@ -79,10 +79,9 @@ async def publish_dataset(
     ),
 ):
     # Construct and load collection
-    collection_data = publisher.generate_stac(dataset, dataset.data_type or "cog")
+    collection_data = publisher.generate_stac(dataset, dataset.data_type.value)
     collection = schemas.DashboardCollection.parse_obj(collection_data)
     collection_publisher.ingest(collection, token, settings.ingest_url)
-
     # TODO improve typing
     return_dict = {
         "message": f"Successfully published collection: {dataset.collection}."

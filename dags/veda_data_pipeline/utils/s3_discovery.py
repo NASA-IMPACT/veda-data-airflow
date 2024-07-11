@@ -118,7 +118,7 @@ def group_by_item(discovered_files: List[str], id_regex: str, assets: dict) -> d
 
 def construct_single_asset_items(discovered_files: List[str], assets: dict|None) -> dict:
     items_with_assets = []
-    asset_key = "cog_default"
+    asset_key = "default"
     asset_value = {}
     if assets:
         asset_key = list(assets.keys())[0]

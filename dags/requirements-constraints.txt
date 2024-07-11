@@ -206,7 +206,6 @@ boto==2.49.0
 botocore==1.29.51
 bowler==0.9.0
 cachelib==0.9.0
-cachetools==4.2.2
 cassandra-driver==3.25.0
 cattrs==22.2.0
 celery==5.2.7

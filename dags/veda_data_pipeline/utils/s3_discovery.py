@@ -116,8 +116,13 @@ def group_by_item(discovered_files: List[str], id_regex: str, assets: dict) -> d
     return items_with_assets
 
 
-def construct_single_asset_items(discovered_files: List[str]) -> dict:
+def construct_single_asset_items(discovered_files: List[str], assets: dict|None) -> dict:
     items_with_assets = []
+    asset_key = "cog_default"
+    asset_value = {}
+    if assets:
+        asset_key = list(assets.keys())[0]
+        asset_value = assets[asset_key]
     for uri in discovered_files:
         # Each file gets its matched asset type and id
         filename = uri.split("/")[-1]
@@ -126,10 +131,11 @@ def construct_single_asset_items(discovered_files: List[str]) -> dict:
         item = {
             "item_id": filename_without_extension,
             "assets": {
-                "default": {
+                asset_key: {
                     "title": "Default COG Layer",
                     "description": "Cloud optimized default layer to display on map",
                     "href": f"{prefix}/{filename}",
+                    **asset_value
                 }
             },
         }
@@ -221,10 +227,10 @@ def s3_discovery_handler(event, chunk_size=2800, role_arn=None, bucket_output=No
         raise ValueError(f"No files discovered at bucket: {bucket}, prefix: {prefix}")
 
     # out of convenience, we might not always want to explicitly define assets
-    if assets is not None:
+    if assets and len(assets) > 1:
         items_with_assets = group_by_item(file_uris, id_regex, assets)
     else:
-        items_with_assets = construct_single_asset_items(file_uris)
+        items_with_assets = construct_single_asset_items(file_uris, assets)
 
     if len(items_with_assets) == 0:
         raise ValueError(

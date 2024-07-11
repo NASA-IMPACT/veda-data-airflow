@@ -31,7 +31,7 @@ def generate_dags():
         collections = json.loads(collections)
 
         # Allow the file content to be either one config or a list of configs
-        if type(collections, dict):
+        if type(collections) is dict:
             collections = [collections]
         scheduled_collections = [
             collection

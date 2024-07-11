@@ -58,21 +58,25 @@ class Publisher:
 
     def __init__(self) -> None:
         self.func_map = {
-            DataType.zarr: self.create_zarr_collection,
-            DataType.cog: self.create_cog_collection,
+            DataType.zarr.value: self.create_zarr_collection,
+            DataType.cog.value: self.create_cog_collection,
         }
 
     def get_template(self, dataset: Union[ZarrDataset, COGDataset]) -> dict:
         dataset_dict = dataset.dict()
-        collection_dict = {
-            "id": dataset_dict["collection"],
-            **Publisher.common,
-            **{
-                key: dataset_dict[key]
-                for key in Publisher.common_fields
-                if key in dataset_dict.keys()
-            },
-        }
+        collection_dict = dataset_dict
+        # manage data as needed by ingest
+        collection_dict["id"] = dataset_dict["collection"]
+        collection_dict.update(Publisher.common)
+        collection_dict.update({
+            key: dataset_dict[key]
+            for key in Publisher.common_fields
+            if key in dataset_dict.keys()
+        })
+        # Convert enum values to their string equivalents
+        for key, value in dataset_dict.items():
+            if isinstance(value, DataType):
+                dataset_dict[key] = value.value
         return collection_dict
 
     def _create_zarr_template(self, dataset: ZarrDataset, store_path: str) -> dict:
@@ -165,6 +169,11 @@ class Publisher:
                     "description": "Cloud optimized default layer to display on map"
                 }
             }
+
+        # if the dataset has the attributes provided already in the request json, use them instead of the generated ones
+        for key, _ in collection_stac.items():
+            if key in dataset_dict:
+                collection_stac[key] = dataset_dict[key]
 
         return collection_stac
 

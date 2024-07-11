@@ -11,6 +11,7 @@ from pydantic import (
     Field,
     root_validator,
     validator,
+    Extra,
 )
 from src.schema_helpers import (
     BboxExtent,
@@ -60,7 +61,7 @@ class DashboardCollection(Collection):
 
     class Config:
         allow_population_by_field_name = True
-
+        extra = Extra.allow
 
 class Status(str, enum.Enum):
     @classmethod
@@ -181,6 +182,9 @@ class S3Input(WorkflowInputBase):
         )
         return values
 
+    class Config:
+        extra = Extra.allow
+
 class Dataset(BaseModel):
     collection: str
     title: str
@@ -210,6 +214,8 @@ class Dataset(BaseModel):
         validators.time_density_is_valid(values["is_periodic"], values["time_density"])
         return values
 
+    class Config:
+        extra = Extra.allow
 
 class DataType(str, enum.Enum):
     cog = "cog"
@@ -261,7 +267,6 @@ class COGDataset(Dataset):
                 "of the provided prefix/filename_regex combinations."
             )
         return values
-
 
 class ZarrDataset(Dataset):
     xarray_kwargs: Optional[Dict] = dict()

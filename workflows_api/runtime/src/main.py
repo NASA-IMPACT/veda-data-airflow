@@ -39,6 +39,12 @@ workflows_app = FastAPI(
     router=APIRouter(route_class=LoggerRouteHandler),
 )
 
+@workflows_app.exception_handler(ValueError)
+async def value_error_exception_handler(request: Request, exc: ValueError):
+    raise HTTPException(
+        status_code=422,
+        detail=exc.errors()
+    )
 
 # "Datasets" interface (collections + item ingests from one input)
 
@@ -79,8 +85,12 @@ async def publish_dataset(
     ),
 ):
     # Construct and load collection
-    collection_data = publisher.generate_stac(dataset, dataset.data_type or "cog")
-    collection = schemas.DashboardCollection.parse_obj(collection_data)
+    collection_data = publisher.generate_stac(dataset, dataset.data_type.value)
+    unwanted_keys = ["sample_files", "data_type", "discovery_items", "collection", "spatial_extent", "temporal_extent"]
+    filtered_collection_data = filter_unwanted_keys(collection_data, unwanted_keys)
+    collection = schemas.DashboardCollection.parse_obj(filtered_collection_data)
+
+
     collection_publisher.ingest(collection, token, settings.ingest_url)
 
     # TODO improve typing
@@ -88,6 +98,7 @@ async def publish_dataset(
         "message": f"Successfully published collection: {dataset.collection}."
     }
 
+    # run airflow workflow for COG datasets
     if dataset.data_type == schemas.DataType.cog:
         workflow_runs = []
         for discovery in dataset.discovery_items:
@@ -111,6 +122,11 @@ async def publish_dataset(
 
     return return_dict
 
+def filter_unwanted_keys(collection_data: dict, unwanted_keys : list[str]):
+    for key in unwanted_keys:
+        if key in collection_data:
+            del collection_data[key]
+    return collection_data
 
 @workflows_app.post(
     "/discovery",

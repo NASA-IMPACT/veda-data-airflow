@@ -226,10 +226,12 @@ def s3_discovery_handler(event, chunk_size=2800, role_arn=None, bucket_output=No
     if len(file_uris) == 0:
         raise ValueError(f"No files discovered at bucket: {bucket}, prefix: {prefix}")
 
-    # out of convenience, we might not always want to explicitly define assets
-    if assets and len(assets) > 1:
+    # group only if more than 1 assets
+    if assets and len(assets.keys()) > 1:
         items_with_assets = group_by_item(file_uris, id_regex, assets)
     else:
+        # out of convenience, we might not always want to explicitly define assets
+        # or if only a single asset is defined, follow default flow
         items_with_assets = construct_single_asset_items(file_uris, assets)
 
     if len(items_with_assets) == 0:

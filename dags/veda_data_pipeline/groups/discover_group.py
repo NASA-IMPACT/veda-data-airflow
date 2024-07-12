@@ -2,13 +2,13 @@ import time
 import uuid
 
 from airflow.models.variable import Variable
-from airflow.operators.python import BranchPythonOperator, PythonOperator
 from airflow.operators.dummy_operator import DummyOperator as EmptyOperator
 from airflow.decorators import task_group
+from airflow.operators.python import BranchPythonOperator, PythonOperator, ShortCircuitOperator
 from airflow.utils.trigger_rule import TriggerRule
 from airflow_multi_dagrun.operators import TriggerMultiDagRunOperator
 from veda_data_pipeline.utils.s3_discovery import (
-    s3_discovery_handler,
+    s3_discovery_handler, EmptyFileListError
 )
 
 group_kwgs = {"group_id": "Discover", "tooltip": "Discover"}
@@ -29,14 +29,18 @@ def discover_from_s3_task(ti, event={}, **kwargs):
     MWAA_STAC_CONF = Variable.get("MWAA_STACK_CONF", deserialize_json=True)
     read_assume_arn = Variable.get("ASSUME_ROLE_READ_ARN", default_var=None)
     # Making the chunk size small, this helped us process large data faster than
-    # passing a large chunk of 2800
+    # passing a large chunk of 500
     chunk_size = config.get("chunk_size", 500)
-    return s3_discovery_handler(
-        event=config,
-        role_arn=read_assume_arn,
-        bucket_output=MWAA_STAC_CONF["EVENT_BUCKET"],
-        chunk_size=chunk_size
-    )
+    try:
+        return s3_discovery_handler(
+            event=config,
+            role_arn=read_assume_arn,
+            bucket_output=MWAA_STAC_CONF["EVENT_BUCKET"],
+            chunk_size=chunk_size
+        )
+    except EmptyFileListError as ex:
+        print(f"Received an exception {ex}")
+        return []
 
 
 def get_files_to_process(ti):
@@ -71,7 +75,7 @@ def vector_raster_choice(ti):
 
 @task_group
 def subdag_discover(event={}):
-    discover_from_s3 = PythonOperator(
+    discover_from_s3 = ShortCircuitOperator(
         task_id="discover_from_s3",
         python_callable=discover_from_s3_task,
         op_kwargs={"text": "Discover from S3", "event": event},
@@ -81,6 +85,7 @@ def subdag_discover(event={}):
 
     raster_vector_branching = BranchPythonOperator(
         task_id="raster_vector_branching",
+        trigger_rule=TriggerRule.ONE_SUCCESS,
         python_callable=vector_raster_choice,
     )
 

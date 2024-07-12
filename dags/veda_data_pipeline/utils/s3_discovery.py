@@ -12,6 +12,13 @@ import boto3
 from smart_open import open as smrt_open
 
 
+# Adding a custom exception for empty list
+class EmptyFileListError(Exception):
+    def __init__(self, error_message):
+        self.error_message = error_message
+        super().__init__(self.error_message)
+
+
 def assume_role(role_arn, session_name="veda-data-pipelines_s3-discovery"):
     sts = boto3.client("sts")
     credentials = sts.assume_role(
@@ -42,7 +49,7 @@ def get_s3_resp_iterator(bucket_name, prefix, s3_client, page_size=1000):
 
 
 def discover_from_s3(
-    response_iterator, filename_regex: str, last_execution: datetime
+        response_iterator, filename_regex: str, last_execution: datetime
 ) -> dict:
     """Iterate through pages of S3 objects returned by a ListObjectsV2 operation.
     The discover_from_s3 function takes in an iterator over the pages of S3 objects returned
@@ -218,7 +225,7 @@ def s3_discovery_handler(event, chunk_size=2800, role_arn=None, bucket_output=No
     ]
 
     if len(file_uris) == 0:
-        raise ValueError(f"No files discovered at bucket: {bucket}, prefix: {prefix}")
+        raise EmptyFileListError(f"No files discovered at bucket: {bucket}, prefix: {prefix}")
 
     # out of convenience, we might not always want to explicitly define assets
     if assets is not None:
@@ -227,7 +234,7 @@ def s3_discovery_handler(event, chunk_size=2800, role_arn=None, bucket_output=No
         items_with_assets = construct_single_asset_items(file_uris)
 
     if len(items_with_assets) == 0:
-        raise ValueError(
+        raise EmptyFileListError(
             f"No items could be constructed for files at bucket: {bucket}, prefix: {prefix}"
         )
 
@@ -243,7 +250,7 @@ def s3_discovery_handler(event, chunk_size=2800, role_arn=None, bucket_output=No
             if item_count < slice[0]:  # Skip until we reach the start of the slice
                 continue
             if (
-                item_count >= slice[1]
+                    item_count >= slice[1]
             ):  # Stop once we reach the end of the slice, while saving progress
                 break
         file_obj = {

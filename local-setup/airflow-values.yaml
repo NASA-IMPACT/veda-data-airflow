@@ -1,0 +1,32 @@
+workers:
+  persistence:
+    enabled: false 
+    # can be used to debug, but will accumulate quickly
+triggerer:
+  persistence:
+    enabled: false 
+    # can be used to debug, but will accumulate quickly
+images:
+  airflow:
+    repository: "docker.io/library/veda-airflow"
+    tag: "latest"
+    # Don't waste a day: https://iximiuz.com/en/posts/kubernetes-kind-load-docker-image/
+    pullPolicy: IfNotPresent
+  migrationsWaitTimeout: 120
+# if using private GHCR image registry, uncomment the following lines
+# and create a secret with the credentials
+#registry:
+#  secretName: "ghcr-credentials"
+config:
+  webserver:
+    base_url: "http://localhost:8080"
+    expose_config: true
+  scheduler: 
+    # after how much time a new DAGs should be picked up from the filesystem
+    min_file_process_interval: 0
+    dag_dir_list_interval: 60
+webserver:
+  defaultUser:
+    enabled: true
+    username: "admin"
+    password: "admin"

@@ -27,7 +27,7 @@ dag_args = {
     "schedule_interval": None,
     "catchup": False,
     "doc_md": dag_doc_md,
-    "tags": ["collection", "discovery"],
+    "tags": ["collection"],
 }
 
 template_dag_run_conf = {
@@ -42,7 +42,7 @@ template_dag_run_conf = {
 
 with DAG("veda_dataset_pipeline", params=template_dag_run_conf, **dag_args) as dag:
     start = EmptyOperator(task_id="start", dag=dag)
-    end = EmptyOperator(task_id="end", trigger_rule=TriggerRule.ONE_SUCCESS, dag=dag)
+    end = EmptyOperator(task_id="end", trigger_rule=TriggerRule.NONE_FAILED_MIN_ONE_SUCCESS, dag=dag)
 
     collection_grp = collection_task_group()
 

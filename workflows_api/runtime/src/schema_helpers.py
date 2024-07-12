@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import List, Union, Optional
 
-from pydantic import BaseModel, root_validator
+from pydantic import BaseModel, Extra, root_validator
 from stac_pydantic.collection import Extent, TimeInterval
 
 # Smaller utility models to support the larger models in schemas.py
@@ -55,3 +55,6 @@ class DiscoveryItemAsset(BaseModel):
     description: Optional[str]
     roles: Optional[List[str]]
     regex: str
+
+    class Config:
+        extra = Extra.allow

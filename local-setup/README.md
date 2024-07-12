@@ -35,6 +35,12 @@ For MWAA-specific testing, consider https://github.com/aws/aws-mwaa-local-runner
 
 1. kubectx bundles kubens and kubectl, so follow the instructions for your platform: https://github.com/ahmetb/kubectx?tab=readme-ov-file#installation
 
+2. Verify kubectx Installation:
+
+```bash
+kubectx --help
+```
+
 ### Installing Kind
 
 1. Install `kind` using instructions for your local operating system: https://kind.sigs.k8s.io/docs/user/quick-start/
@@ -42,7 +48,7 @@ For MWAA-specific testing, consider https://github.com/aws/aws-mwaa-local-runner
 2. Verify Kind Installation:
 
 ```bash
-    kind --version
+kind --version
 ```
 
 ### Installing Helm
@@ -60,7 +66,7 @@ This method gets the most up-to-date installation (I've had issues with the `apt
 **2. Verify Helm Installation:**
 
 ```bash
-    helm version
+helm version
 ```
 
 ### Setting Up Airflow on Kind Cluster
@@ -68,6 +74,7 @@ This method gets the most up-to-date installation (I've had issues with the `apt
 
 ```bash
 kind create cluster --name airflow-cluster
+kubectx airflow-cluster
 ```
 
 If this is not your first k8s rodeo, `kubectx airflow-cluster` will switch your context to the new cluster.
@@ -85,6 +92,15 @@ docker build -f ./local-setup/Dockerfile.airflow -t veda-airflow .
 kind load docker-image veda-airflow:latest --name airflow-cluster
 ```
 
+Optional: Verify the image is loaded:
+
+```bash
+docker exec -it airflow-cluster-control-plane bash
+# in docker terminal
+crictl images
+# veda-airflow should be listed, along with other system images
+```
+
 **4. Add Airflow Helm Repo:**
 
 ```bash
@@ -96,6 +112,7 @@ helm repo update
 
 ```bash
 kubectl create namespace airflow
+kubens airflow
 ```
 
 **6. Install Airflow:**
@@ -145,6 +162,31 @@ helm upgrade airflow apache-airflow/airflow --namespace airflow --set images.air
 
 ## Troubleshooting
 
-If you are using `Airflow < 2.7`, you need to add `--version 1.10.0` to your `helm install` and `helm upgrade` commands.
+- If you are using `Airflow < 2.7`, you need to add `--version 1.10.0` to your `helm install` and `helm upgrade` commands.
 
-If you are missing "Variables" and your DAGs fail to import as a result, you can add new Variables in the Airflow Admin UI. For reference, a template is available at `infrastructure/mwaa_environment_variables.tpl`, and a complete file is present at `/tmp/mwaa_vars.json` if you have deployed from your local machine before.
+- If you are missing "Variables" and your DAGs fail to import as a result, you can add new Variables in the Airflow Admin UI. For reference, a template is available at `infrastructure/mwaa_environment_variables.tpl`, and a complete file is present at `/tmp/mwaa_vars.json` if you have deployed from your local machine before.
+
+- If you're stuck on AWS permissions when running DAGs - https://airflow.apache.org/docs/apache-airflow-providers-amazon/stable/connections/aws.html - you can specify a role to assume, or simply use your own credentials (this gets me 99% of the way, by allowing me to access resources on UAH)
+
+- Fixing a broken state after timeouts (during helm upgrades or installs)
+    ```bash
+    kubens airflow
+    helm uninstall airflow
+    ```
+
+
+- `Error: secret "airflow-metadata" not found`
+
+    This is likely a symptom of installing a new version, followed by the old one. Run the `helm uninstall` command above to remove the old version.
+
+- Out of space on postgres pod
+    ```
+    │ postgresql 22:51:11.57 INFO  ==> ** Starting PostgreSQL **                                                            │
+    │ 2024-07-11 22:51:11.589 GMT [1] FATAL:  could not write lock file "postmaster.pid": No space left on device           │
+    │ Stream closed EOF for airflow/airflow-postgresql-0 
+    ```
+    This is a known issue with the postgres container, and can be caused by Docker engine settings, or by an improperly removed PVC. The easiest way to fix this is to uninstall/reinstall the helm chart with the added step of removing the PVCs:
+    ```
+    kubectl delete pvc/data-airflow-postgresql-0
+    ```
+

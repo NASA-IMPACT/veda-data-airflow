@@ -27,23 +27,23 @@ def generate_dags():
             continue
         file_name = Path(key).stem
         result = client.get_object(Bucket=bucket, Key=key)
-        collections = result["Body"].read().decode()
-        collections = json.loads(collections)
+        discovery_configs = result["Body"].read().decode()
+        discovery_configs = json.loads(discovery_configs)
 
         # Allow the file content to be either one config or a list of configs
-        if type(collections) is dict:
-            collections = [collections]
-        scheduled_collections = [
-            collection
-                for collection in collections
-                    if collection.get("schedule")
+        if type(discovery_configs) is dict:
+            discovery_configs = [discovery_configs]
+        scheduled_discovery_configs = [
+            discovery_config
+                for discovery_config in discovery_configs
+                    if discovery_config.get("schedule")
             ]
-        for idx, collection in enumerate(scheduled_collections):
+        for idx, discovery_config in enumerate(scheduled_discovery_configs):
             id = f"discover-{file_name}"
             if idx > 0:
                 id = f"{id}-{idx}"
             get_discover_dag(
-                id=id, event=collection
+                id=id, event=discovery_config
             )
 
 

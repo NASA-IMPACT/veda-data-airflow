@@ -303,7 +303,7 @@ resource "null_resource" "update_cloudfront" {
   count = coalesce(var.cloudfront_id, false) != false ? 1 : 0
 
   provisioner "local-exec" {
-    command = "${path.module}/cf_update.sh ${var.cloudfront_id} workflows-api \"${aws_apigatewayv2_api.workflows_http_api.api_endpoint}\""
+    command = "${path.module}/cf_update.sh ${var.cloudfront_id} workflows_api_origin \"${aws_apigatewayv2_api.workflows_http_api.api_endpoint}\""
   }
 
   depends_on = [aws_apigatewayv2_api.workflows_http_api]

@@ -47,6 +47,7 @@ def get_files_to_process(ti):
     payload = ti.xcom_pull(task_ids=f"{dynamic_group_id}.discover_from_s3")
     if isinstance(payload, list):
         payloads_xcom = payload[0].pop("payload", [])
+        payload = payload[0]
     else:
         payloads_xcom = payload.pop("payload", [])
     dag_run_id = ti.dag_run.run_id
@@ -54,7 +55,7 @@ def get_files_to_process(ti):
         time.sleep(2)
         yield {
             "run_id": f"{dag_run_id}_{uuid.uuid4()}_{indx}",
-            **payload[0],
+            **payload,
             "payload": payload_xcom,
         }
 

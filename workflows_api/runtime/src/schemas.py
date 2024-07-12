@@ -1,7 +1,7 @@
 import enum
 import re
 from datetime import datetime
-from typing import Dict, List, Literal, Optional, Union, Any
+from typing import Dict, List, Literal, Optional
 from urllib.parse import urlparse
 
 import src.validators as validators
@@ -160,6 +160,7 @@ class WorkflowInputBase(BaseModel):
 
 
 class S3Input(WorkflowInputBase):
+    discovery: Literal["s3"]
     prefix: str
     bucket: str
     filename_regex: str = r"[\s\S]*"  # default to match all files in prefix
@@ -181,9 +182,6 @@ class S3Input(WorkflowInputBase):
             bucket=bucket, prefix=prefix, zarr_store=zarr_store
         )
         return values
-
-    class Config:
-        extra = Extra.allow
 
 class Dataset(BaseModel):
     collection: str

@@ -168,6 +168,26 @@ helm upgrade airflow apache-airflow/airflow --namespace airflow --set images.air
 
 - If you're stuck on AWS permissions when running DAGs - https://airflow.apache.org/docs/apache-airflow-providers-amazon/stable/connections/aws.html - you can specify a role to assume, or simply use your own credentials (this gets me 99% of the way, by allowing me to access resources on UAH)
 
+## k8s Troubleshooting
+
+- If helm is timing out with an error message about migrations, you can try to increase the timeout:
+
+    ```bash
+    helm install airflow apache-airflow/airflow --namespace airflow -f ./local-setup/airflow-values.yaml --timeout 10m
+    ```
+    Alternatively, increase the `images.migrationsWaitTimeout` value in `airflow-values.yaml`
+
+- If helm installs are still failing, there are several possible reasons. To help identify the issue, you can use `k9s` to investigate the state of the cluster.
+
+    - Without k9s, you can still access the same information using `kubectl` commands.
+
+        ```bash
+        kubectl get pods,svc,deployments --namespace airflow
+        # identify the pods, services, or deployments that are failing or stuck in a loop
+        kubectl logs pod/<pod-name> --namespace airflow # or svc/<service-name>, deployment/<deployment-name> etc
+        kubectl describe pod/<pod-name> --namespace airflow
+        ```
+
 - Fixing a broken state after timeouts (during helm upgrades or installs)
     ```bash
     kubens airflow

@@ -2,6 +2,7 @@ import time
 import uuid
 
 from airflow.models.variable import Variable
+from airflow.models.xcom import LazyXComAccess
 from airflow.operators.dummy_operator import DummyOperator as EmptyOperator
 from airflow.decorators import task_group
 from airflow.operators.python import BranchPythonOperator, PythonOperator, ShortCircuitOperator
@@ -49,7 +50,7 @@ def get_files_to_process(ti):
     """
     dynamic_group_id = ti.task_id.split(".")[0]
     payload = ti.xcom_pull(task_ids=f"{dynamic_group_id}.discover_from_s3")
-    if isinstance(payload, list):
+    if isinstance(payload, LazyXComAccess):
         payloads_xcom = payload[0].pop("payload", [])
         payload = payload[0]
     else:
@@ -85,7 +86,6 @@ def subdag_discover(event={}):
 
     raster_vector_branching = BranchPythonOperator(
         task_id="raster_vector_branching",
-        trigger_rule=TriggerRule.ONE_SUCCESS,
         python_callable=vector_raster_choice,
     )
 
@@ -102,7 +102,7 @@ def subdag_discover(event={}):
     )
 
     # extra no-op, needed to run in dynamic mapping context
-    end_discover = EmptyOperator(task_id="end_discover")
+    end_discover = EmptyOperator(task_id="end_discover", trigger_rule=TriggerRule.NONE_FAILED_MIN_ONE_SUCCESS,)
     
     discover_from_s3 >> raster_vector_branching >> [run_process_raster, run_process_vector]
     run_process_raster >> end_discover

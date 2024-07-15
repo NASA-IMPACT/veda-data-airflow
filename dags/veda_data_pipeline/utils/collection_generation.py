@@ -4,6 +4,7 @@ import fsspec
 import xarray as xr
 import xstac
 from veda_data_pipeline.utils.schemas import SpatioTemporalExtent
+from datetime import datetime, timezone
 
 
 class GenerateCollection:
@@ -16,15 +17,24 @@ class GenerateCollection:
         "type": "Collection",
         "stac_version": "1.0.0",
     }
-    keys_to_ignore = ["collection", "data_type", "sample_files", "discovery_items", "spatial_extent", "temporal_extent", "is_periodic", "time_density"]
+    keys_to_ignore = [
+        "collection",
+        "data_type",
+        "sample_files",
+        "discovery_items",
+        "spatial_extent",
+        "temporal_extent",
+        "is_periodic",
+        "time_density",
+        "type",
+    ]
 
-            
     def get_template(self, dataset: Dict[str, Any]) -> dict:
         extra_fields = {
-                key: dataset[key]
-                for key in dataset.keys()
-                if key not in GenerateCollection.keys_to_ignore
-            }
+            key: dataset[key]
+            for key in dataset.keys()
+            if key not in GenerateCollection.keys_to_ignore
+        }
 
         collection_dict = {
             "id": dataset["collection"],
@@ -86,23 +96,20 @@ class GenerateCollection:
         collection_stac = self.get_template(dataset)
 
         # Override the extents if they exists
-        if (spatial_extent := dataset.get("spatial_extent")) or (
-            temporal_extent := dataset.get("temporal_extent")
-        ):
-            collection_stac["extent"] = SpatioTemporalExtent.parse_obj(
-                {
-                    "spatial": {"bbox": [list(spatial_extent)]},
-                    "temporal": {
-                        "interval": [
-                            # most of our data uses the Z suffix for UTC - isoformat() doesn't
-                            [
-                                x.isoformat().replace("+00:00", "Z")
-                                for x in list(temporal_extent)
-                            ]
-                        ]
-                    },
-                }
-            )
+        if spatial_extent := dataset.get("spatial_extent"):
+            collection_stac["extent"]["spatial"] = {"bbox": [list(spatial_extent.values())]},
+        
+        if temporal_extent := dataset.get("temporal_extent"):
+            collection_stac["extent"]["temporal"] = {
+                "interval": [
+                    # most of our data uses the Z suffix for UTC - isoformat() doesn't
+                    [
+                        datetime.fromisoformat(x).astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
+                        if x else None
+                        for x in list(temporal_extent.values())
+                    ]
+                ]
+            }
 
         collection_stac["item_assets"] = {
             "cog_default": {

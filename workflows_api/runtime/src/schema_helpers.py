@@ -54,7 +54,7 @@ class DiscoveryItemAsset(BaseModel):
     title: str
     description: Optional[str]
     roles: Optional[List[str]]
-    regex: str
+    regex: str = ".*"
 
     class Config:
         extra = Extra.allow

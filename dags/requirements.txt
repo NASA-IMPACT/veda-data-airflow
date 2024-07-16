@@ -13,3 +13,8 @@ typing-extensions==4.4.0
 psycopg2-binary==2.9.5
 pypgstac==0.7.4
 pyOpenSSL==22.0.0
+stac-pydantic
+fsspec
+s3fs
+xarray
+xstac

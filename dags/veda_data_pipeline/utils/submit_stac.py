@@ -1,7 +1,7 @@
 import json
+import os
 import sys
 from dataclasses import dataclass
-import os
 
 if sys.version_info >= (3, 8):
     from typing import TypedDict
@@ -79,40 +79,49 @@ class IngestionApi:
             raise f"Error, {ex}"
         return response.json()
 
-    def submit(self, stac_item: Dict[str, Any]):
+    def submit(self, event: Dict[str, Any], endpoint: str) -> Dict[str, Any]:
+        headers = {
+            "Authorization": f"Bearer {self.token}",
+            "Content-Type": "application/json",
+        }
         response = requests.post(
-            f"{self.base_url.rstrip('/')}/ingestions",
-            json=stac_item,
-            headers={"Authorization": f"bearer {self.token}"},
+            f"{self.base_url.rstrip('/')}{endpoint}",
+            json=event,
+            headers=headers,
         )
-
         try:
             response.raise_for_status()
         except Exception as e:
             print(response.text)
             raise e
-
         return response.json()
 
 
 def submission_handler(
-    event: Union[S3LinkInput, StacItemInput],
+    event: Union[S3LinkInput, StacItemInput, Dict[str, Any]],
+    endpoint: str = "/ingestions",
     cognito_app_secret=None,
     stac_ingestor_api_url=None,
-    context={},
+    context=None,
 ) -> None:
-    # print(f"SUBMISSION EVENT {event}")
+    if context is None:
+        context = {}
+
     stac_item = event
 
-    if event.get("dry_run"):
+    if stac_item.get("dry_run"):
         print("Dry run, not inserting, would have inserted:")
         print(json.dumps(stac_item, indent=2))
         return
+
+    cognito_app_secret = cognito_app_secret or os.getenv("COGNITO_APP_SECRET")
+    stac_ingestor_api_url = stac_ingestor_api_url or os.getenv("STAC_INGESTOR_API_URL")
+
     ingestor = IngestionApi.from_veda_auth_secret(
-        secret_id=os.getenv("COGNITO_APP_SECRET", cognito_app_secret),
-        base_url=os.getenv("STAC_INGESTOR_API_URL", stac_ingestor_api_url),
+        secret_id=cognito_app_secret,
+        base_url=stac_ingestor_api_url,
     )
-    ingestor.submit(stac_item)
+    ingestor.submit(event=stac_item, endpoint=endpoint)
     # print("Successfully submitted STAC item")
 
 

@@ -72,7 +72,7 @@ jobs:
         with:
           role-to-assume: ${{ secrets.DEPLOYMENT_ROLE_ARN }}
           role-session-name: "veda-airflow-github-${{ needs.define-environment.outputs.env_name }}-deployment"
-          aws-region: "us-west-2"
+          aws-region: us-west-2
 
       - name: Run deployment
         uses: "./.github/actions/terraform-deploy"

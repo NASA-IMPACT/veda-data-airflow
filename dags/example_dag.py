@@ -79,7 +79,9 @@ with DAG(
     )
 
     end = EmptyOperator(task_id="end", dag=dag)
+
     start >> discover_from_cmr
+    
     start >> discover_from_s3 >> move_files_to_maap_store
     (
         [discover_from_cmr, move_files_to_maap_store]

@@ -66,6 +66,5 @@ runs:
         AWS_REGION: ${{ inputs.aws-region }}
       run: |
         cp -r ../dags .
-        echo $AWS_REGION
         ./scripts/deploy.sh ${{ inputs.env-file }} <<< init
-        ./scripts/deploy.sh ${{ inputs.env-file }} <<< plan
+        ./scripts/deploy.sh ${{ inputs.env-file }} <<< deploy

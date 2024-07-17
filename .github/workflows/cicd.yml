@@ -10,6 +10,7 @@ on:
       - main
       - dev
       - production
+      - deploy-sm2a
   pull_request:
     branches:
       - main

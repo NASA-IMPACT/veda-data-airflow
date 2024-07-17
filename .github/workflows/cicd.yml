@@ -38,6 +38,8 @@ jobs:
         run: |
           if [ "${{ github.ref }}" = "refs/heads/main" ]; then
             echo "env_name=staging" >> $GITHUB_OUTPUT
+          elif [ "${{ github.ref }}" = "refs/heads/deploy-sm2a" ]; then
+            echo "env_name=development" >> $GITHUB_OUTPUT
           elif [ "${{ github.ref }}" = "refs/heads/dev" ]; then
             echo "env_name=development" >> $GITHUB_OUTPUT
           elif [ "${{ github.ref }}" = "refs/heads/production" ]; then
@@ -72,6 +74,32 @@ jobs:
           aws-region: "us-west-2"
 
       - name: Run deployment
-        uses: "./.github/actions/terraform-deploy"
+        uses: "./.github/actions/terraform-deploy/action.yml"
         with:
           env_aws_secret_name: ${{ secrets.ENV_AWS_SECRET_NAME }}
+
+
+  deploy-sm2a:
+    name: Deploy to ${{ needs.define-environment.outputs.env_name }} 🚀
+    runs-on: self-hosted
+    if: ${{ needs.define-environment.outputs.env_name }}
+    needs: [gitflow-enforcer, define-environment]
+    environment: ${{ needs.define-environment.outputs.env_name }}
+    concurrency: ${{ needs.define-environment.outputs.env_name }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: ${{ secrets.DEPLOYMENT_ROLE_ARN }}
+          role-session-name: "veda-airflow-github-sm2a-${{ needs.define-environment.outputs.env_name }}-deployment"
+          aws-region: "us-west-2"
+
+      - name: Run sm2a deployment
+        uses: "./.github/actions/terraform-deploy/sm2a-action.yml"
+        with:
+          env_aws_secret_name: veda-sm2a-dev-deployment-secrets
+          env-file: .env

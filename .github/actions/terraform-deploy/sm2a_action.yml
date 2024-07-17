@@ -1,22 +1,31 @@
-name: Deploy
+name: Deploy SM2A
 
 inputs:
-  env_aws_secret_name:
-    required: true
+  environment:
     type: string
+    required: true
+  aws-region:
+    type: string
+    required: false
+    default: us-east-1
   env-file:
     type: string
-    default: ".env"
-  dir:
+    required: true
+  role-session-name:
+    required: false
+    type: string
+    default: github-actions-deployment
+  current_dir:
     required: false
     type: string
     default: "."
+  sm2a_dir:
+    required: false
+    type: string
+    default: "./sm2a"
   script_path:
     type: string
-  backend_stack_name:
-    type: string
-  auth_stack_name:
-    type: string
+
 
 runs:
   using: "composite"
@@ -25,7 +34,7 @@ runs:
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
-        python-version: "3.10"
+        python-version: "3.11"
         cache: "pip"
 
     - name: Install python dependencies
@@ -35,21 +44,14 @@ runs:
 
     - name: Get relevant environment configuration from aws secrets
       shell: bash
-      working-directory: ${{ inputs.dir }}
+      working-directory: ${{ inputs.sm2a_dir }}
       env:
         SECRET_SSM_NAME: ${{ inputs.env_aws_secret_name }}
         AWS_DEFAULT_REGION: us-west-2
       run: |
-        if [[ -z "${{ inputs.script_path }}" ]]; then
-        ./scripts/sync-env.sh ${{ inputs.env_aws_secret_name }}
-        else
-        echo ${{ inputs.auth_stack_name}}
-        echo ${{ inputs.backend_stack_name}}
-        python ${{ inputs.script_path }} --secret-id ${{ inputs.env_aws_secret_name }} --stack-names ${{ inputs.auth_stack_name}},${{ inputs.backend_stack_name}}
-        source .env
-        echo "PREFIX=data-pipeline-$STAGE" >> ${{ inputs.env-file }}
-        cat .env
-        fi
+        python scripts/generate_env_file.py --secret-id ${{ vars.DEPLOYMENT_ENV_SECRET_NAME }} --env-file ${{ inputs.env-file }}
+
+
 
     - name: Setup Terraform
       uses: hashicorp/setup-terraform@v3
@@ -58,6 +60,8 @@ runs:
 
     - name: Deploy
       shell: bash
-      working-directory: ${{ inputs.dir }}
+      working-directory: ${{ inputs.sm2a_dir }}
       run: |
+        cp -r ../dags .
         ./scripts/deploy.sh ${{ inputs.env-file }} <<< init
+        ./scripts/deploy.sh ${{ inputs.env-file }} <<< plan

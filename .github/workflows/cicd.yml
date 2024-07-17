@@ -75,11 +75,11 @@ jobs:
           aws-region: "us-west-2"
 
       - name: Run deployment
-        uses: "./.github/actions/terraform-deploy/action.yml"
+        uses: "./.github/actions/terraform-deployl"
         with:
           env_aws_secret_name: ${{ secrets.ENV_AWS_SECRET_NAME }}
       - name: Run sm2a deployment
-        uses: "./.github/actions/terraform-deploy/sm2a-action.yml"
+        uses: "./.github/actions/terraform-deploy-sm2a"
         with:
           env_aws_secret_name: veda-sm2a-dev-deployment-secrets
           env-file: .env

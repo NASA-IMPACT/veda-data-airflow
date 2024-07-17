@@ -25,5 +25,6 @@ COPY --chown=airflow:airflow scripts "${AIRFLOW_HOME}/scripts"
 COPY --chown=airflow:airflow airflow_services/webserver_config.py "${AIRFLOW_HOME}/webserver_config.py"
 
 RUN cp ${AIRFLOW_HOME}/configuration/airflow.cfg* ${AIRFLOW_HOME}/.
+
 #ENV
 ENV PYTHONPATH /opt/airflow

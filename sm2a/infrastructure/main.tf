@@ -19,7 +19,7 @@ resource "random_password" "password" {
 
 
 module "sma-base" {
-  source                         =  "https://github.com/NASA-IMPACT/self-managed-apache-airflow/releases/download/v1.0.23/self-managed-apache-airflow.zip"
+  source                         =  "https://github.com/NASA-IMPACT/self-managed-apache-airflow/releases/download/v1.0.23.beta/self-managed-apache-airflow.zip"
   airflow_db                     = var.airflow_db
   fernet_key                     = var.fernet_key
   prefix                         = var.prefix

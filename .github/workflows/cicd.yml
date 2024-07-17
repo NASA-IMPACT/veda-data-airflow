@@ -84,3 +84,4 @@ jobs:
         with:
           env_aws_secret_name: veda-sm2a-dev-deployment-secrets
           env-file: .env
+          aws-region: us-west-2

@@ -51,8 +51,6 @@ runs:
       run: |
         python scripts/generate_env_file.py --secret-id ${{ inputs.env_aws_secret_name }} --env-file ${{ inputs.env-file }}
 
-
-
     - name: Setup Terraform
       uses: hashicorp/setup-terraform@v1
       with:

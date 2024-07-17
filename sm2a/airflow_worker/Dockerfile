@@ -41,6 +41,7 @@ COPY --chown=airflow:airflow scripts "${AIRFLOW_HOME}/scripts"
 
 RUN cp ${AIRFLOW_HOME}/configuration/airflow.cfg* ${AIRFLOW_HOME}/.
 
+
 RUN pip install pypgstac==0.7.4
 
 # ENV

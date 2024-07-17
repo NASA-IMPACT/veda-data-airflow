@@ -62,5 +62,6 @@ runs:
       working-directory: ${{ inputs.sm2a_dir }}
       run: |
         cp -r ../dags .
+        ls -al
         ./scripts/deploy.sh ${{ inputs.env-file }} <<< init
         ./scripts/deploy.sh ${{ inputs.env-file }} <<< plan

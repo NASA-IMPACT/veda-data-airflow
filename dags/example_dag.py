@@ -45,7 +45,7 @@ with DAG(
 ) as dag:
 
     start = EmptyOperator(task_id="start", dag=dag)
-    
+
     discover_from_cmr = PythonOperator(
         task_id="discover_from_cmr",
         python_callable=discover_from_cmr_task,

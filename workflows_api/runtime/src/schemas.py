@@ -57,7 +57,6 @@ class DashboardCollection(Collection):
     assets: Optional[Dict]
     extent: SpatioTemporalExtent
     renders: Optional[Dict]
-    stac_extensions: Optional[List[str]]
 
     class Config:
         allow_population_by_field_name = True

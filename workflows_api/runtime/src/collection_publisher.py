@@ -13,8 +13,6 @@ from src.schemas import (
 )
 from src.validators import get_s3_credentials
 
-import json
-
 class CollectionPublisher:
     def ingest(self, collection: DashboardCollection, token: str, ingest_api: str):
         """
@@ -27,8 +25,8 @@ class CollectionPublisher:
             "Authorization": f"Bearer {token}",
             "Content-Type": "application/json",
         }
-        response = requests.post(url, data=collection.json(by_alias=True), headers=headers)
-        if response.status_code == 200:
+        response = requests.post(url, data=collection.json(by_alias=True, exclude_unset=True, exclude_none=True), headers=headers)
+        if response.status_code == 201:
             print("Success:", response.json())
         else:
             print("Error:", response.status_code, response.text)
@@ -183,20 +181,4 @@ class Publisher:
         create_function = self.func_map.get(data_type, self.create_cog_collection)
         return create_function(dataset)
 
-    def ingest(self, collection: DashboardCollection, token: str, ingest_api: str):
-        """
-        Takes a collection model,
-        does necessary preprocessing,
-        and loads into the PgSTAC collection table
-        """
-        
-        url = f"{ingest_api}/collections"
-        headers = {
-            "Authorization": f"Bearer {token}",
-            "Content-Type": "application/json",
-        }
-        response = requests.post(url, data=collection.json(by_alias=True), headers=headers)
-        if response.status_code == 200:
-            print("Success:", response.json())
-        else:
-            print("Error:", response.status_code, response.text)
+    

@@ -13,11 +13,8 @@ def generate_dags():
     import json
 
     from pathlib import Path
-
-
     mwaa_stac_conf = Variable.get("MWAA_STACK_CONF", deserialize_json=True)
     bucket = mwaa_stac_conf["EVENT_BUCKET"]
-
     client = boto3.client("s3")
     response = client.list_objects_v2(Bucket=bucket, Prefix="collections/")
 
@@ -35,9 +32,9 @@ def generate_dags():
             discovery_configs = [discovery_configs]
         scheduled_discovery_configs = [
             discovery_config
-                for discovery_config in discovery_configs
-                    if discovery_config.get("schedule")
-            ]
+            for discovery_config in discovery_configs
+            if discovery_config.get("schedule")
+        ]
         for idx, discovery_config in enumerate(scheduled_discovery_configs):
             id = f"discover-{file_name}"
             if idx > 0:

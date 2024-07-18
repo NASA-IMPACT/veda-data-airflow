@@ -46,25 +46,7 @@ variable "custom_worker_policy_statement" {
     Action   = list(string)
     Resource = list(string)
   }))
-  default = [
-    {
-      Effect = "Allow"
-      Action = [
-        "dynamodb:UpdateItem",
-        "dynamodb:PutItem",
-        "dynamodb:GetItem",
-        "dynamodb:BatchWriteItem",
-        "dynamodb:BatchGetItem"
-      ]
-      "Resource" : [
-        "arn:aws:dynamodb:us-west-2:*:table/*_sha256_store/*",
-        "arn:aws:dynamodb:us-west-2:*:table/*_sha256_store"
-      ]
-
-    }
-
-
-  ]
+  default = []
 
 }
 

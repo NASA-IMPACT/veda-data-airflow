@@ -10,7 +10,6 @@ on:
       - main
       - dev
       - production
-      - deploy-sm2a
   pull_request:
     branches:
       - main
@@ -39,8 +38,6 @@ jobs:
         run: |
           if [ "${{ github.ref }}" = "refs/heads/main" ]; then
             echo "env_name=staging" >> $GITHUB_OUTPUT
-          elif [ "${{ github.ref }}" = "refs/heads/deploy-sm2a" ]; then
-            echo "env_name=development" >> $GITHUB_OUTPUT
           elif [ "${{ github.ref }}" = "refs/heads/dev" ]; then
             echo "env_name=development" >> $GITHUB_OUTPUT
           elif [ "${{ github.ref }}" = "refs/heads/production" ]; then

@@ -1,6 +1,6 @@
-# CSDA-data-pipelines
+# VEDA-data-pipelines
 
-This repo houses function code and deployment code for CSDA projects.
+This repo houses function code and deployment code for VEDA projects.
 
 ## Project layout
 

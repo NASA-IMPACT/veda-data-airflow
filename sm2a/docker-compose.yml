@@ -17,7 +17,7 @@ x-airflow-common:
     AIRFLOW__WEBSERVER__SECRET_KEY: "Ly8wMU8r5K7jPy58M3GpkZbXDNyJz8HiJll3pu8DbIM="
     AIRFLOW__CELERY__RESULT_BACKEND: db+postgresql://airflow:airflow@airflow-db/airflow
     AIRFLOW__CELERY__BROKER_URL: sqs://user:pass@celery-broker:9324/
-    AIRFLOW__WEBSERVER__INSTANCE_NAME: "${AIRFLOW__WEBSERVER__INSTANCE_NAME:-CSDA-SM2A-Airflow}"
+    AIRFLOW__WEBSERVER__INSTANCE_NAME: "${AIRFLOW__WEBSERVER__INSTANCE_NAME:-VEDA-SM2A-Airflow}"
     AIRFLOW__LOGGING__LOGGING_LEVEL: DEBUG
     # Gotcha: Even though we set this to "True" in airflow.cfg, an environment variable overrides it
     AIRFLOW__CORE__LOAD_EXAMPLES: false

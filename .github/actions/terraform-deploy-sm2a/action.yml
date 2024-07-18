@@ -15,10 +15,6 @@ inputs:
     required: false
     type: string
     default: github-actions-deployment
-  current_dir:
-    required: false
-    type: string
-    default: "."
   env_aws_secret_name:
     type: string
     required: true

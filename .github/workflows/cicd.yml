@@ -80,8 +80,9 @@ jobs:
           env_aws_secret_name: ${{ secrets.ENV_AWS_SECRET_NAME }}
 
       - name: Run SM2A deployment
+        if: ${{ needs.define-environment.outputs.env_name }} = "development"
         uses: "./.github/actions/terraform-deploy-sm2a"
         with:
-          env_aws_secret_name: veda-sm2a-dev-deployment-secrets
+          env_aws_secret_name: ${{ vars.SM2A_ENVS_DEPLOYMENT_SECRET_NAME }}
           env-file: .env
           aws-region: us-west-2

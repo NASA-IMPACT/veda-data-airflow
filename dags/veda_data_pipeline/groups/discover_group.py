@@ -11,6 +11,8 @@ from airflow_multi_dagrun.operators import TriggerMultiDagRunOperator
 from veda_data_pipeline.utils.s3_discovery import (
     s3_discovery_handler, EmptyFileListError
 )
+from veda_data_pipeline.groups.processing_group import subdag_process
+
 
 group_kwgs = {"group_id": "Discover", "tooltip": "Discover"}
 
@@ -43,11 +45,12 @@ def discover_from_s3_task(ti, event={}, **kwargs):
         print(f"Received an exception {ex}")
         return []
 
-
-def get_files_to_process(ti):
+@task
+def get_files_to_process(**kwargs):
     """Get files from S3 produced by the discovery task.
     Used as part of both the parallel_run_process_rasters and parallel_run_process_vectors tasks.
     """
+    ti = kwargs.get("ti")
     dynamic_group_id = ti.task_id.split(".")[0]
     payload = ti.xcom_pull(task_ids=f"{dynamic_group_id}.discover_from_s3")
     if isinstance(payload, LazyXComAccess):
@@ -56,13 +59,11 @@ def get_files_to_process(ti):
     else:
         payloads_xcom = payload.pop("payload", [])
     dag_run_id = ti.dag_run.run_id
-    for indx, payload_xcom in enumerate(payloads_xcom):
-        time.sleep(2)
-        yield {
+    return [{
             "run_id": f"{dag_run_id}_{uuid.uuid4()}_{indx}",
             **payload,
             "payload": payload_xcom,
-        }
+        } for indx, payload_xcom in enumerate(payloads_xcom)]
 
 
 def vector_raster_choice(ti):
@@ -89,12 +90,9 @@ def subdag_discover(event={}):
         python_callable=vector_raster_choice,
     )
 
-    run_process_raster = TriggerMultiDagRunOperator(
-        task_id="parallel_run_process_rasters",
-        trigger_dag_id="veda_ingest_raster",
-        python_callable=get_files_to_process,
-    )
-
+    run_process_raster = subdag_process.expand(get_files_to_process())
+    
+    # TODO don't let me merge this without spending more time with vector ingest
     run_process_vector = TriggerMultiDagRunOperator(
         task_id="parallel_run_process_vectors",
         trigger_dag_id="veda_ingest_vector",

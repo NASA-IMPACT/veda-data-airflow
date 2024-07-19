@@ -35,61 +35,61 @@ def submit_to_stac_ingestor_task(ti):
         )
     return event
 
-
-def subdag_process():
-    with TaskGroup(**group_kwgs) as process_grp:
-        mwaa_stack_conf = Variable.get("MWAA_STACK_CONF", deserialize_json=True)
-        build_stac = EcsRunTaskOperator(
-            task_id="build_stac",
-            trigger_rule="none_failed",
-            cluster=f"{mwaa_stack_conf.get('PREFIX')}-cluster",
-            task_definition=f"{mwaa_stack_conf.get('PREFIX')}-tasks",
-            launch_type="FARGATE",
-            do_xcom_push=True,
-            execution_timeout=timedelta(minutes=60),
-            overrides={
-                "containerOverrides": [
-                    {
-                        "name": f"{mwaa_stack_conf.get('PREFIX')}-veda-stac-build",
-                        "command": [
-                            "/usr/local/bin/python",
-                            "handler.py",
-                            "--payload",
-                            "{}".format("{{ task_instance.dag_run.conf }}"),
-                        ],
-                        "environment": [
-                            {
-                                "name": "EXTERNAL_ROLE_ARN",
-                                "value": Variable.get(
-                                    "ASSUME_ROLE_READ_ARN", default_var=""
-                                ),
-                            },
-                            {
-                                "name": "BUCKET",
-                                "value": "veda-data-pipelines-staging-lambda-ndjson-bucket",
-                            },
-                            {
-                                "name": "EVENT_BUCKET",
-                                "value": mwaa_stack_conf.get("EVENT_BUCKET"),
-                            },
-                        ],
-                        "memory": 2048,
-                        "cpu": 1024,
-                    },
-                ],
-            },
-            network_configuration={
-                "awsvpcConfiguration": {
-                    "securityGroups": mwaa_stack_conf.get("SECURITYGROUPS"),
-                    "subnets": mwaa_stack_conf.get("SUBNETS"),
+@task_group
+def subdag_process(event={}, **kwargs):
+    if not event:
+        event = kwargs.get("dag_run").conf
+    mwaa_stack_conf = Variable.get("MWAA_STACK_CONF", deserialize_json=True)
+    build_stac = EcsRunTaskOperator(
+        task_id="build_stac",
+        trigger_rule="none_failed",
+        cluster=f"{mwaa_stack_conf.get('PREFIX')}-cluster",
+        task_definition=f"{mwaa_stack_conf.get('PREFIX')}-tasks",
+        launch_type="FARGATE",
+        do_xcom_push=True,
+        execution_timeout=timedelta(minutes=60),
+        overrides={
+            "containerOverrides": [
+                {
+                    "name": f"{mwaa_stack_conf.get('PREFIX')}-veda-stac-build",
+                    "command": [
+                        "/usr/local/bin/python",
+                        "handler.py",
+                        "--payload",
+                        "{}".format("{{ event }}"),
+                    ],
+                    "environment": [
+                        {
+                            "name": "EXTERNAL_ROLE_ARN",
+                            "value": Variable.get(
+                                "ASSUME_ROLE_READ_ARN", default_var=""
+                            ),
+                        },
+                        {
+                            "name": "BUCKET",
+                            "value": "veda-data-pipelines-staging-lambda-ndjson-bucket",
+                        },
+                        {
+                            "name": "EVENT_BUCKET",
+                            "value": mwaa_stack_conf.get("EVENT_BUCKET"),
+                        },
+                    ],
+                    "memory": 2048,
+                    "cpu": 1024,
                 },
+            ],
+        },
+        network_configuration={
+            "awsvpcConfiguration": {
+                "securityGroups": mwaa_stack_conf.get("SECURITYGROUPS"),
+                "subnets": mwaa_stack_conf.get("SUBNETS"),
             },
-            awslogs_group=mwaa_stack_conf.get("LOG_GROUP_NAME"),
-            awslogs_stream_prefix=f"ecs/{mwaa_stack_conf.get('PREFIX')}-veda-stac-build",  # prefix with container name
-        )
-        submit_to_stac_ingestor = PythonOperator(
-            task_id="submit_to_stac_ingestor",
-            python_callable=submit_to_stac_ingestor_task,
-        )
-        build_stac >> submit_to_stac_ingestor
-        return process_grp
+        },
+        awslogs_group=mwaa_stack_conf.get("LOG_GROUP_NAME"),
+        awslogs_stream_prefix=f"ecs/{mwaa_stack_conf.get('PREFIX')}-veda-stac-build",  # prefix with container name
+    )
+    submit_to_stac_ingestor = PythonOperator(
+        task_id="submit_to_stac_ingestor",
+        python_callable=submit_to_stac_ingestor_task,
+    )
+    build_stac >> submit_to_stac_ingestor

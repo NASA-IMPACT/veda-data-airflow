@@ -1,5 +1,4 @@
 import base64
-import os
 from typing import Dict
 from uuid import uuid4
 
@@ -8,21 +7,19 @@ import requests
 import json
 from fastapi import HTTPException
 
-try:
-    from src.schemas import WorkflowExecutionResponse, Status
-except ImportError:
-    from src.schemas import WorkflowExecutionResponse, Status
+from src.config import settings
+from src.schemas import WorkflowExecutionResponse, Status, ListWorkflowsResponse
 
 
 def cli_input(cli_string: str) -> Dict:
     """
     Pass a command directly to the CLI. Requires auth.
     """
-    if not (MWAA_ENV := os.environ.get("MWAA_ENV")):
+    if not (mwaa_env := settings.mwaa_env):
         raise HTTPException(status_code=400, detail="MWAA environment not set")
 
     airflow_client = boto3.client("mwaa")
-    mwaa_cli_token = airflow_client.create_cli_token(Name=MWAA_ENV)
+    mwaa_cli_token = airflow_client.create_cli_token(Name=mwaa_env)
 
     mwaa_webserver_hostname = (
         f"https://{mwaa_cli_token['WebServerHostname']}/aws_mwaa/cli"
@@ -46,11 +43,11 @@ def cli_input(cli_string: str) -> Dict:
 
 
 def trigger_discover(input: Dict) -> Dict:
-    if not (MWAA_ENV := os.environ.get("MWAA_ENV")):
+    if not (mwaa_env := settings.mwaa_env):
         raise HTTPException(status_code=400, detail="MWAA environment not set")
 
     airflow_client = boto3.client("mwaa")
-    mwaa_cli_token = airflow_client.create_cli_token(Name=MWAA_ENV)
+    mwaa_cli_token = airflow_client.create_cli_token(Name=mwaa_env)
 
     mwaa_webserver_hostname = (
         f"https://{mwaa_cli_token['WebServerHostname']}/aws_mwaa/cli"
@@ -80,12 +77,12 @@ def trigger_discover(input: Dict) -> Dict:
         )
 
 
-def list_dags() -> str:
-    if not (MWAA_ENV := os.environ.get("MWAA_ENV")):
+def list_dags() -> Dict:
+    if not (mwaa_env := settings.mwaa_env):
         raise HTTPException(status_code=400, detail="MWAA environment not set")
 
     airflow_client = boto3.client("mwaa")
-    mwaa_cli_token = airflow_client.create_cli_token(Name=MWAA_ENV)
+    mwaa_cli_token = airflow_client.create_cli_token(Name=mwaa_env)
 
     mwaa_webserver_hostname = (
         f"https://{mwaa_cli_token['WebServerHostname']}/aws_mwaa/cli"
@@ -100,24 +97,42 @@ def list_dags() -> str:
         },
         data=raw_data,
     )
+
     if mwaa_response.raise_for_status():
         raise Exception(
             f"Failed to trigger airflow: {mwaa_response.status_code} "
             f"{mwaa_response.text}"
         )
     else:
-        return mwaa_response.text
+        # decode base64 encoded string output and parse the text
+        decoded_response = base64.b64decode(mwaa_response.json()["stdout"]).decode("utf-8")
+        dags_response = []
+        for item in decoded_response.split("\n")[2:]:
+            if (row := item.replace(" ", "")) == "":
+                continue
+            
+            columns = row.split("|")
+            dags_response.append({
+                "dag_id": columns[0],
+                "filepath":columns[1],
+                "owner": columns[2],
+                "paused": columns[3]
+            })
+        
+        return ListWorkflowsResponse(
+            dags= dags_response
+        )
 
 
 def get_status(dag_run_id: str) -> Dict:
     """
     Get the status of a veda_discover workflow execution by dag_id
     """
-    if not (MWAA_ENV := os.environ.get("MWAA_ENV")):
+    if not (mwaa_env := settings.mwaa_env):
         raise HTTPException(status_code=400, detail="MWAA environment not set")
 
     airflow_client = boto3.client("mwaa")
-    mwaa_cli_token = airflow_client.create_cli_token(Name=MWAA_ENV)
+    mwaa_cli_token = airflow_client.create_cli_token(Name=mwaa_env)
 
     mwaa_webserver_hostname = (
         f"https://{mwaa_cli_token['WebServerHostname']}/aws_mwaa/cli"

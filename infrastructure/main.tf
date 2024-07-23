@@ -157,6 +157,27 @@ resource "aws_iam_policy" "lambda_access" {
   })
 }
 
+resource "aws_iam_policy" "s3_bucket_access" {
+  name        = "S3_Access_For_Lambda"
+  path        = "/"
+  description = "Policy to access S3 bucket"
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = [
+          "s3:*",
+        ]
+        Effect   = "Allow"
+        Resource = [
+          "arn:aws:s3:::*",
+          "arn:aws:s3:::*/*"
+        ]
+      },
+    ]
+  })
+}
+
 resource "aws_iam_role_policy_attachment" "lambda_access_attach" {
   role       = aws_iam_role.lambda_execution_role.name
   policy_arn = aws_iam_policy.lambda_access.arn
@@ -165,6 +186,11 @@ resource "aws_iam_role_policy_attachment" "lambda_access_attach" {
 resource "aws_iam_role_policy_attachment" "lambda_basic_execution" {
   role       = aws_iam_role.lambda_execution_role.name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+}
+
+resource "aws_iam_role_policy_attachment" "lambda_s3_access" {
+  role = aws_iam_role.lambda_execution_role.name
+  policy_arn = aws_iam_policy.s3_bucket_access.arn
 }
 
 resource "aws_security_group" "workflows_api_handler_sg" {

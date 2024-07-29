@@ -102,19 +102,19 @@ variable "rds_configuration" {
       rds_instance_class        = "db.t4g.medium",
       rds_allocated_storage     = 20,
       rds_max_allocated_storage = 100,
-      rds_engine_version        = "13.13"
+      rds_engine_version        = "13"
     },
     staging = {
       rds_instance_class        = "db.t4g.large",
       rds_allocated_storage     = 40,
       rds_max_allocated_storage = 100,
-      rds_engine_version        = "13.13"
+      rds_engine_version        = "13"
     },
     prod = {
       rds_instance_class        = "db.r5.xlarge",
       rds_allocated_storage     = 100,
       rds_max_allocated_storage = 200,
-      rds_engine_version        = "13.13"
+      rds_engine_version        = "13"
     }
   }
 }
@@ -180,10 +180,28 @@ variable "gh_team_name" {
 
 }
 
+variable "custom_worker_policy_statement" {
+  type = list(object({
+    Effect   = string
+    Action   = list(string)
+    Resource = list(string)
+  }))
+  default = [
+    {
+      Effect = "Allow"
+      Action = [
+				"sts:AssumeRole",
+				"iam:PassRole",
+				"logs:GetLogEvents"
+      ]
+      "Resource" : [
+        "*"
+      ]
 
-variable "airflow_custom_variables" {
-  description = "Airflow custom variables"
-  type        = map(string)
-  default = {}
+    }
+
+  ]
+
 }
+
 

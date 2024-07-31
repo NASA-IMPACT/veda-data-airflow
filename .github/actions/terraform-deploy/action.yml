@@ -69,4 +69,5 @@ runs:
       working-directory: ${{ inputs.dir }}
       run: |
         cd ./infrastructure
-        terraform output -json > ${HOME}/terraform_outputs.json
+        ls -al
+        terraform output -json workflows_api > ${HOME}/terraform_outputs.json

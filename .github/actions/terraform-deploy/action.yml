@@ -69,3 +69,4 @@ runs:
       working-directory: ${{ inputs.dir }}
       run: |
         terraform output -json > ${HOME}/terraform_outputs.json
+        cat ${HOME}/terraform_outputs.json

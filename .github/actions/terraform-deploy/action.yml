@@ -56,11 +56,16 @@ runs:
       with:
         terraform_version: 1.6.6
 
-    - name: Deploy and output workflows API endpoint
-      id: deploy_and_output_workflows_endpoint
+    - name: Deploy
       shell: bash
       working-directory: ${{ inputs.dir }}
       run: |
         ./scripts/deploy.sh ${{ inputs.env-file }} <<< init
         ./scripts/deploy.sh ${{ inputs.env-file }} <<< deploy
+
+    - name: Output workflows API endpoint
+      id: output_workflows_endpoint
+      shell: bash
+      working-directory: ${{ inputs.dir }}
+      run: |
         terraform output -json workflows_api > terraform_outputs.json

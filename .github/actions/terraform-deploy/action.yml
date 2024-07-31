@@ -68,4 +68,4 @@ runs:
       shell: bash
       working-directory: ${{ inputs.dir }}
       run: |
-        terraform output -json workflows_api > terraform_outputs.json
+        terraform output -json > terraform_outputs.json

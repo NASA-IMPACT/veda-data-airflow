@@ -45,7 +45,7 @@ def discover_from_s3_task(ti=None, event={}, **kwargs):
         )
     except EmptyFileListError as ex:
         print(f"Received an exception {ex}")
-        # TODO replace short circuit
+        # TODO replace short circuit operator behavior
         return {}
 
 @task

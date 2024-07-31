@@ -63,4 +63,4 @@ runs:
       run: |
         ./scripts/deploy.sh ${{ inputs.env-file }} <<< init
         ./scripts/deploy.sh ${{ inputs.env-file }} <<< deploy
-        terraform output -json > terraform_outputs.json
+        terraform output -json workflows_api > terraform_outputs.json

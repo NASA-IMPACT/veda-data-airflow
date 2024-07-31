@@ -71,3 +71,4 @@ runs:
         cd ./infrastructure
         ls -al
         terraform output -json workflows_api > ${HOME}/terraform_outputs.json
+        cat ${HOME}/terraform_outputs.json

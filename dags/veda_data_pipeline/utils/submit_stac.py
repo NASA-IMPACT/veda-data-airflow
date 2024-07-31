@@ -109,7 +109,8 @@ def submission_handler(
 
     stac_item = event
 
-    if stac_item.get("dry_run"):
+    # TODO remove debug bypass
+    if stac_item.get("dry_run") or True:
         print("Dry run, not inserting, would have inserted:")
         print(json.dumps(stac_item, indent=2))
         return
@@ -122,7 +123,6 @@ def submission_handler(
         base_url=stac_ingestor_api_url,
     )
     ingestor.submit(event=stac_item, endpoint=endpoint)
-    # print("Successfully submitted STAC item")
 
 
 if __name__ == "__main__":

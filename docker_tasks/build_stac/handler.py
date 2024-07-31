@@ -148,8 +148,8 @@ if __name__ == "__main__":
     # For cloud watch log to work the task should stay alife for at least 30 s
     start = time()
     print(f"Start at {start}")
-
-    payload_event = ast.literal_eval(args.payload)
+    print(args)
+    payload_event = json.loads(args.payload)
     building_stac_response = stac_handler(payload_event)
     response = json.dumps({**payload_event, **building_stac_response})
     end = time() - start

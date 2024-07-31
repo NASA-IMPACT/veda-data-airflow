@@ -109,8 +109,7 @@ def submission_handler(
 
     stac_item = event
 
-    # TODO remove debug bypass
-    if stac_item.get("dry_run") or True:
+    if stac_item.get("dry_run"):
         print("Dry run, not inserting, would have inserted:")
         print(json.dumps(stac_item, indent=2))
         return

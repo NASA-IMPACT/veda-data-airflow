@@ -62,13 +62,13 @@ with DAG(dag_id="veda_ingest_vector", params=template_dag_run_conf, **dag_args) 
 
     discover = discover_from_s3_task()
     get_files = get_files_to_process(payload=discover)
-    build_vector_kwargs_task = build_vector_kwargs(event=get_files)
+    build_vector_kwargs_task = build_vector_kwargs.expand(event=get_files)
     vector_ingest = EcsRunTaskOperator.partial(
-            task_id="ingest_vector"
+            task_id="ingest_vector",
             execution_timeout=timedelta(minutes=60),
             trigger_rule=TriggerRule.NONE_FAILED,
             cluster=f"{mwaa_stack_conf.get('PREFIX')}-cluster",
-            task_definition=f"{mwaa_stack_conf.get('PREFIX')}-tasks",
+            task_definition=f"{mwaa_stack_conf.get('PREFIX')}-vector-tasks",
             launch_type="FARGATE",
             do_xcom_push=True
         ).expand_kwargs(build_vector_kwargs_task)

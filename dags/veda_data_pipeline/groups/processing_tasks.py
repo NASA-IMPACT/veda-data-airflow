@@ -104,12 +104,6 @@ def build_vector_kwargs(event={}):
         payload = "{{ task_instance.dag_run.conf }}"
     
     return {
-        "trigger_rule": "none_failed",
-        "cluster": f"{mwaa_stack_conf.get('PREFIX')}-cluster",
-        "task_definition": f"{mwaa_stack_conf.get('PREFIX')}-vector-tasks",
-        "launch_type": "FARGATE",
-        "do_xcom_push": True,
-        "execution_timeout": timedelta(minutes=120),
         "overrides": {
             "containerOverrides": [
                 {

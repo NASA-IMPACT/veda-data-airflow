@@ -45,7 +45,7 @@ def discover_from_s3_task(ti=None, event={}, **kwargs):
         )
     except EmptyFileListError as ex:
         print(f"Received an exception {ex}")
-        # TODO replace short circuit operator behavior
+        # TODO test continued short circuit operator behavior (no files -> skip remaining tasks)
         return {}
 
 @task
@@ -64,33 +64,3 @@ def get_files_to_process(payload, ti=None):
             **payload,
             "payload": payload_xcom,
         } for indx, payload_xcom in enumerate(payloads_xcom)]
-
-
-# this task group is defined for reference, but can not be used in expanded taskgroup maps
-@task_group
-def subdag_discover(event={}):
-    # Define operators for non-taskflow tasks
-    discover_from_s3 = discover_from_s3_task(event=event)
-
-    submit_to_stac_ingestor = PythonOperator(
-        task_id="submit_to_stac_ingestor",
-        python_callable=submit_to_stac_ingestor_task,
-    )
-    
-    # define DAG using taskflow notation
-    discover_from_s3 = discover_from_s3_task(event=event)
-    get_files = get_files_to_process()
-
-    chain(discover_from_s3, get_files)
-
-    build_stac_kwargs_task = build_stac_kwargs.expand(event=get_files)
-    build_stac = EcsRunTaskOperator.partial(
-        task_id="build_stac"
-    ).expand_kwargs(build_stac_kwargs_task)
-
-    submit_to_stac_ingestor.expand(build_stac)
-    
-
-
-    
-    

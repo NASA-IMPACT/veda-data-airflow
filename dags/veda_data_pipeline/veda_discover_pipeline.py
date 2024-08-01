@@ -113,8 +113,5 @@ def get_discover_dag(id, event={}):
         submit_stac.set_downstream(end)
 
         return dag
-    
-    a >> b >> c
-
 
 get_discover_dag("veda_discover")

@@ -122,7 +122,6 @@ def submission_handler(
         base_url=stac_ingestor_api_url,
     )
     ingestor.submit(event=stac_item, endpoint=endpoint)
-    # print("Successfully submitted STAC item")
 
 
 if __name__ == "__main__":

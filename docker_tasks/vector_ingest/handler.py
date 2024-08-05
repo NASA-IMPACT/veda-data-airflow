@@ -18,7 +18,6 @@ from sqlalchemy.dialects.postgresql import DOUBLE_PRECISION, INTEGER, VARCHAR, T
 
 
 def download_file(file_uri: str):
-    """download stuff"""
     sts = boto3.client("sts")
     response = sts.assume_role(
         RoleArn=os.environ.get("EXTERNAL_ROLE_ARN"),
@@ -337,7 +336,7 @@ def alter_datetime_add_indexes_eis(collection: str):
     conn.commit()
 
 
-def handler(event, context):
+def handler():
     print("Vector ingest started")
     parser = ArgumentParser(
         prog="vector_ingest",
@@ -357,13 +356,13 @@ def handler(event, context):
     s3_objects = event_received["objects"]
     status = list()
     for s3_object in s3_objects:
-        href = s3_object["assets"]["default"]["href"]
+        href = s3_object["s3_filename"]
         collection = s3_object["collection"]
         downloaded_filepath = download_file(href)
         print(f"[ DOWNLOAD FILEPATH ]: {downloaded_filepath}")
         print(f"[ COLLECTION ]: {collection}")
 
-        s3_object_prefix = s3_object["prefix"]
+        s3_object_prefix = event_received["prefix"]
         if s3_object_prefix.startswith("EIS/"):
             coll_status = load_to_featuresdb_eis(downloaded_filepath, collection)
         else:
@@ -382,8 +381,4 @@ def handler(event, context):
 
 
 if __name__ == "__main__":
-    sample_event = {
-        "collection": "eis_fire_newfirepix_2",
-        "href": "s3://covid-eo-data/fireline/newfirepix.fgb",
-    }
-    handler(sample_event, {})
+    handler()

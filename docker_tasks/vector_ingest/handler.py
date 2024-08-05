@@ -18,6 +18,7 @@ from sqlalchemy.dialects.postgresql import DOUBLE_PRECISION, INTEGER, VARCHAR, T
 
 
 def download_file(file_uri: str):
+    """download stuff"""
     sts = boto3.client("sts")
     response = sts.assume_role(
         RoleArn=os.environ.get("EXTERNAL_ROLE_ARN"),

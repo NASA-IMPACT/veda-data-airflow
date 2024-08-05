@@ -118,6 +118,24 @@ def ensure_table_exists(
             )
 
 
+def delete_region(
+    engine,
+    gpkg_path: str,
+    table_name: str,
+):
+    """delete all existing records by region name"""
+    gdf = gpd.read_file(gpkg_path)
+    region_name = gdf["region"].iloc[0]
+    with engine.connect() as conn:
+        with conn.begin():
+            delete_sql = sqlalchemy.text(
+                f"""
+                    DELETE FROM {table_name} WHERE region='{region_name}'
+                """
+            )
+            conn.execute(delete_sql)
+
+
 def upsert_to_postgis(
     engine,
     gpkg_path: str,
@@ -281,6 +299,7 @@ def load_to_featuresdb_eis(
     metadata.bind = engine
 
     ensure_table_exists(metadata, filename, target_projection, target_table_name)
+    delete_region(engine, filename, target_table_name)
     upsert_to_postgis(engine, filename, target_projection, target_table_name)
     return {"status": "success"}
 

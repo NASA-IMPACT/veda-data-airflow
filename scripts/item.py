@@ -13,7 +13,7 @@ def insert_items(files):
     for filename in files:
         print(filename)
         events = json.load(open(filename))
-        if type(events) != list:
+        if type(events) is not list:
             events = [events]
         for event in events:
             raw_data = f"dags trigger veda_discover --conf '{json.dumps(event)}'"

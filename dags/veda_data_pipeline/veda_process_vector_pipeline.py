@@ -82,7 +82,7 @@ with DAG(dag_id="veda_ingest_vector", params=templat_dag_run_conf, **dag_args) a
                         {
                             "name": "EXTERNAL_ROLE_ARN",
                             "value": Variable.get(
-                                "ASSUME_ROLE_READ_ARN", default_var=None
+                                "ASSUME_ROLE_READ_ARN", default_var=""
                             ),
                         },
                         {
@@ -99,8 +99,8 @@ with DAG(dag_id="veda_ingest_vector", params=templat_dag_run_conf, **dag_args) a
         },
         network_configuration={
             "awsvpcConfiguration": {
-                "securityGroups": vector_ecs_conf.get("VECTOR_SECURITY_GROUP"),
-                "subnets": vector_ecs_conf.get("VECTOR_SUBNETS"),
+                    "securityGroups": mwaa_stack_conf.get("SECURITYGROUPS"),
+                    "subnets": mwaa_stack_conf.get("SUBNETS"),
             },
         },
         awslogs_group=mwaa_stack_conf.get("LOG_GROUP_NAME"),

@@ -101,6 +101,8 @@ def load_to_featuresdb(
     collection: str,
     x_possible: str = "longitude",
     y_possible: str = "latitude",
+    source_projection : str ="EPSG:4326",
+    target_projection : str ="EPSG:4326"
 ):
     secret_name = os.environ.get("VECTOR_SECRET_NAME")
     con_secrets = get_secret(secret_name)
@@ -120,9 +122,9 @@ def load_to_featuresdb(
         "-nln",
         collection, # Or could be the actual filename 
         "-s_srs",
-        "EPSG:4326",
+        source_projection,
         "-t_srs",
-        "EPSG:4326",
+        target_projection,
         "-overwrite"
     ]
     out = subprocess.run(
@@ -157,7 +159,7 @@ def handler(event, context):
     s3_event = payload_event.pop("payload")
 
     # extract the actual link of the json file and read
-    with smart_open.open(s3_event[0], "r") as _file:
+    with smart_open.open(s3_event, "r") as _file:
         s3_event_read = _file.read()
     print("file read done")
     event_received = json.loads(s3_event_read)
@@ -169,6 +171,8 @@ def handler(event, context):
         # These will be later extracted from the json file. Need to see if the json file put x_possible in the json file after the dag is triggered with x_possibel in it
         x_possible = s3_object["x_possible"]
         y_possible = s3_object["y_possible"]
+        source_projection = s3_object["source_projection"]
+        target_projection = s3_object["target_projection"]
 
         #collection = s3_object["collection"]
         #collection = href.split("/")[-1].split(".")[0]
@@ -179,7 +183,7 @@ def handler(event, context):
         print("-----------------------------------------------------\n")
         print(f"[ DOWNLOAD FILEPATH ]: {downloaded_filepath}")
         print(f"[ COLLECTION ]: {collection}")
-        coll_status = load_to_featuresdb(downloaded_filepath, collection, x_possible, y_possible)
+        coll_status = load_to_featuresdb(downloaded_filepath, collection, x_possible, y_possible, source_projection, target_projection)
         status.append(coll_status)
 
         # delete file after ingest

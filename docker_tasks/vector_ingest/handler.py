@@ -156,7 +156,13 @@ def handler(event, context):
     args = parser.parse_args()
 
     payload_event = ast.literal_eval(args.payload)
+    print("*********** payload", payload_event)
     s3_event = payload_event.pop("payload")
+    # These will be later extracted from the json file. Need to see if the json file put x_possible in the json file after the dag is triggered with x_possibel in it
+    x_possible = s3_object["x_possible"]
+    y_possible = s3_object["y_possible"]
+    source_projection = s3_object["source_projection"]
+    target_projection = s3_object["target_projection"]
 
     # extract the actual link of the json file and read
     with smart_open.open(s3_event, "r") as _file:
@@ -167,13 +173,6 @@ def handler(event, context):
     status = list()
     for s3_object in s3_objects:
         href = s3_object["assets"]["default"]["href"] #s3://ghgc-data-store-develop/transformed_csv/NIST_Urban_Testbed/NEB-ch4.csv
-        
-        # These will be later extracted from the json file. Need to see if the json file put x_possible in the json file after the dag is triggered with x_possibel in it
-        x_possible = s3_object["x_possible"]
-        y_possible = s3_object["y_possible"]
-        source_projection = s3_object["source_projection"]
-        target_projection = s3_object["target_projection"]
-
         #collection = s3_object["collection"]
         #collection = href.split("/")[-1].split(".")[0]
         # or it could be 

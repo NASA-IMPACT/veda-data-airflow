@@ -40,15 +40,6 @@ variable "rds_publicly_accessible" {
   default = false
 }
 
-variable "custom_worker_policy_statement" {
-  type = list(object({
-    Effect   = string
-    Action   = list(string)
-    Resource = list(string)
-  }))
-  default = []
-
-}
 
 variable "scheduler_cpu" {
   type    = number
@@ -203,5 +194,9 @@ variable "custom_worker_policy_statement" {
   ]
 
 }
-
+variable "airflow_custom_variables" {
+  description = "Airflow custom variables"
+  type        = map(string)
+  default = {}
+}
 

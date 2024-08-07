@@ -40,8 +40,6 @@ def download_file(file_uri: str):
 # Just to test locally
 def download_file2(file_uri: str):
     s3 = boto3.client("s3")
-
-
     url_parse = urlparse(file_uri)
     print("url_parsed: ", url_parse)
 
@@ -178,7 +176,7 @@ def handler(event, context):
         # or it could be 
         collection = href.split("/")[-2] + '_' + href.split("/")[-1].split(".")[0]
 
-        downloaded_filepath = download_file(href)
+        downloaded_filepath = download_file2(href)
         print("-----------------------------------------------------\n")
         print(f"[ DOWNLOAD FILEPATH ]: {downloaded_filepath}")
         print(f"[ COLLECTION ]: {collection}")

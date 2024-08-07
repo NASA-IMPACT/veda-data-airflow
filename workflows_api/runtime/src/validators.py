@@ -7,7 +7,7 @@ import requests
 
 @functools.lru_cache
 def get_s3_credentials():
-    from src.main import settings
+    from src.config import settings
 
     print("Fetching S3 Credentials...")
 
@@ -52,7 +52,7 @@ def s3_bucket_object_is_accessible(
     except client.exceptions.NoSuchBucket:
         raise ValueError("Bucket doesn't exist.")
     except client.exceptions.ClientError as e:
-        raise ValueError(f"Access denied: {e.__dict__['response']['Error']['Message']}")
+        raise ValueError(f"S3 Client error, Access denied: {e.__dict__['response']['Error']['Message']}")
     content = result.get("Contents", [])
     if len(content) < 1:
         raise ValueError("No data in bucket/prefix.")

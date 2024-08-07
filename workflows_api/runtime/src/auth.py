@@ -1,15 +1,14 @@
 import logging
 
 import jwt
-import src.config as config
 
 from fastapi import Depends, HTTPException, Security, security, status
 from typing import Annotated, Any, Dict
 
+from src.config import settings
+
 
 logger = logging.getLogger(__name__)
-
-settings = config.Settings()
 
 oauth2_scheme = security.OAuth2AuthorizationCodeBearer(
     authorizationUrl=settings.cognito_authorization_url,
@@ -18,12 +17,6 @@ oauth2_scheme = security.OAuth2AuthorizationCodeBearer(
 )
 
 jwks_client = jwt.PyJWKClient(settings.jwks_url)
-
-
-def get_settings() -> config.Settings:
-    import src.main as main
-
-    return main.settings
 
 
 def validated_token(

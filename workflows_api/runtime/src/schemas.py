@@ -1,20 +1,26 @@
 import enum
 import re
 from datetime import datetime
-from typing import Dict, List, Literal, Optional, Union
+from typing import Dict, List, Literal, Optional
 from urllib.parse import urlparse
 
 import src.validators as validators
+from src.utils import regex
 from pydantic import (
     BaseModel,
     Field,
     root_validator,
     validator,
+    Extra,
 )
-from src.schema_helpers import BboxExtent, SpatioTemporalExtent, TemporalExtent
+from src.schema_helpers import (
+    BboxExtent,
+    SpatioTemporalExtent,
+    TemporalExtent,
+    DiscoveryItemAsset,
+)
 from stac_pydantic import Collection, Item, shared
 from stac_pydantic.links import Link
-from typing_extensions import Annotated
 
 
 class AccessibleAsset(shared.Asset):
@@ -50,10 +56,11 @@ class DashboardCollection(Collection):
     links: Optional[List[Link]]
     assets: Optional[Dict]
     extent: SpatioTemporalExtent
+    renders: Optional[Dict]
 
     class Config:
         allow_population_by_field_name = True
-
+        extra = Extra.allow
 
 class Status(str, enum.Enum):
     @classmethod
@@ -120,6 +127,9 @@ class ExecutionResponse(WorkflowExecutionResponse):
     message: str = Field(..., description="Message returned from the step function.")
     discovered_files: List[str] = Field(..., description="List of discovered files.")
 
+class ListWorkflowsResponse(BaseModel):
+    dags: List
+
 
 class WorkflowInputBase(BaseModel):
     collection: str = ""
@@ -138,7 +148,13 @@ class WorkflowInputBase(BaseModel):
         Returns:
         - str: Name of the collection.
         """
-        validators.collection_exists(collection_id=collection)
+        if not re.match(r"[a-z]+(?:-[a-z]+)*", collection):
+            try:
+                validators.collection_exists(collection_id=collection)
+            except ValueError:
+                raise ValueError(
+                    "Invalid id - id must be all lowercase, with optional '-' delimiters"
+                )
         return collection
 
 
@@ -151,6 +167,9 @@ class S3Input(WorkflowInputBase):
     start_datetime: Optional[datetime]
     end_datetime: Optional[datetime]
     single_datetime: Optional[datetime]
+    id_regex: Optional[str]
+    id_template: Optional[str]
+    assets: Optional[Dict[str, DiscoveryItemAsset]]
     zarr_store: Optional[str]
 
     @root_validator
@@ -163,30 +182,15 @@ class S3Input(WorkflowInputBase):
         )
         return values
 
-
-class CmrInput(WorkflowInputBase):
-    discovery: Literal["cmr"]
-    version: Optional[str]
-    include: Optional[str]
-    temporal: Optional[List[datetime]]
-    bounding_box: Optional[List[float]]
-
-
-# allows the construction of models with a list of discriminated unions
-ItemUnion = Annotated[
-    Union[S3Input, CmrInput], Field(discriminator="discovery")  # noqa
-]
-
-
 class Dataset(BaseModel):
     collection: str
     title: str
     description: str
     license: str
-    is_periodic: Optional[bool] = False
-    time_density: Optional[str] = None
+    is_periodic: Optional[bool] = Field(default=False, alias='dashboard:is_periodic')
+    time_density: Optional[str] = Field(default=None, alias='dashboard:time_density')
     links: Optional[List[Link]] = []
-    discovery_items: List[ItemUnion]
+    discovery_items: List[S3Input]
 
     # collection id must be all lowercase, with optional - delimiter
     @validator("collection")
@@ -207,6 +211,8 @@ class Dataset(BaseModel):
         validators.time_density_is_valid(values["is_periodic"], values["time_density"])
         return values
 
+    class Config:
+        extra = Extra.allow
 
 class DataType(str, enum.Enum):
     cog = "cog"
@@ -218,6 +224,9 @@ class COGDataset(Dataset):
     temporal_extent: TemporalExtent
     sample_files: List[str]  # unknown how this will work with CMR
     data_type: Literal[DataType.cog]
+    item_assets: Optional[Dict]
+    renders: Optional[Dict]
+    stac_extensions: Optional[List[str]]
 
     @root_validator
     def check_sample_files(cls, values):
@@ -227,24 +236,19 @@ class COGDataset(Dataset):
         if not (discovery_items := values.get("discovery_items")):
             return
 
-        if "s3" not in [item.discovery for item in discovery_items]:
-            return values
-
-        # TODO cmr handling/validation
         invalid_fnames = []
         for fname in values.get("sample_files", []):
             found_match = False
             for item in discovery_items:
                 if all(
                     [
-                        item.discovery == "s3",
                         re.search(item.filename_regex, fname.split("/")[-1]),
                         "/".join(fname.split("/")[3:]).startswith(item.prefix),
                     ]
                 ):
                     if item.datetime_range:
                         try:
-                            validators.extract_dates(fname, item.datetime_range)
+                            regex.extract_dates(fname, item.datetime_range)
                         except Exception:
                             raise ValueError(
                                 f"Invalid sample file - {fname} does not align"
@@ -260,7 +264,6 @@ class COGDataset(Dataset):
                 "of the provided prefix/filename_regex combinations."
             )
         return values
-
 
 class ZarrDataset(Dataset):
     xarray_kwargs: Optional[Dict] = dict()

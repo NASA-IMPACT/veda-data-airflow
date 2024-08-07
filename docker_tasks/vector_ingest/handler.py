@@ -130,7 +130,7 @@ def load_to_featuresdb(
         check=False,
         capture_output=True,
     )
-    #print("db connection ", options)
+    print("db connection ", options)
 
     if out.stderr:
         error_description = f"Error: {out.stderr}"
@@ -174,7 +174,7 @@ def handler(event, context):
         #collection = s3_object["collection"]
         #collection = href.split("/")[-1].split(".")[0]
         # or it could be 
-        collection = href.split("/")[-2] + '_' + href.split("/")[-1].split(".")[0]
+        collection = href.split("/")[-2] + '_test_' + href.split("/")[-1].split(".")[0]
 
         downloaded_filepath = download_file2(href)
         print("-----------------------------------------------------\n")

@@ -56,9 +56,6 @@ with DAG(dag_id="veda_ingest_vector", params=templat_dag_run_conf, **dag_args) a
     mwaa_stack_conf = Variable.get(
         "MWAA_STACK_CONF", default_var={}, deserialize_json=True
     )
-    vector_ecs_conf = Variable.get(
-        "VECTOR_ECS_CONF", default_var={}, deserialize_json=True
-    )
 
     ingest_vector = EcsRunTaskOperator(
         task_id="ingest_vector",
@@ -96,12 +93,6 @@ with DAG(dag_id="veda_ingest_vector", params=templat_dag_run_conf, **dag_args) a
                     ],
                 },
             ],
-        },
-        network_configuration={
-            "awsvpcConfiguration": {
-                "securityGroups": vector_ecs_conf.get("VECTOR_SECURITY_GROUP"),
-                "subnets": vector_ecs_conf.get("VECTOR_SUBNETS"),
-            },
         },
         awslogs_group=mwaa_stack_conf.get("LOG_GROUP_NAME"),
         awslogs_stream_prefix=f"ecs/{mwaa_stack_conf.get('PREFIX')}-veda-vector_ingest",  # prefix with container name

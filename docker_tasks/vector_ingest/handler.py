@@ -159,10 +159,10 @@ def handler(event, context):
     print("*********** payload", payload_event)
     s3_event = payload_event.pop("payload")
     # These will be later extracted from the json file. Need to see if the json file put x_possible in the json file after the dag is triggered with x_possibel in it
-    x_possible = s3_object["x_possible"]
-    y_possible = s3_object["y_possible"]
-    source_projection = s3_object["source_projection"]
-    target_projection = s3_object["target_projection"]
+    x_possible = payload_event["x_possible"]
+    y_possible = payload_event["y_possible"]
+    source_projection = payload_event["source_projection"]
+    target_projection = payload_event["target_projection"]
 
     # extract the actual link of the json file and read
     with smart_open.open(s3_event, "r") as _file:

@@ -103,7 +103,7 @@ resource "local_file" "mwaa_variables" {
       vector_secret_name      = var.vector_secret_name
       vector_subnet_1         = data.aws_subnets.private.ids[0]
       vector_subnet_2         = data.aws_subnets.private.ids[1]
-      vector_security_group   = aws_security_group.vector_sg.id
+      vector_security_group   = aws_security_group.vector_sg[0].id
       vector_vpc              = var.vector_vpc
   })
   filename = "/tmp/mwaa_vars.json"

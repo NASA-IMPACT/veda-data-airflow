@@ -101,6 +101,10 @@ resource "local_file" "mwaa_variables" {
       stac_ingestor_api_url   = var.stac_ingestor_api_url
       stac_url                = var.stac_url
       vector_secret_name      = var.vector_secret_name
+      vector_subnet_1         = data.aws_subnets.private.ids[0]
+      vector_subnet_2         = data.aws_subnets.private.ids[1]
+      vector_security_group   = aws_security_group.vector_sg.id
+      vector_vpc              = var.vector_vpc
   })
   filename = "/tmp/mwaa_vars.json"
 }

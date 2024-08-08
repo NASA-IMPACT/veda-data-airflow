@@ -16,7 +16,7 @@
     "STAC_URL": "${stac_url}",
     "VECTOR_SECRET_NAME": "${vector_secret_name}",
     "VECTOR_ECS_CONF":{
-        "VECTOR_SECURITY_GROUP": ["${vector_security_group}","${securitygroup_1}"],
-        "VECTOR_SUBNETS": ["${vector_subnet_1}", "${vector_subnet_2}", "${subnet_1}", "${subnet_2}"]
+        "VECTOR_SECURITY_GROUP": ["${vector_security_group}"],
+        "VECTOR_SUBNETS": ["${vector_subnet_1}", "${vector_subnet_2}"]
     }
 }

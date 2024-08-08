@@ -7,38 +7,8 @@ import subprocess
 import json
 import smart_open
 from urllib.parse import urlparse
-import psycopg2
-
 
 def download_file(file_uri: str):
-    sts = boto3.client("sts")
-    response = sts.assume_role(
-        RoleArn=os.environ.get("EXTERNAL_ROLE_ARN"),
-        RoleSessionName="sts-assume-114506680961",
-    )
-    new_session = boto3.Session(
-        aws_access_key_id=response["Credentials"]["AccessKeyId"],
-        aws_secret_access_key=response["Credentials"]["SecretAccessKey"],
-        aws_session_token=response["Credentials"]["SessionToken"],
-    )
-    s3 = new_session.client("s3")
-
-    url_parse = urlparse(file_uri)
-
-    bucket = url_parse.netloc
-    path = url_parse.path[1:]
-    filename = url_parse.path.split("/")[-1]
-    target_filepath = os.path.join("/tmp", filename)
-
-    s3.download_file(bucket, path, target_filepath)
-
-    print(f"downloaded {target_filepath}")
-
-    sts.close()
-    return target_filepath
-
-# Just to test locally
-def download_file2(file_uri: str):
     s3 = boto3.client("s3")
     url_parse = urlparse(file_uri)
     print("url_parsed: ", url_parse)
@@ -100,7 +70,8 @@ def load_to_featuresdb(
     x_possible: str = "longitude",
     y_possible: str = "latitude",
     source_projection : str ="EPSG:4326",
-    target_projection : str ="EPSG:4326"
+    target_projection : str ="EPSG:4326",
+    extra_flags: list = ["-overwrite", "-progress"]
 ):
     secret_name = os.environ.get("VECTOR_SECRET_NAME")
     con_secrets = get_secret(secret_name)
@@ -123,7 +94,7 @@ def load_to_featuresdb(
         source_projection,
         "-t_srs",
         target_projection,
-        "-overwrite"
+        *extra_flags
     ]
     out = subprocess.run(
         options,
@@ -156,11 +127,12 @@ def handler(event, context):
     payload_event = ast.literal_eval(args.payload)
     print("*********** payload", payload_event)
     s3_event = payload_event.pop("payload")
-    # These will be later extracted from the json file. Need to see if the json file put x_possible in the json file after the dag is triggered with x_possibel in it
+
     x_possible = payload_event["x_possible"]
     y_possible = payload_event["y_possible"]
     source_projection = payload_event["source_projection"]
     target_projection = payload_event["target_projection"]
+    extra_flags = payload_event["extra_flags"]
 
     # extract the actual link of the json file and read
     with smart_open.open(s3_event, "r") as _file:
@@ -176,22 +148,23 @@ def handler(event, context):
         # or it could be 
         collection = href.split("/")[-2] + '_test_' + href.split("/")[-1].split(".")[0]
 
-        downloaded_filepath = download_file2(href)
+        downloaded_filepath = download_file(href)
         print("-----------------------------------------------------\n")
         print(f"[ DOWNLOAD FILEPATH ]: {downloaded_filepath}")
         print(f"[ COLLECTION ]: {collection}")
-        coll_status = load_to_featuresdb(downloaded_filepath, collection, x_possible, y_possible, source_projection, target_projection)
+        coll_status = load_to_featuresdb(downloaded_filepath, collection, 
+                                         x_possible, y_possible, 
+                                         source_projection, target_projection, 
+                                         extra_flags)
         status.append(coll_status)
 
         # delete file after ingest
         os.remove(downloaded_filepath)
 
-        # Not sure if we need it
-        # if coll_status["status"] == "success":
-        #     alter_datetime_add_indexes(collection)
-        # else:
-        #     # bubble exception so Airflow shows it as a failure
-        #     raise Exception(coll_status["reason"])
+        if coll_status["status"] != "success":
+            # bubble exception so Airflow shows it as a failure
+            raise Exception(coll_status["reason"])
+
     print("\n **********Overall Status*********\n", f"Done for {len(status)} csv files",status)
 
 

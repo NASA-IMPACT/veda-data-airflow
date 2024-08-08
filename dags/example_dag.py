@@ -43,13 +43,16 @@ with DAG(
     schedule_interval=None,
     tags=["example"],
 ) as dag:
+
     start = EmptyOperator(task_id="start", dag=dag)
+
     discover_from_cmr = PythonOperator(
         task_id="discover_from_cmr",
         python_callable=discover_from_cmr_task,
         op_kwargs={"text": "Discover from CMR"},
         dag=dag,
     )
+
     discover_from_s3 = PythonOperator(
         task_id="discover_from_s3",
         python_callable=discover_from_s3_task,
@@ -79,7 +82,9 @@ with DAG(
     )
 
     end = EmptyOperator(task_id="end", dag=dag)
+
     start >> discover_from_cmr
+
     start >> discover_from_s3 >> move_files_to_maap_store
     (
         [discover_from_cmr, move_files_to_maap_store]

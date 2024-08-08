@@ -1,0 +1,15 @@
+prefix="${PREFIX}"
+vpc_id="${VPC_ID}"
+permission_boundaries_arn="${PERMISSION_BOUNDARIES_ARN}"
+airflow_db={
+    db_name = "${AIRFLOW_DB_NAME}"
+    username = "${AIRFLOW_DB_USERNAME}"
+    password = "${AIRFLOW_DB_PASSWORD}"
+    port = "5432"
+  }
+fernet_key="${AIRFLOW_FERNET_KEY}"
+private_subnets_tagname="${PRIVATE_SUBNETS_TAGNAME}"
+public_subnets_tagname="${PUBLIC_SUBNETS_TAGNAME}"
+state_bucketname="${STATE_BUCKET_NAME}"
+domain_name="${DOMAIN_NAME}"
+stage="${STAGE}"

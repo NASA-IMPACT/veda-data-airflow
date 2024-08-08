@@ -70,3 +70,4 @@ runs:
       run: |
         cd ./infrastructure
         terraform output -json workflows_api > ${HOME}/terraform_outputs.json
+

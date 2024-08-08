@@ -1,0 +1,67 @@
+name: Deploy SM2A
+
+inputs:
+  environment:
+    type: string
+    required: true
+  aws-region:
+    type: string
+    required: false
+    default: us-west-2
+  env-file:
+    type: string
+    required: true
+  role-session-name:
+    required: false
+    type: string
+    default: github-actions-deployment
+  env_aws_secret_name:
+    type: string
+    required: true
+  sm2a_dir:
+    required: false
+    type: string
+    default: "./sm2a"
+  script_path:
+    type: string
+
+
+runs:
+  using: "composite"
+
+  steps:
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.11"
+        cache: "pip"
+
+    - name: Install python dependencies
+      shell: bash
+      working-directory: ${{ inputs.dir }}
+      run: pip install -r deploy_requirements.txt
+
+    - name: Get relevant environment configuration from aws secrets
+      shell: bash
+      working-directory: ${{ inputs.sm2a_dir }}
+      env:
+        AWS_DEFAULT_REGION: ${{ inputs.aws-region }}
+        AWS_REGION: ${{ inputs.aws-region }}
+      run: |
+        python scripts/generate_env_file.py --secret-id ${{ inputs.env_aws_secret_name }} --env-file ${{ inputs.env-file }}
+
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v1
+      with:
+        terraform_version: 1.3.3
+
+    - name: Deploy
+      shell: bash
+      working-directory: ${{ inputs.sm2a_dir }}
+      env:
+        AWS_DEFAULT_REGION: ${{ inputs.aws-region }}
+        AWS_REGION: ${{ inputs.aws-region }}
+      run: |
+        cp -r ../dags .
+        ./scripts/deploy.sh ${{ inputs.env-file }} <<< init
+        ./scripts/deploy.sh ${{ inputs.env-file }} <<< deploy

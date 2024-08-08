@@ -9,19 +9,23 @@ import smart_open
 from urllib.parse import urlparse
 
 def download_file(file_uri: str):
+    """Downloads file from s3
+
+    Args:
+        file_uri (str): s3 URL of the file to be downloaded
+
+    Returns:
+        target_filepath (str): filepath of the downloaded file
+    """
     s3 = boto3.client("s3")
     url_parse = urlparse(file_uri)
-    print("url_parsed: ", url_parse)
 
     bucket = url_parse.netloc
     path = url_parse.path[1:]
     filename = url_parse.path.split("/")[-1]
-    print(bucket, path, filename)
     target_filepath = os.path.join("/tmp", filename)
 
     s3.download_file(bucket, path, target_filepath)
-
-    print(f"downloaded {target_filepath}")
 
     s3.close()
     return target_filepath
@@ -77,7 +81,7 @@ def load_to_featuresdb(
     con_secrets = get_secret(secret_name)
     connection = get_connection_string(con_secrets)
 
-    print(f"running ogr2ogr import for collection: {collection}")
+    print(f"running ogr2ogr import for collection/file: {collection}")
     options = [
         "ogr2ogr",
         "-f",
@@ -101,7 +105,6 @@ def load_to_featuresdb(
         check=False,
         capture_output=True,
     )
-    print("db connection ", options)
 
     if out.stderr:
         error_description = f"Error: {out.stderr}"
@@ -110,13 +113,11 @@ def load_to_featuresdb(
 
     return {"status": "success"}
 
-
-
 def handler(event, context):
-    print("Generic Vector ingest started")
+    print("------Vector ingestion for Features API started------")
     parser = ArgumentParser(
-        prog="generic_vector_ingest",
-        description="Ingest Vector- Generic",
+        prog="vector_ingest",
+        description="Ingest Vector",
         epilog="Running the code as ECS task",
     )
     parser.add_argument(
@@ -124,48 +125,49 @@ def handler(event, context):
     )
     args = parser.parse_args()
 
+    # Extracting the payload passed from upstream task/dag or conf
     payload_event = ast.literal_eval(args.payload)
-    print("*********** payload", payload_event)
     s3_event = payload_event.pop("payload")
 
+    # Extracting configs for ingestion
     x_possible = payload_event["x_possible"]
     y_possible = payload_event["y_possible"]
     source_projection = payload_event["source_projection"]
     target_projection = payload_event["target_projection"]
     extra_flags = payload_event["extra_flags"]
 
-    # extract the actual link of the json file and read
+    # Read the json to extract the discovered file paths
     with smart_open.open(s3_event, "r") as _file:
         s3_event_read = _file.read()
-    print("file read done")
+
     event_received = json.loads(s3_event_read)
     s3_objects = event_received["objects"]
     status = list()
+
+
     for s3_object in s3_objects:
-        href = s3_object["assets"]["default"]["href"] #s3://ghgc-data-store-develop/transformed_csv/NIST_Urban_Testbed/NEB-ch4.csv
+        href = s3_object["assets"]["default"]["href"] 
+
         #collection = s3_object["collection"]
-        #collection = href.split("/")[-1].split(".")[0]
-        # or it could be 
-        collection = href.split("/")[-2] + '_test_' + href.split("/")[-1].split(".")[0]
+        collection = href.split("/")[-2] + href.split("/")[-1].split(".")[0]
 
         downloaded_filepath = download_file(href)
-        print("-----------------------------------------------------\n")
-        print(f"[ DOWNLOAD FILEPATH ]: {downloaded_filepath}")
-        print(f"[ COLLECTION ]: {collection}")
+        print(f"[ COLLECTION ]: {collection}, [ DOWNLOAD FILEPATH ]: {downloaded_filepath}")
+        
         coll_status = load_to_featuresdb(downloaded_filepath, collection, 
                                          x_possible, y_possible, 
                                          source_projection, target_projection, 
                                          extra_flags)
         status.append(coll_status)
 
-        # delete file after ingest
+        # Delete file after ingest
         os.remove(downloaded_filepath)
 
         if coll_status["status"] != "success":
-            # bubble exception so Airflow shows it as a failure
+            # Bubble exception so Airflow shows it as a failure
             raise Exception(coll_status["reason"])
 
-    print("\n **********Overall Status*********\n", f"Done for {len(status)} csv files",status)
+    print("------Overall Status------\n", f"Done for {len(status)} discovered files\n",status)
 
 
 if __name__ == "__main__":

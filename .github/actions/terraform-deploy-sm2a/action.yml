@@ -73,4 +73,5 @@ runs:
       run: |
         cd ./infrastructure
         terraform output -json Airflow_url > ${HOME}/terraform_outputs.json
-
+        workflows_api_value=$(cat ${HOME}/terraform_outputs.json)
+        echo "workflows_api_endpoint=$workflows_api_value" >> $GITHUB_OUTPUT

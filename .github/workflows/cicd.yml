@@ -73,6 +73,7 @@ jobs:
 
       - name: Run MWAA deployment
         uses: "./.github/actions/terraform-deploy"
+        if: ${{ vars.DEPLOY_SM2A != 'true' }}
         with:
           env_aws_secret_name: ${{ secrets.ENV_AWS_SECRET_NAME }}
 

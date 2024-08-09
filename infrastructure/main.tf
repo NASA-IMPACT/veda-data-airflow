@@ -83,16 +83,6 @@ resource "aws_vpc_security_group_ingress_rule" "vector_rds_ingress" {
   referenced_security_group_id = aws_security_group.vector_sg[count.index].id
 }
 
-resource "aws_vpc_security_group_ingress_rule" "icmp_noop" {
-  count             = var.vector_vpc == "null" ? 0 : 1
-  security_group_id = var.vector_security_group
-
-  from_port                    = 8
-  to_port                      = 0
-  ip_protocol                  = "icmp"
-  referenced_security_group_id = aws_security_group.vector_sg[count.index].id
-}
-
 resource "local_file" "mwaa_variables" {
   content = templatefile("${path.module}/mwaa_environment_variables.tpl",
     {

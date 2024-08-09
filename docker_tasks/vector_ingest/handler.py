@@ -17,7 +17,10 @@ def download_file(file_uri: str):
     Returns:
         target_filepath (str): filepath of the downloaded file
     """
-    s3 = boto3.client("s3")
+    role_arn = os.environ.get("EXTERNAL_ROLE_ARN")
+    kwargs = assume_role(role_arn=role_arn) if role_arn else {}
+
+    s3 = boto3.client("s3", **kwargs)
     url_parse = urlparse(file_uri)
 
     bucket = url_parse.netloc
@@ -29,6 +32,28 @@ def download_file(file_uri: str):
 
     s3.close()
     return target_filepath
+
+def assume_role(role_arn, session_name="veda-data-pipelines_vector-ingest"):
+    """Assumes an AWS IAM role and returns temporary credentials.
+
+    Args:
+        role_arn (str): The ARN of the role to assume.
+        session_name (str): A name for the assumed session.
+
+    Returns:
+        dict: Temporary AWS credentials.
+    """
+    sts = boto3.client("sts")
+    credentials = sts.assume_role(
+        RoleArn=role_arn,
+        RoleSessionName=session_name,
+    )
+    creds = credentials["Credentials"]
+    return {
+        "aws_access_key_id": creds["AccessKeyId"],
+        "aws_secret_access_key": creds.get("SecretAccessKey"),
+        "aws_session_token": creds.get("SessionToken"),
+    }
 
 
 def get_connection_string(secret: dict, as_uri: bool = False) -> str:
@@ -70,7 +95,7 @@ def get_secret(secret_name: str) -> None:
 
 def load_to_featuresdb(
     filename: str,
-    collection: str,
+    layer_name: str,
     x_possible: str = "longitude",
     y_possible: str = "latitude",
     source_projection : str ="EPSG:4326",
@@ -81,7 +106,7 @@ def load_to_featuresdb(
     con_secrets = get_secret(secret_name)
     connection = get_connection_string(con_secrets)
 
-    print(f"running ogr2ogr import for collection/file: {collection}")
+    print(f"running ogr2ogr import for collection/file: {layer_name}")
     options = [
         "ogr2ogr",
         "-f",
@@ -93,7 +118,7 @@ def load_to_featuresdb(
         "-oo",
         f"Y_POSSIBLE_NAMES={y_possible}",
         "-nln",
-        collection, # Or could be the actual filename 
+        layer_name, 
         "-s_srs",
         source_projection,
         "-t_srs",
@@ -136,6 +161,8 @@ def handler(event, context):
     target_projection = payload_event["target_projection"]
     extra_flags = payload_event["extra_flags"]
 
+    layer_name = payload_event["collection"]
+
     # Read the json to extract the discovered file paths
     with smart_open.open(s3_event, "r") as _file:
         s3_event_read = _file.read()
@@ -144,17 +171,18 @@ def handler(event, context):
     s3_objects = event_received["objects"]
     status = list()
 
-
     for s3_object in s3_objects:
         href = s3_object["assets"]["default"]["href"] 
+        filename = href.split("/")[-1].split(".")[0]
 
-        #collection = s3_object["collection"]
-        collection = href.split("/")[-2] + href.split("/")[-1].split(".")[0]
+        # Use id template when collection is not provided in the conf
+        if layer_name == "":
+            layer_name = payload_event["id_template"].format(filename)
 
         downloaded_filepath = download_file(href)
-        print(f"[ COLLECTION ]: {collection}, [ DOWNLOAD FILEPATH ]: {downloaded_filepath}")
+        print(f"[ COLLECTION ]: {layer_name}, [ DOWNLOAD FILEPATH ]: {downloaded_filepath}")
         
-        coll_status = load_to_featuresdb(downloaded_filepath, collection, 
+        coll_status = load_to_featuresdb(downloaded_filepath, layer_name, 
                                          x_possible, y_possible, 
                                          source_projection, target_projection, 
                                          extra_flags)
@@ -171,9 +199,4 @@ def handler(event, context):
 
 
 if __name__ == "__main__":
-    # It has nothing to do
-    sample_event = {
-        "collection": "eis_fire_newfirepix_2",
-        "href": "s3://covid-eo-data/fireline/newfirepix.fgb",
-    }
-    handler(sample_event, {})
+    handler({}, {})

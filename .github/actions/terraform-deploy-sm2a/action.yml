@@ -43,7 +43,7 @@ runs:
 
     - name: Get relevant environment configuration from aws secrets
       shell: bash
-      working-directory: ${{ inputs.sm2a_dir }}
+      working-directory: ${{ inputs.dir }}
       env:
         AWS_DEFAULT_REGION: ${{ inputs.aws-region }}
         AWS_REGION: ${{ inputs.aws-region }}

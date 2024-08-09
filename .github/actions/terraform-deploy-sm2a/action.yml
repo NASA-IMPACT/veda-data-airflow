@@ -39,7 +39,7 @@ runs:
     - name: Install python dependencies
       shell: bash
       working-directory: ${{ inputs.dir }}
-      run: pip install -r deploy_requirements.txt
+      run: pip install -r ../deploy_requirements.txt
 
     - name: Get relevant environment configuration from aws secrets
       shell: bash

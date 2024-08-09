@@ -73,5 +73,4 @@ runs:
       run: |
         cd ./infrastructure
         terraform output -json Airflow_url > ${HOME}/terraform_outputs.json
-        cat ${HOME}/terraform_outputs.json
 

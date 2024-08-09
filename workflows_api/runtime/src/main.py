@@ -76,7 +76,7 @@ def validate_dataset(dataset: schemas.COGDataset):
 
 
 @workflows_app.post(
-    "/dataset/publish", tags=["Dataset"], dependencies=[Depends(auth.get_username)]
+    "/dataset/publish", tags=["Dataset"], dependencies=[Depends(auth.validated_token)]
 )
 async def publish_dataset(
     token=Depends(auth.oauth2_scheme),

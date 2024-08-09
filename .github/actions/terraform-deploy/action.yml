@@ -59,7 +59,7 @@ runs:
     - name: Deploy
       shell: bash
       working-directory: ${{ inputs.dir }}
-      if: ${{ vars.DEPLOY_SM2A }} != "true"
+      if: ${{ vars.DEPLOY_SM2A != 'true' }}
       run: |
         ./scripts/deploy.sh ${{ inputs.env-file }} <<< init 
         ./scripts/deploy.sh ${{ inputs.env-file }} <<< deploy
@@ -67,7 +67,7 @@ runs:
     - name: Output workflows API endpoint
       id: output_workflows_endpoint
       shell: bash
-      if: ${{ vars.DEPLOY_SM2A }} != "true"
+      if: ${{ vars.DEPLOY_SM2A != 'true' }}
       working-directory: ${{ inputs.dir }}
       run: |
         cd ./infrastructure

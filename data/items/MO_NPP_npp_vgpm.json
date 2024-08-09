@@ -1,9 +1,0 @@
-{
-    "collection": "MO_NPP_npp_vgpm",
-    "prefix": "MO_NPP_npp_vgpm/",
-    "bucket": "veda-data-store-staging",
-    "filename_regex": "^(.*).tif$",
-    "discovery": "s3",
-    "datetime_range": "month",
-    "upload": false
-}

@@ -82,6 +82,11 @@ from utils import regex
             ("s3://foo/bar/foo_20050402_bar.tif", "year"),
             (datetime(2005, 1, 1), datetime(2005, 12, 31), None),
         ),
+        (
+            # Single date converted to year range - %Y
+            ("s3://foo/bar/foo_20050402_bar.tif", "day"),
+            (datetime(2005, 4, 2, 0, 0), datetime(2005, 4, 2, 23, 59, 59), None),
+        ),
     ],
 )
 def test_date_extraction(test_input, expected):

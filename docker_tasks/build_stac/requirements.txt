@@ -3,8 +3,9 @@ awslambdaric
 boto3
 pystac==1.4.0
 python-cmr
-rasterio==1.3.0
-rio-stac==0.7.0
+rasterio==1.3.10
+rio-stac>=0.8.0
 shapely
 smart-open==6.3.0
-pydantic==1.9.1
+pydantic==1.10.7
+typing-extensions==4.5.0

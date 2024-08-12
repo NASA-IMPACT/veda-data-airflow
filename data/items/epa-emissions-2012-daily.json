@@ -1,8 +1,0 @@
-{
-    "collection": "EPA-daily-emissions_5_Forest_Fires",
-    "prefix": "EIS/cog/EPA-inventory-2012/daily/emissions_5_Forest_Fires/",
-    "bucket": "veda-data-store-staging",
-    "filename_regex": "^(.*)Forest_Fires_(.*).tif$",
-    "discovery": "s3",
-    "upload": false
-}

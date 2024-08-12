@@ -3,6 +3,12 @@
 variable "subnet_tagname" {
   description = "Private subnet tagname to use for MWAA"
 }
+
+variable "subnet_ids" {
+  type        = list(string)
+  description = "Private subnets to be used for workflows api lambdas"
+}
+
 variable "vpc_id" {
   description = "Account VPC to use"
 }
@@ -11,8 +17,9 @@ variable "prefix" {
   description = "Deployment prefix"
 }
 
-variable "iam_role_permissions_boundary" {
+variable "iam_policy_permissions_boundary_name" {
   description = "Permission boundaries"
+  default     = null
 }
 
 variable "assume_role_arns" {
@@ -37,42 +44,88 @@ variable "cognito_app_secret" {
   type = string
 }
 
+variable "workflows_client_secret" {
+  type = string
+}
+
 variable "stac_ingestor_api_url" {
   type = string
 }
+
 variable "min_workers" {
-  type = map(number)
-  default = {
-    dev        = 2
-    staging    = 3
-    production = 3
-  }
+  type    = number
+  default = 2
 }
+
+variable "mwaa_environment_class" {
+  type        = string
+  description = "MWAA class, options are mw1.small,mw1.large, mw1.xlarge,mw1.2xlarge"
+  default     = "mw1.small"
+}
+
 variable "vector_secret_name" {
   type = string
 }
+
 variable "vector_security_group" {
   type = string
 }
+
 variable "vector_vpc" {
+  type    = string
+  default = "null"
+}
+
+variable "data_access_role_arn" {
   type = string
 }
 
-variable "rds_engine_version" {
-  default = "14.6"
+variable "raster_url" {
+  type = string
 }
 
-variable "read_rds_instance_class" {
-  default = "db.t3.medium"
+variable "stac_url" {
+  type = string
 }
 
-variable "write_rds_instance_class" {
-  default = "db.t3.medium"
+variable "workflow_root_path" {
+  type    = string
+  default = "/api/workflows"
 }
 
-variable "rds_database_name" {
-  default = "veda_dev_db"
+variable "cloudfront_id" {
+  type = string
 }
-variable "rds_username" {
-  default = "veda_dev"
+
+variable "cognito_domain" {
+  type = string
+}
+
+variable "client_id" {
+  type = string
+}
+
+variable "userpool_id" {
+  type = string
+}
+
+variable "backend_vpc_id" {
+  type        = string
+  description = "VPC ID used for VEDA Backend lambdas"
+}
+
+variable "provision_s3_access_block" {
+  type        = bool
+  description = "Boolean used to control creation of s3_access_block"
+  default     = "true"
+}
+
+variable "ecs_task_cpu" {
+  type    = number
+  default = 2048
+}
+
+variable "ecs_task_memory" {
+  type    = number
+  default = 4096
 }

@@ -32,6 +32,12 @@ module "mwaa" {
       docker_file_path          = "${path.module}/../docker_tasks/vector_ingest/Dockerfile"
       ecs_container_folder_path = "${path.module}/../docker_tasks/vector_ingest"
       ecr_repo_name             = "${var.prefix}-veda-vector_ingest"
+    },
+    {
+      handler_file_path         = "${path.module}/../docker_tasks/generic_vector_ingest/handler.py"
+      docker_file_path          = "${path.module}/../docker_tasks/generic_vector_ingest/Dockerfile"
+      ecs_container_folder_path = "${path.module}/../docker_tasks/generic_vector_ingest"
+      ecr_repo_name             = "${var.prefix}-veda-generic_vector_ingest"
     }
   ]
 }

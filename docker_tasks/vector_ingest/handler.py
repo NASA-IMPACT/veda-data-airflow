@@ -172,13 +172,8 @@ def handler(event, context):
     status = list()
 
     for s3_object in s3_objects:
-        href = s3_object["assets"]["default"]["href"] 
-        filename = href.split("/")[-1].split(".")[0]
-
-        # Use id template when collection is not provided in the conf
-        if layer_name == "":
-            layer_name = payload_event["id_template"].format(filename)
-
+        href = s3_object["assets"]["default"]["href"]
+        collection = s3_object["collection"]
         downloaded_filepath = download_file(href)
         print(f"[ COLLECTION ]: {layer_name}, [ DOWNLOAD FILEPATH ]: {downloaded_filepath}")
         

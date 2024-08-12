@@ -101,6 +101,10 @@ resource "local_file" "mwaa_variables" {
       stac_ingestor_api_url   = var.stac_ingestor_api_url
       stac_url                = var.stac_url
       vector_secret_name      = var.vector_secret_name
+      vector_subnet_1         = length(data.aws_subnets.private.ids) > 0 ? data.aws_subnets.private.ids[0] : ""
+      vector_subnet_2         = length(data.aws_subnets.private.ids) > 0 ? data.aws_subnets.private.ids[1] : ""
+      vector_security_group   = length(aws_security_group.vector_sg) > 0 ? aws_security_group.vector_sg[0].id : ""
+      vector_vpc              = var.vector_vpc
   })
   filename = "/tmp/mwaa_vars.json"
 }
@@ -158,7 +162,7 @@ resource "aws_iam_policy" "lambda_access" {
 }
 
 resource "aws_iam_policy" "s3_bucket_access" {
-  name        = "S3_Access_For_Lambda"
+  name        = "${var.prefix}_S3_Access_For_Lambda"
   path        = "/"
   description = "Policy to access S3 bucket"
   policy = jsonencode({

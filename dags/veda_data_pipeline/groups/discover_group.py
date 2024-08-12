@@ -97,7 +97,7 @@ def subdag_discover(event={}):
 
     run_process_vector = TriggerMultiDagRunOperator(
         task_id="parallel_run_process_vectors",
-        trigger_dag_id="veda_ingest_vector",
+        trigger_dag_id="veda_generic_ingest_vector",
         python_callable=get_files_to_process,
     )
 

@@ -77,7 +77,7 @@ resource "aws_ecs_task_definition" "veda_generic_vector_task_definition" {
     }
 
   ])
-  family                   = "${var.prefix}-vector-tasks"
+  family                   = "${var.prefix}-generic-vector-tasks"
   requires_compatibilities = ["FARGATE"]
   network_mode             = "awsvpc"
   execution_role_arn       = module.mwaa.mwaa_role_arn

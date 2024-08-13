@@ -11,6 +11,10 @@ inputs:
     required: false
     type: string
     default: "."
+  aws-region:
+    required: false
+    type: string
+    default: "us-west-2"
   script_path:
     type: string
   backend_stack_name:

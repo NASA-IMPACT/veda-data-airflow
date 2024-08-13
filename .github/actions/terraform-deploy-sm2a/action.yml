@@ -62,3 +62,12 @@ runs:
         cp -r ../dags .
         ./scripts/deploy.sh ${{ inputs.env-file }} <<< init
         ./scripts/deploy.sh ${{ inputs.env-file }} <<< deploy
+
+    - name: Output workflows API endpoint
+      id: output_sm2a_workflows_endpoint
+      shell: bash
+      working-directory: ${{ inputs.dir }}
+      run: |
+        cd ./infrastructure
+        terraform output -json Airflow_url > ${HOME}/output_sm2a_workflows_endpoint.json
+

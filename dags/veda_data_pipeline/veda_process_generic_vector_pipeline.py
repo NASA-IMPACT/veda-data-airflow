@@ -97,8 +97,8 @@ with DAG(dag_id="veda_generic_ingest_vector", params=templat_dag_run_conf, **dag
         },
         network_configuration={
             "awsvpcConfiguration": {
-                    "securityGroups": mwaa_stack_conf.get("SECURITYGROUPS"),
-                    "subnets": mwaa_stack_conf.get("SUBNETS"),
+                    "securityGroups": vector_ecs_conf.get("SECURITYGROUPS") + mwaa_stack_conf.get("SECURITYGROUPS"),
+                    "subnets": vector_ecs_conf.get("SUBNETS"),
             },
         },
         awslogs_group=mwaa_stack_conf.get("LOG_GROUP_NAME"),

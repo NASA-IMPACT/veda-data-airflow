@@ -103,10 +103,8 @@ def load_to_featuresdb(
     extra_flags: list = ["-overwrite", "-progress"]
 ):
     secret_name = os.environ.get("VECTOR_SECRET_NAME")
-    print(f"Secret name {secret_name}")
     con_secrets = get_secret(secret_name)
     connection = get_connection_string(con_secrets)
-    print(f"{connection=}")
 
     print(f"running ogr2ogr import for collection/file: {layer_name}")
     options = [
@@ -140,7 +138,7 @@ def load_to_featuresdb(
 
     return {"status": "success"}
 
-def handler(event, context):
+def handler():
     print("------Vector ingestion for Features API started------")
     parser = ArgumentParser(
         prog="vector_ingest",
@@ -164,6 +162,8 @@ def handler(event, context):
     extra_flags = payload_event["extra_flags"]
 
     layer_name = payload_event["collection"]
+    collection_not_provided = layer_name == ""
+
 
     # Read the json to extract the discovered file paths
     with smart_open.open(s3_event, "r") as _file:
@@ -178,7 +178,7 @@ def handler(event, context):
         filename = href.split("/")[-1].split(".")[0]
 
         # Use id template when collection is not provided in the conf
-        if layer_name == "":
+        if collection_not_provided:
             layer_name = payload_event["id_template"].format(filename)
 
         downloaded_filepath = download_file(href)
@@ -201,4 +201,4 @@ def handler(event, context):
 
 
 if __name__ == "__main__":
-    handler({}, {})
+    handler()

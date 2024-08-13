@@ -103,8 +103,10 @@ def load_to_featuresdb(
     extra_flags: list = ["-overwrite", "-progress"]
 ):
     secret_name = os.environ.get("VECTOR_SECRET_NAME")
+    print(f"Secret name {secret_name}")
     con_secrets = get_secret(secret_name)
     connection = get_connection_string(con_secrets)
+    print(f"{connection=}")
 
     print(f"running ogr2ogr import for collection/file: {layer_name}")
     options = [

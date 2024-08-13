@@ -102,7 +102,7 @@ with DAG(dag_id="veda_generic_ingest_vector", params=templat_dag_run_conf, **dag
             },
         },
         awslogs_group=mwaa_stack_conf.get("LOG_GROUP_NAME"),
-        awslogs_stream_prefix=f"ecs/{mwaa_stack_conf.get('PREFIX')}-veda-vector_ingest",  # prefix with container name
+        awslogs_stream_prefix=f"ecs/{mwaa_stack_conf.get('PREFIX')}-veda-generic-vector_ingest",  # prefix with container name
     )
 
     start >> generic_ingest_vector >> end

@@ -81,6 +81,7 @@ jobs:
         if: ${{ vars.DEPLOY_SM2A }} = "true"
         uses: "./.github/actions/terraform-deploy-sm2a"
         with:
+          dir: ./sm2a
           env_aws_secret_name: ${{ vars.SM2A_ENVS_DEPLOYMENT_SECRET_NAME }}
           env-file: .env
           aws-region: us-west-2

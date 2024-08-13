@@ -1,28 +1,21 @@
 name: Deploy SM2A
 
 inputs:
-  environment:
-    type: string
+  env_aws_secret_name:
     required: true
-  aws-region:
     type: string
-    required: false
-    default: us-west-2
   env-file:
     type: string
-    required: true
-  role-session-name:
+    default: ".env"
+  dir:
     required: false
     type: string
-    default: github-actions-deployment
-  env_aws_secret_name:
-    type: string
-    required: true
-  sm2a_dir:
-    required: false
-    type: string
-    default: "./sm2a"
+    default: "."
   script_path:
+    type: string
+  backend_stack_name:
+    type: string
+  auth_stack_name:
     type: string
 
 
@@ -43,7 +36,7 @@ runs:
 
     - name: Get relevant environment configuration from aws secrets
       shell: bash
-      working-directory: ${{ inputs.sm2a_dir }}
+      working-directory: ${{ inputs.dir }}
       env:
         AWS_DEFAULT_REGION: ${{ inputs.aws-region }}
         AWS_REGION: ${{ inputs.aws-region }}
@@ -57,7 +50,7 @@ runs:
 
     - name: Deploy
       shell: bash
-      working-directory: ${{ inputs.sm2a_dir }}
+      working-directory: ${{ inputs.dir }}
       env:
         AWS_DEFAULT_REGION: ${{ inputs.aws-region }}
         AWS_REGION: ${{ inputs.aws-region }}

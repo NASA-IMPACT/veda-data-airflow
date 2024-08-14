@@ -125,13 +125,13 @@ This pipeline is designed to handle the ingestion of both vector and raster data
 
 ```
 ## Configuration Fields Description
-- collection: The collection_id of the raster or vector data.
-- bucket: The name of the S3 bucket where the data is stored.
-- prefix: The location within the bucket where the files are to be discovered.
-- filename_regex: A regex expression used to filter files based on naming patterns.
-- id_template: The format used to create item identifiers in the system.
-- vector: Set to true to trigger the generic vector ingestion pipeline.
-- vector_eis: Set to true to trigger the vector ingestion pipeline.
+- `collection`: The collection_id of the raster or vector data.
+- `bucket`: The name of the S3 bucket where the data is stored.
+- `prefix`: The location within the bucket where the files are to be discovered.
+- `filename_regex`: A regex expression used to filter files based on naming patterns.
+- `id_template`: The format used to create item identifiers in the system.
+- `vector`: Set to true to trigger the generic vector ingestion pipeline.
+- `vector_eis`: Set to true to trigger the vector ingestion pipeline.
 
 
 ## Pipeline Behaviour

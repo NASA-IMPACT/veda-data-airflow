@@ -179,7 +179,7 @@ def handler():
 
         # Use id template when collection is not provided in the conf
         if collection_not_provided:
-            layer_name = payload_event["id_template"].format(filename)
+            layer_name = payload_event.get("id_template", "{}").format(filename)
 
         downloaded_filepath = download_file(href)
         print(f"[ COLLECTION ]: {layer_name}, [ DOWNLOAD FILEPATH ]: {downloaded_filepath}")

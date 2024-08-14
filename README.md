@@ -136,7 +136,7 @@ This pipeline is designed to handle the ingestion of both vector and raster data
 ## Pipeline Behaviour
 Since this pipeline can ingest both raster and vector data, the configuration can be modified accordingly. The `"vector": true` triggers the `generic_ingest_vector` dag. If the `collection` is provided, it uses the collection name as the table name for ingestion (recommended to use `append` extra_flag when the collection is provided). When no `collection` is provided, it uses the `id_template` and generates a table name by appending the actual ingested filename to the id_template (recommended to use `overwrite` extra flag).
 
-Setting `"vector_eis": true `will trigger the `ingest_vector` dag. If neither of these flags is set, the raster ingestion will be triggered, with the configuration typically looking like the raster ingestion example above.
+Setting `"vector_eis": true` will trigger the EIS Fire specific `ingest_vector` dag. If neither of these flags is set, the raster ingestion will be triggered, with the configuration typically looking like the raster ingestion example above.
 
 # License
 This project is licensed under **Apache 2**, see the [LICENSE](LICENSE) file for more details.

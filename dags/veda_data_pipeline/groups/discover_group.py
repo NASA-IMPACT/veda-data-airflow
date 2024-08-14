@@ -71,6 +71,8 @@ def vector_raster_choice(ti):
     dynamic_group_id = ti.task_id.split(".")[0]
 
     if payload.get("vector"):
+        return f"{dynamic_group_id}.parallel_run_process_generic_vectors"
+    if payload.get("vector_eis"):
         return f"{dynamic_group_id}.parallel_run_process_vectors"
     return f"{dynamic_group_id}.parallel_run_process_rasters"
 
@@ -97,6 +99,12 @@ def subdag_discover(event={}):
 
     run_process_vector = TriggerMultiDagRunOperator(
         task_id="parallel_run_process_vectors",
+        trigger_dag_id="veda_ingest_vector",
+        python_callable=get_files_to_process,
+    )
+
+    run_process_vector = TriggerMultiDagRunOperator(
+        task_id="parallel_run_process_generic_vectors",
         trigger_dag_id="veda_generic_ingest_vector",
         python_callable=get_files_to_process,
     )

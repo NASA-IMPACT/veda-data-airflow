@@ -103,7 +103,7 @@ def subdag_discover(event={}):
         python_callable=get_files_to_process,
     )
 
-    run_process_vector = TriggerMultiDagRunOperator(
+    run_process_generic_vector = TriggerMultiDagRunOperator(
         task_id="parallel_run_process_generic_vectors",
         trigger_dag_id="veda_generic_ingest_vector",
         python_callable=get_files_to_process,
@@ -112,7 +112,8 @@ def subdag_discover(event={}):
     # extra no-op, needed to run in dynamic mapping context
     end_discover = EmptyOperator(task_id="end_discover", trigger_rule=TriggerRule.NONE_FAILED_MIN_ONE_SUCCESS,)
     
-    discover_from_s3 >> raster_vector_branching >> [run_process_raster, run_process_vector]
+    discover_from_s3 >> raster_vector_branching >> [run_process_raster, run_process_vector,run_process_generic_vector]
     run_process_raster >> end_discover
     run_process_vector >> end_discover
+    run_process_generic_vector >> end_discover
     

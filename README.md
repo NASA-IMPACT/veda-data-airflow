@@ -92,7 +92,6 @@ This pipeline is designed to handle the ingestion of both vector and raster data
   "bucket": "",
   "prefix": "",
   "filename_regex": ".*.csv$",
-  "id_regex": "",
   "id_template": "-{}",
   "datetime_range": "",
   "vector": true,

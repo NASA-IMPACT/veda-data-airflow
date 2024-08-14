@@ -130,7 +130,7 @@ This pipeline is designed to handle the ingestion of both vector and raster data
 - `filename_regex`: A regex expression used to filter files based on naming patterns.
 - `id_template`: The format used to create item identifiers in the system.
 - `vector`: Set to true to trigger the generic vector ingestion pipeline.
-- `vector_eis`: Set to true to trigger the vector ingestion pipeline.
+- `vector_eis`: Set to true to trigger the EIS Fire specific vector ingestion pipeline.
 
 
 ## Pipeline Behaviour

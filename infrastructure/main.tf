@@ -96,7 +96,7 @@ resource "local_file" "mwaa_variables" {
       log_group_name          = module.mwaa.log_group_name
       mwaa_execution_role_arn = module.mwaa.mwaa_role_arn
       assume_role_read_arn    = length(var.assume_role_arns) > 0 ? var.assume_role_arns[0] : ""
-      assume_role_write_arn   = length(var.assume_role_arns) > 0 ? var.assume_role_arns[0] : ""
+      assume_role_write_arn   = length(var.assume_role_arns) > 0 ? var.assume_role_arns[1] : ""
       account_id              = local.account_id
       aws_region              = local.aws_region
       cognito_app_secret      = var.workflows_client_secret

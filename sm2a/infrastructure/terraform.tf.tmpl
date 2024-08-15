@@ -1,0 +1,8 @@
+terraform {
+  backend "s3" {
+    region         = "${AWS_REGION:-us-west-2}"
+    bucket         = "${STATE_BUCKET_NAME}"
+    key            = "${STATE_BUCKET_KEY}"
+    dynamodb_table = "${STATE_DYNAMO_TABLE}"
+  }
+}

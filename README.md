@@ -35,6 +35,31 @@ See [terraform-getting-started](https://developer.hashicorp.com/terraform/tutori
 
 See [getting-started-install](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)
 
+
+
+### Setup a local SM2A development environment
+
+1. Initialize the metadata db (only needed once)
+
+```shell
+make sm2a-local-init
+```
+This will create an airflow username: `airflow` with password `airflow`
+
+2. Start all services
+
+```shell
+make sm2a-local-run
+```
+This will start SM2A services and will be running on http://localhost:8080
+
+3. Stop all services
+
+```shell
+make sm2a-local-stop
+```
+
+
 ## Deployment
 
 This project uses Terraform modules to deploy Apache Airflow and related AWS resources using Amazon's managed Airflow provider.

@@ -31,10 +31,11 @@ count_down = \
 	all
 	test
 
+
 all: switch-to-sm2a sm2a-local-init sm2a-local-run
 
 test:
-	$(call count_down, 10)
+	pytest tests
 
 switch-to-sm2a:
 	$(call chdir,${SM2A_FOLDER})
@@ -69,7 +70,7 @@ sm2a-deploy: switch-to-sm2a sm2a-cp-dags
 
 clean: switch-to-sm2a sm2a-local-stop
 	@echo "Cleaning local env"
-	docker container prune <<< y
-	docker image prune <<< y
-	docker volume prune <<< y
+	docker container prune -f
+	docker image prune -f
+	docker volume prune -f
 

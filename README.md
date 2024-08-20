@@ -39,11 +39,15 @@ See [getting-started-install](https://docs.aws.amazon.com/cli/latest/userguide/g
 
 ### Setup a local SM2A development environment
 
-1. Initialize the metadata db (only needed once)
+1. Initialize the metadata db
 
 ```shell
 make sm2a-local-init
 ```
+🚨 NOTE: This command is typically required only once at the beginning. 
+After running it, you generally do not need to run it again unless you run `make clean`,
+which will require you to reinitialize SM2A with `make sm2a-local-init`
+
 This will create an airflow username: `airflow` with password `airflow`
 
 2. Start all services

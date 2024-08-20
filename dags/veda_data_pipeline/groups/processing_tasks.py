@@ -144,6 +144,65 @@ def build_vector_kwargs(event={}):
     }
 
 
+@task
+def build_generic_vector_kwargs(event={}):
+    """Build kwargs for the ECS operator."""
+    mwaa_stack_conf = Variable.get(
+        "MWAA_STACK_CONF", default_var={}, deserialize_json=True
+    )
+    vector_ecs_conf = Variable.get(
+        "VECTOR_ECS_CONF", default_var={}, deserialize_json=True
+    )
+
+    if event:
+        intermediate = {
+            **event
+        }
+        payload = json.dumps(intermediate)
+    else:
+        payload = "{{ task_instance.dag_run.conf }}"
+    
+    return {
+        "overrides":{
+            "containerOverrides": [
+                {
+                    "name": f"{mwaa_stack_conf.get('PREFIX')}-veda-generic_vector_ingest",
+                    "command": [
+                        "/var/lang/bin/python",
+                        "handler.py",
+                        "--payload",
+                        payload,
+                    ],
+                    "environment": [
+                        {
+                            "name": "EXTERNAL_ROLE_ARN",
+                            "value": Variable.get(
+                                "ASSUME_ROLE_READ_ARN", default_var=""
+                            ),
+                        },
+                        {
+                            "name": "AWS_REGION",
+                            "value": mwaa_stack_conf.get("AWS_REGION"),
+                        },
+                        {
+                            "name": "VECTOR_SECRET_NAME",
+                            "value": Variable.get("VECTOR_SECRET_NAME"),
+                        },
+                    ],
+                },
+            ],
+        },
+        "network_configuration":{
+            "awsvpcConfiguration": {
+                "securityGroups": vector_ecs_conf.get("VECTOR_SECURITY_GROUP") + mwaa_stack_conf.get("SECURITYGROUPS"),
+                "subnets": vector_ecs_conf.get("VECTOR_SUBNETS"),
+            },
+        },
+        "awslogs_group":mwaa_stack_conf.get("LOG_GROUP_NAME"),
+        "awslogs_stream_prefix":f"ecs/{mwaa_stack_conf.get('PREFIX')}-veda-generic-vector_ingest",  # prefix with container name
+    }
+
+
 @task_group
 def subdag_process(event={}):
 

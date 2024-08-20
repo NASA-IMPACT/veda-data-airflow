@@ -13,7 +13,6 @@ from src.schemas import (
 )
 from src.validators import get_s3_credentials
 
-
 class CollectionPublisher:
     def ingest(self, collection: DashboardCollection, token: str, ingest_api: str):
         """
@@ -26,8 +25,8 @@ class CollectionPublisher:
             "Authorization": f"Bearer {token}",
             "Content-Type": "application/json",
         }
-        response = requests.post(url, data=collection.json(by_alias=True), headers=headers)
-        if response.status_code == 200:
+        response = requests.post(url, data=collection.json(by_alias=True, exclude_unset=True, exclude_none=True), headers=headers)
+        if response.status_code == 201:
             print("Success:", response.json())
         else:
             print("Error:", response.status_code, response.text)
@@ -42,6 +41,8 @@ class Publisher:
         "links",
         "time_density",
         "is_periodic",
+        "renders",
+        "stac_extensions"
     ]
     common = {
         "links": [],
@@ -55,21 +56,25 @@ class Publisher:
 
     def __init__(self) -> None:
         self.func_map = {
-            DataType.zarr: self.create_zarr_collection,
-            DataType.cog: self.create_cog_collection,
+            DataType.zarr.value: self.create_zarr_collection,
+            DataType.cog.value: self.create_cog_collection,
         }
 
     def get_template(self, dataset: Union[ZarrDataset, COGDataset]) -> dict:
         dataset_dict = dataset.dict()
-        collection_dict = {
-            "id": dataset_dict["collection"],
-            **Publisher.common,
-            **{
-                key: dataset_dict[key]
-                for key in Publisher.common_fields
-                if key in dataset_dict.keys()
-            },
-        }
+        collection_dict = dataset_dict
+        # manage data as needed by ingest
+        collection_dict["id"] = dataset_dict["collection"]
+        collection_dict.update(Publisher.common)
+        collection_dict.update({
+            key: dataset_dict[key]
+            for key in Publisher.common_fields
+            if key in dataset_dict.keys()
+        })
+        # Convert enum values to their string equivalents
+        for key, value in dataset_dict.items():
+            if isinstance(value, DataType):
+                dataset_dict[key] = value.value
         return collection_dict
 
     def _create_zarr_template(self, dataset: ZarrDataset, store_path: str) -> dict:
@@ -137,14 +142,37 @@ class Publisher:
                 },
             }
         )
-        collection_stac["item_assets"] = {
-            "cog_default": {
-                "type": "image/tiff; application=geotiff; profile=cloud-optimized",
-                "roles": ["data", "layer"],
-                "title": "Default COG Layer",
-                "description": "Cloud optimized default layer to display on map",
+        collection_stac["item_assets"] = {}
+
+        dataset_dict = dataset.dict(exclude_unset=True)
+
+        discovery_items_assets = []
+        if (dataset_dict.get("discovery_items")):
+            discovery_items_assets = [discovery_item.get("assets") for discovery_item in dataset_dict.get("discovery_items") if discovery_item.get("assets") is not None]
+
+        if dataset_dict.get("item_assets"):
+            collection_stac["item_assets"] = dataset_dict.get("item_assets")
+        elif discovery_items_assets:
+            for discovery_asset in discovery_items_assets:
+                for key, asset in discovery_asset.items():
+                    collection_stac["item_assets"][key] = {
+                        k: v for k, v in asset.items() if k != "regex"
+                    }
+        else:
+            collection_stac["item_assets"] = {
+                "cog_default": {
+                    "type": "image/tiff; application=geotiff; profile=cloud-optimized",
+                    "roles": ["data", "layer"],
+                    "title": "Default COG Layer",
+                    "description": "Cloud optimized default layer to display on map"
+                }
             }
-        }
+
+        # if the dataset has the attributes provided already in the request json, use them instead of the generated ones
+        for key, _ in collection_stac.items():
+            if key in dataset_dict:
+                collection_stac[key] = dataset_dict[key]
+
         return collection_stac
 
     def generate_stac(
@@ -153,20 +181,4 @@ class Publisher:
         create_function = self.func_map.get(data_type, self.create_cog_collection)
         return create_function(dataset)
 
-    def ingest(self, collection: DashboardCollection, token: str, ingest_api: str):
-        """
-        Takes a collection model,
-        does necessary preprocessing,
-        and loads into the PgSTAC collection table
-        """
-        
-        url = f"{ingest_api}/collections"
-        headers = {
-            "Authorization": f"Bearer {token}",
-            "Content-Type": "application/json",
-        }
-        response = requests.post(url, data=collection.json(by_alias=True), headers=headers)
-        if response.status_code == 200:
-            print("Success:", response.json())
-        else:
-            print("Error:", response.status_code, response.text)
+    

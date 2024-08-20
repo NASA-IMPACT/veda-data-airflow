@@ -69,9 +69,19 @@ jobs:
         with:
           role-to-assume: ${{ secrets.DEPLOYMENT_ROLE_ARN }}
           role-session-name: "veda-airflow-github-${{ needs.define-environment.outputs.env_name }}-deployment"
-          aws-region: "us-west-2"
+          aws-region: us-west-2
 
-      - name: Run deployment
+      - name: Run MWAA deployment
         uses: "./.github/actions/terraform-deploy"
         with:
           env_aws_secret_name: ${{ secrets.ENV_AWS_SECRET_NAME }}
+
+      - name: Run SM2A deployment
+        # Flag to deploy SM2A
+        if: ${{ vars.DEPLOY_SM2A }} = "true"
+        uses: "./.github/actions/terraform-deploy-sm2a"
+        with:
+          dir: ./sm2a
+          env_aws_secret_name: ${{ vars.SM2A_ENVS_DEPLOYMENT_SECRET_NAME }}
+          env-file: .env
+          aws-region: us-west-2

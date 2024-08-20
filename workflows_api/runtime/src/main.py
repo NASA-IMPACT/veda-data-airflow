@@ -3,9 +3,9 @@ from typing import Union
 import requests
 import src.airflow_helpers as airflow_helpers
 import src.auth as auth
-import src.config as config
 import src.schemas as schemas
 from src.collection_publisher import CollectionPublisher, Publisher
+from src.config import settings
 from src.monitoring import LoggerRouteHandler, logger, metrics, tracer
 from aws_lambda_powertools.metrics import MetricUnit
 
@@ -15,8 +15,6 @@ from fastapi.responses import JSONResponse
 from fastapi.encoders import jsonable_encoder
 from starlette.requests import Request
 
-
-settings = config.Settings()
 
 collection_publisher = CollectionPublisher()
 publisher = Publisher()
@@ -41,6 +39,12 @@ workflows_app = FastAPI(
     router=APIRouter(route_class=LoggerRouteHandler),
 )
 
+@workflows_app.exception_handler(ValueError)
+async def value_error_exception_handler(request: Request, exc: ValueError):
+    raise HTTPException(
+        status_code=422,
+        detail=exc.errors()
+    )
 
 # "Datasets" interface (collections + item ingests from one input)
 
@@ -72,7 +76,7 @@ def validate_dataset(dataset: schemas.COGDataset):
 
 
 @workflows_app.post(
-    "/dataset/publish", tags=["Dataset"], dependencies=[Depends(auth.get_username)]
+    "/dataset/publish", tags=["Dataset"], dependencies=[Depends(auth.validated_token)]
 )
 async def publish_dataset(
     token=Depends(auth.oauth2_scheme),
@@ -81,8 +85,12 @@ async def publish_dataset(
     ),
 ):
     # Construct and load collection
-    collection_data = publisher.generate_stac(dataset, dataset.data_type or "cog")
-    collection = schemas.DashboardCollection.parse_obj(collection_data)
+    collection_data = publisher.generate_stac(dataset, dataset.data_type.value)
+    unwanted_keys = ["sample_files", "data_type", "discovery_items", "collection", "spatial_extent", "temporal_extent"]
+    filtered_collection_data = filter_unwanted_keys(collection_data, unwanted_keys)
+    collection = schemas.DashboardCollection.parse_obj(filtered_collection_data)
+
+
     collection_publisher.ingest(collection, token, settings.ingest_url)
 
     # TODO improve typing
@@ -90,11 +98,16 @@ async def publish_dataset(
         "message": f"Successfully published collection: {dataset.collection}."
     }
 
+    # run airflow workflow for COG datasets
     if dataset.data_type == schemas.DataType.cog:
         workflow_runs = []
         for discovery in dataset.discovery_items:
             discovery.collection = dataset.collection
-            response = await start_discovery_workflow_execution(discovery)
+            discovery_dict = discovery.dict(exclude_unset=True)
+            if (not bool(discovery_dict.get("assets"))):
+                if (dataset.item_assets):
+                    discovery_dict["assets"] = dataset.item_assets
+            response = await start_discovery_workflow_execution(discovery_dict)
             workflow_runs.append(response.id)
         if workflow_runs:
             return_dict["message"] += f" {len(workflow_runs)} workflows initiated."  # type: ignore
@@ -102,6 +115,11 @@ async def publish_dataset(
 
     return return_dict
 
+def filter_unwanted_keys(collection_data: dict, unwanted_keys : list[str]):
+    for key in unwanted_keys:
+        if key in collection_data:
+            del collection_data[key]
+    return collection_data
 
 @workflows_app.post(
     "/discovery",
@@ -111,9 +129,7 @@ async def publish_dataset(
     dependencies=[Depends(auth.validated_token)],
 )
 async def start_discovery_workflow_execution(
-    input: Union[schemas.S3Input, schemas.CmrInput] = Body(
-        ..., discriminator="discovery"
-    ),
+    input: schemas.S3Input = Body(...),
 ) -> schemas.WorkflowExecutionResponse:
     """
     Triggers the ingestion workflow
@@ -138,6 +154,7 @@ async def get_discovery_workflow_execution_status(
 
 @workflows_app.get(
     "/list-workflows",
+    response_model = schemas.ListWorkflowsResponse,
     tags=["Workflow-Executions"],
     dependencies=[Depends(auth.validated_token)],
 )
@@ -146,8 +163,8 @@ async def get_workflow_list() -> (
 ):
     """
     Returns the status of the workflow execution
-    """
-    return airflow_helpers.list_dags()
+    """   
+    return airflow_helpers.list_dags() 
 
 
 @workflows_app.post(

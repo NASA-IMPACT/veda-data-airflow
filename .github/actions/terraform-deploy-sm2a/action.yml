@@ -33,20 +33,6 @@ runs:
         python-version: "3.11"
         cache: "pip"
 
-    - name: Install python dependencies
-      shell: bash
-      working-directory: ${{ inputs.dir }}
-      run: pip install -r ../deploy_requirements.txt
-
-    - name: Get relevant environment configuration from aws secrets
-      shell: bash
-      working-directory: ${{ inputs.dir }}
-      env:
-        AWS_DEFAULT_REGION: ${{ inputs.aws-region }}
-        AWS_REGION: ${{ inputs.aws-region }}
-      run: |
-        python scripts/generate_env_file.py --secret-id ${{ inputs.env_aws_secret_name }} --env-file ${{ inputs.env-file }}
-
     - name: Setup Terraform
       uses: hashicorp/setup-terraform@v1
       with:
@@ -54,14 +40,11 @@ runs:
 
     - name: Deploy
       shell: bash
-      working-directory: ${{ inputs.dir }}
       env:
         AWS_DEFAULT_REGION: ${{ inputs.aws-region }}
         AWS_REGION: ${{ inputs.aws-region }}
       run: |
-        cp -r ../dags .
-        ./scripts/deploy.sh ${{ inputs.env-file }} <<< init
-        ./scripts/deploy.sh ${{ inputs.env-file }} <<< deploy
+        make sm2a-deploy ENV_FILE=${{ inputs.env-file }} SECRET_NAME=${{ inputs.env_aws_secret_name }}
 
     - name: Output workflows API endpoint
       id: output_sm2a_workflows_endpoint

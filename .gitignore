@@ -44,6 +44,5 @@ cdk.context.json
 env.sh
 
 .hypothesis
-Makefile
 .env_sit
 terraform.tfstate

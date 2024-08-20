@@ -118,7 +118,7 @@ def build_vector_kwargs(event={}):
                         {
                             "name": "EXTERNAL_ROLE_ARN",
                             "value": Variable.get(
-                                "ASSUME_ROLE_READ_ARN", default_var=None
+                                "ASSUME_ROLE_READ_ARN", default_var=""
                             ),
                         },
                         {

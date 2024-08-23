@@ -52,8 +52,6 @@ sm2a-deploy: sm2a-cp-dags
 	@echo "Installing the deployment dependency"
 	pip install -r deploy_requirements.txt
 	echo "Deploying SM2A"
-	pwd
-	ls -al
 	python scripts/generate_env_file.py --secret-id ${SECRET_NAME} --env-file ${ENV_FILE}
 	./scripts/deploy.sh ${ENV_FILE} <<< init
 	./scripts/deploy.sh ${ENV_FILE} <<< deploy

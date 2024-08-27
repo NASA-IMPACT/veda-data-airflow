@@ -15,7 +15,7 @@ from veda_data_pipeline.groups.discover_group import discover_from_s3_task, get_
 dag_doc_md = """
 ### Generic Ingest Vector
 #### Purpose
-This DAG is supposed to be triggered by `veda_discover`. But you still can trigger this DAG manually or through an API 
+This DAG is used to ingest vector data for use in the VEDA Features API
 
 #### Notes
 - This DAG can run with the following configuration <br>

@@ -22,6 +22,7 @@ count_down = \
 .PHONY:
 	clean
 	all
+	list
 
 
 
@@ -46,6 +47,11 @@ sm2a-local-stop:
 	docker compose down
 
 
+sm2a-local-build:
+	cp -r ../dags .
+	docker compose build
+	rm -rf dags
+
 sm2a-deploy:
 	@echo "Installing the deployment dependency"
 	pip install -r ../deploy_requirements.txt
@@ -60,3 +66,6 @@ clean: sm2a-local-stop
 	docker container prune -f
 	docker image prune -f
 	docker volume prune -f
+
+list:
+	@grep '^[^#[:space:]].*:' Makefile

@@ -22,7 +22,7 @@ x-airflow-common:
     # Gotcha: Even though we set this to "True" in airflow.cfg, an environment variable overrides it
     AIRFLOW__CORE__LOAD_EXAMPLES: false
   volumes:
-    - ./dags:/opt/airflow/dags
+    - ../dags:/opt/airflow/dags
     - ./plugins:/opt/airflow/plugins
     - ./sm2a-local-config/local_airflow.cfg:/opt/airflow/airflow.cfg
     - ./sm2a-local-config/local_webserver_config.py:/opt/airflow/webserver_config.py
@@ -47,7 +47,7 @@ x-airflow-worker:
   environment:
     <<: *airflow-common-env
   volumes:
-    - ./dags:/opt/airflow/dags
+    - ../dags:/opt/airflow/dags
     - ./plugins:/opt/airflow/plugins
     - ./sm2a-local-config/local_airflow.cfg:/opt/airflow/airflow.cfg
     - ./infrastructure/configuration:/opt/airflow/configuration

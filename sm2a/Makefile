@@ -48,7 +48,7 @@ sm2a-local-stop:
 
 sm2a-deploy:
 	@echo "Installing the deployment dependency"
-	pip install -r deploy_requirements.txt
+	pip install -r ../deploy_requirements.txt
 	@echo "Deploying SM2A"
 	cp -r ../dags .
 	python scripts/generate_env_file.py --secret-id ${SECRET_NAME} --env-file ${ENV_FILE}

@@ -1,5 +1,6 @@
 SECRET_NAME=""
 ENV_FILE=".env"
+SHELL=/bin/bash
 
 important_message = \
 	@echo "\033[0;31m$(1) \033[0m"

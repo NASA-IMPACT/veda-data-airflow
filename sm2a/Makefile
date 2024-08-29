@@ -1,13 +1,11 @@
 SECRET_NAME=""
 ENV_FILE=".env"
 
-
 important_message = \
 	@echo "\033[0;31m$(1) \033[0m"
 
 info_message = \
 	@echo "\033[0;32m$(1) \033[0m"
-
 
 count_down = \
 	@echo "Spinning up the system please wait..."; \
@@ -18,15 +16,12 @@ count_down = \
 		: $$((secs--)); \
 	done;
 
-
 .PHONY:
 	clean
 	all
-
-
+	list
 
 all: sm2a-local-init sm2a-local-run
-
 
 sm2a-local-run: sm2a-local-stop
 	@echo "Running SM2A"
@@ -39,16 +34,22 @@ sm2a-local-run: sm2a-local-stop
 
 sm2a-local-init:
 	cp sm2a-local-config/env_example sm2a-local-config/.env
+	cp -r ../dags .
 	docker compose run --rm airflow-cli db init
 	docker compose run --rm airflow-cli users create --email airflow@example.com --firstname airflow --lastname airflow --password airflow --username airflow --role Admin
+	rm -rf dags
 
 sm2a-local-stop:
 	docker compose down
 
+sm2a-local-build:
+	cp -r ../dags .
+	docker compose build
+	rm -rf dags
 
 sm2a-deploy:
 	@echo "Installing the deployment dependency"
-	pip install -r deploy_requirements.txt
+	pip install -r ../deploy_requirements.txt
 	@echo "Deploying SM2A"
 	cp -r ../dags .
 	python scripts/generate_env_file.py --secret-id ${SECRET_NAME} --env-file ${ENV_FILE}
@@ -60,3 +61,6 @@ clean: sm2a-local-stop
 	docker container prune -f
 	docker image prune -f
 	docker volume prune -f
+
+list:
+	@grep '^[^#[:space:]].*:' Makefile

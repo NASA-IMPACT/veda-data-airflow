@@ -80,17 +80,34 @@ This project uses Terraform modules to deploy Apache Airflow and related AWS res
 - [gitflow.yml](./.github/workflows/gitflow.yml) provides a structured way to manage the development, testing, and deployment of terraform modules. For more info refer to [gitflow](https://github.com/NASA-IMPACT/csda-data-pipelines/blob/dev/GITFLOW.md)
 
 
-
-### Deployment via local machine
-You can deploy SM2A from your local machine by running:
-```bash
-$python scripts/generate_env_file.py --secret-id $AWS_SECRET_NAME --env-file .env
+### Setup a local SM2A development environment
+1. Build services
+```shell
+make sm2a-local-build
 ```
-Assuming you have access to [AWS Secrets Manager](https://aws.amazon.com/secrets-manager/) where the deployment variables are stored.
 
-```bash
-./scripts/deploy.sh .env <<< init
-./scripts/deploy.sh .env <<< deploy
+2. Initialize the metadata db
+
+```shell
+make sm2a-local-init
+```
+🚨 NOTE: This command is typically required only once at the beginning. 
+After running it, you generally do not need to run it again unless you run `make clean`,
+which will require you to reinitialize SM2A with `make sm2a-local-init`
+
+This will create an airflow username: `airflow` with password `airflow`
+
+3. Start all services
+
+```shell
+make sm2a-local-run
+```
+This will start SM2A services and will be running on http://localhost:8080
+
+4. Stop all services
+
+```shell
+make sm2a-local-stop
 ```
 
 ### Login to UI

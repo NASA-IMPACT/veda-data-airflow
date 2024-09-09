@@ -8,10 +8,10 @@ DAG_ID = "automate-cog-transformation"
 dag_run_config = {
     "data_acquisition_method": "s3",
     "raw_data_bucket": "ghgc-data-store-develop",
-    "raw_data_prefix": "delivery/cms-co2-flux-monthgrid-v1",
+    "raw_data_prefix": "delivery/tm54dvar-ch4flux-mask-monthgrid-v5",
     "dest_data_bucket": "ghgc-data-store-develop",
     "cog_data_prefix": "transformed_cogs",
-    "collection_name":"cms-co2-flux-monthgrid-v1",
+    "collection_name":"tm54dvar-ch4flux-mask-monthgrid-v5",
     "nodata":-9999,
     "ext": ".nc" # .nc, .nc4, .tif, .tiff
 }
@@ -59,13 +59,11 @@ with DAG(
         print("len of files", len(file_url))
         transform_cog(
             file_url,
-            datefmt=date_fmt,
             nodata = nodata,
             raw_data_bucket=raw_bucket_name,
             dest_data_bucket=dest_data_bucket,
             cog_data_prefix=cog_prefix_name,
             collection_name=collection_name,
-            ext = ext
         )
         return None
 

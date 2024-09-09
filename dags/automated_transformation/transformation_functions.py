@@ -1,7 +1,7 @@
 import boto3
-import xarray as xr
+import xarray
 import re
-
+from datetime import datetime
 
 def get_all_s3_keys(bucket, model_name, ext):
     """Get a list of all keys in an S3 bucket."""
@@ -26,36 +26,29 @@ def get_all_s3_keys(bucket, model_name, ext):
     return keys
 
 # Naming convention for COG transformation is DATASETNAME_TRANSFORMATION
-def collection_name_transformation(file_obj, name, nodata):
+def tm54dvar_ch4flux_mask_monthgrid_v5_transformation(file_obj, name, nodata):
 
-    xds = xr.open_dataset(file_obj)
-    # xds = xds.rename({lon_name: "longitude", lat_name: "latitude", time_name: "time"})
-    if datefmt == "year":
-        time_val = [str(x.astype("M8[Y]")) for x in xds.time.values]
-    elif datefmt == "month":
-        time_val = [str(x.astype("M8[M]")) for x in xds.time.values]
-    elif datefmt == "day":
-        time_val = [str(x.astype("M8[D]")) for x in xds.time.values]
-    else:
-        raise ValueError("Please provide a valid date time format")
-    
-    for time_increment in time_val:
-        filename = name.split("/")[-1]
+    xds = xarray.open_dataset(file_obj)
+    xds = xds.rename({"latitude": "lat", "longitude": "lon"})
+    xds = xds.assign_coords(lon=(((xds.lon + 180) % 360) - 180)).sortby("lon")
+    variable = [var for var in xds.data_vars if "global" not in var]
+
+    for time_increment in range(0, len(xds.months)):
+        filename = name.split("/ ")[-1]
         filename_elements = re.split("[_ .]", filename)
-        data = xds
-        if data.dtype in ["float32", "float64"]:
-
-            data = data.where(data == nodata, -9999)
-
-            data = data.reindex(latitude=list(reversed(data.latitude)))
-            data.rio.set_spatial_dims("longitude", "latitude", inplace=True)
+        start_time = datetime(int(filename_elements[-2]), time_increment + 1, 1)
+        for var in variable:
+            data = getattr(xds.isel(months=time_increment), var)
+            data = data.isel(lat=slice(None, None, -1))
+            xds = xds.where(xds==nodata, -9999)
+            data.rio.set_spatial_dims("lon", "lat", inplace=True)
             data.rio.write_crs("epsg:4326", inplace=True)
-            data.rio.write_nodata(nodata, inplace=True, encoded=True)
+            data.rio.write_nodata(-9999, inplace=True)
 
-            filename_elements.pop()
-            filename_elements.append(f"{datefmt}")
-            filename_elements.append(f'{time_increment.replace("-", "")}')
             # # insert date of generated COG into filename
+            filename_elements.pop()
+            filename_elements[-1] = start_time.strftime("%Y%m")
+            filename_elements.insert(2, var)
             cog_filename = "_".join(filename_elements)
             # # add extension
             cog_filename = f"{cog_filename}.tif"

@@ -3,16 +3,11 @@ import boto3
 import pandas as pd
 import rasterio
 import s3fs
-import re
-import transformation_functions as plugins
 import importlib
+import os
+import sys
 
-
-# datefmt = "month"
-# nodata = -9999
-# # lat_name, lon_name = 'lat', 'lon'
-# lat_name, lon_name, time_name = "latitude", "longitude", "months"
-# variable_list = ["fossil", "microbial", "pyrogenic", "total"]
+sys.path.append(os.path.abspath('dags/automated_transformation'))
 
 files_processed = pd.DataFrame(columns=["file_name", "COGs_created"])
 
@@ -21,12 +16,12 @@ files_processed = pd.DataFrame(columns=["file_name", "COGs_created"])
 # name = '/Users/vgaur/ghgc-docs/data/tm54dvar-ch4flux-mask-monthgrid-v5/methane_emis_1999.nc'
 # name = '/Users/vgaur/ghgc-docs/data/gpw/gpw_v4_population_density_rev11_2000_30_sec.tif'
 # name = '/Users/vgaur/ghgc-docs/data/odiac_data/2000/odiac2022_1km_excl_intl_0001.tif'
-def transform_cog(name_list, datefmt, variables_list, nodata, raw_data_bucket, dest_data_bucket, cog_data_prefix, collection_name, lon_name, lat_name, time_name, ext):
+def transform_cog(name_list, nodata, raw_data_bucket, dest_data_bucket, cog_data_prefix, collection_name):
             
     session = boto3.session.Session()
     s3_client = session.client("s3")
     module = importlib.import_module('transformation_functions')
-    function_name = f'{collection_name.replace('-', '_')}_transformation'
+    function_name = f'{collection_name.replace("-", "_")}_transformation'
 
     if hasattr(module, function_name):
         for name in name_list:

@@ -11,13 +11,8 @@ dag_run_config = {
     "raw_data_prefix": "delivery/cms-co2-flux-monthgrid-v1",
     "dest_data_bucket": "ghgc-data-store-develop",
     "cog_data_prefix": "transformed_cogs",
-    "date_fmt": "month", # month, year, day
     "collection_name":"cms-co2-flux-monthgrid-v1",
-    "lat_name":"lat", # latitude, lat, y
-    "lon_name":"lon", # longitude, lon, x
-    "time_name":"time", # months, time, band
     "nodata":-9999,
-    "variable_list":["fossil"],
     "ext": ".nc" # .nc, .nc4, .tif, .tiff
 }
 
@@ -33,7 +28,7 @@ with DAG(
 
     @task
     def discover_files(ti):
-        from automated_transformation.cog_transformation import get_all_s3_keys
+        from dags.automated_transformation.transformation_functions import get_all_s3_keys
 
         config = ti.dag_run.conf.copy()
         bucket = config.get("raw_data_bucket")
@@ -50,7 +45,7 @@ with DAG(
     @task(max_active_tis_per_dag=10)
     def process_files(file_url, **kwargs):
         dag_run = kwargs.get("dag_run")
-        from automated_transformation.cog_transformation import transform_cog
+        from dags.automated_transformation.transformation_pipeline import transform_cog
 
         config = dag_run.conf.copy()
         raw_bucket_name = config.get("raw_data_bucket")
@@ -59,10 +54,6 @@ with DAG(
         date_fmt = config.get("date_fmt")
         nodata = config.get("nodata")
         collection_name = config.get("collection_name")
-        variables_list = config.get('variable_list')
-        lat_name = config.get("lat_name")
-        lon_name = config.get("lon_name")
-        time_name = config.get("time_name")
         ext = config.get("ext")
         print(f"The file I am processing is {file_url}")
         print("len of files", len(file_url))
@@ -74,10 +65,6 @@ with DAG(
             dest_data_bucket=dest_data_bucket,
             cog_data_prefix=cog_prefix_name,
             collection_name=collection_name,
-            variables_list =variables_list,
-            lat_name = lat_name,
-            lon_name = lon_name,
-            time_name = time_name,
             ext = ext
         )
         return None

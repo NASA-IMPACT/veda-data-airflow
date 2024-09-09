@@ -21,4 +21,6 @@ fsspec
 s3fs
 xarray
 xstac
+h5netcdf
+rioxarray
 

@@ -1,3 +1,4 @@
+from datetime import timedelta
 import time
 import uuid
 
@@ -17,7 +18,7 @@ from veda_data_pipeline.groups.processing_tasks import build_stac_kwargs, submit
 
 group_kwgs = {"group_id": "Discover", "tooltip": "Discover"}
 
-@task
+@task(retries=1, retry_delay=timedelta(minutes=1))
 def discover_from_s3_task(ti=None, event={}, **kwargs):
     """Discover grouped assets/files from S3 in batches of 2800. Produce a list of such files stored on S3 to process.
     This task is used as part of the discover_group subdag and outputs data to EVENT_BUCKET.
@@ -64,3 +65,26 @@ def get_files_to_process(payload, ti=None):
             **payload,
             "payload": payload_xcom,
         } for indx, payload_xcom in enumerate(payloads_xcom)]
+
+@task
+def get_dataset_files_to_process(payload, ti=None):
+    """Get files from S3 produced by the dataset task.
+    This is different from the get_files_to_process task as it produces a combined structure from repeated mappings.
+    """
+    dag_run_id = ti.dag_run.run_id
+
+    result = []
+    for x in payload:
+        if isinstance(x, LazyXComAccess): # if used as part of a dynamic task mapping
+            payloads_xcom = x[0].pop("payload", [])
+            payload_0 = x[0]
+        else:
+            payloads_xcom = x.pop("payload", [])
+            payload_0 = x
+        for indx, payload_xcom in enumerate(payloads_xcom):
+            result.append({
+                    "run_id": f"{dag_run_id}_{uuid.uuid4()}_{indx}",
+                    **payload_0,
+                    "payload": payload_xcom,
+                })
+    return result

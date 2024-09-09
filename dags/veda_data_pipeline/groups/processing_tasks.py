@@ -1,3 +1,4 @@
+from datetime import timedelta
 import json
 import logging
 
@@ -14,7 +15,7 @@ group_kwgs = {"group_id": "Process", "tooltip": "Process"}
 def log_task(text: str):
     logging.info(text)
 
-@task()
+@task(retries=1, retry_delay=timedelta(minutes=1))
 def submit_to_stac_ingestor_task(built_stac:str):
     """Submit STAC items to the STAC ingestor API."""
     event = json.loads(built_stac)

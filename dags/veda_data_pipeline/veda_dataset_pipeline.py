@@ -9,7 +9,7 @@ from airflow.models.variable import Variable
 from airflow.providers.amazon.aws.operators.ecs import EcsRunTaskOperator
 
 from veda_data_pipeline.groups.collection_group import collection_task_group
-from veda_data_pipeline.groups.discover_group import discover_from_s3_task, get_files_to_process
+from veda_data_pipeline.groups.discover_group import discover_from_s3_task, get_dataset_files_to_process
 from veda_data_pipeline.groups.processing_tasks import build_stac_kwargs, submit_to_stac_ingestor_task
 
 dag_doc_md = """
@@ -85,7 +85,7 @@ with DAG("veda_dataset_pipeline", params=template_dag_run_conf, **dag_args) as d
     collection_grp = collection_task_group()
     discover = discover_from_s3_task.expand(event=extract_discovery_items())
     discover.set_upstream(collection_grp) # do not discover until collection exists
-    get_files = get_files_to_process(payload=discover)
+    get_files = get_dataset_files_to_process(payload=discover)
     build_stac_kwargs_task = build_stac_kwargs.expand(event=get_files)
     # partial() is needed for the operator to be used with taskflow inputs
     build_stac = EcsRunTaskOperator.partial(

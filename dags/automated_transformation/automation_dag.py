@@ -9,12 +9,12 @@ DAG_ID = "automate-cog-transformation"
 dag_run_config = {
     "data_acquisition_method": "s3",
     "raw_data_bucket": "ghgc-data-store-develop",
-    "raw_data_prefix": "delivery/gpw",
+    "raw_data_prefix": "delivery/tm54dvar-ch4flux-mask-monthgrid-v5",
     "dest_data_bucket": "ghgc-data-store-develop",
-    "cog_data_prefix": "transformed_cogs",
-    "collection_name":"gpw",
+    "data_prefix": "transformed_cogs",
+    "collection_name":"tm54dvar-ch4flux-mask-monthgrid-v5",
     "nodata":-9999,
-    "ext": ".tif" # .nc, .nc4, .tif, .tiff
+    "ext": ".nc" # .nc, .nc4, .tif, .tiff
 }
 
 with DAG(
@@ -55,7 +55,7 @@ with DAG(
         ]
 
 
-    @task(max_active_tis_per_dag=1)
+    @task(max_active_tis_per_dag=10)
     def process_files(file_url, **kwargs):
         dag_run = kwargs.get("dag_run")
         from dags.automated_transformation.transformation_pipeline import transform_cog
@@ -63,7 +63,7 @@ with DAG(
         config = dag_run.conf.copy()
         raw_bucket_name = config.get("raw_data_bucket")
         dest_data_bucket = config.get("dest_data_bucket")
-        cog_prefix_name = config.get("cog_data_prefix")
+        data_prefix = config.get("data_prefix")
         nodata = config.get("nodata")
         collection_name = config.get("collection_name")
         print(f"The file I am processing is {file_url}")
@@ -73,7 +73,7 @@ with DAG(
             nodata = nodata,
             raw_data_bucket=raw_bucket_name,
             dest_data_bucket=dest_data_bucket,
-            cog_data_prefix=cog_prefix_name,
+            data_prefix=data_prefix,
             collection_name=collection_name,
         )
         return file_status

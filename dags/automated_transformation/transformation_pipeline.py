@@ -4,42 +4,50 @@ import pandas as pd
 import rasterio
 import s3fs
 import importlib
-import os
-import sys
-
-sys.path.append(os.path.abspath('dags/automated_transformation'))
 
 files_processed = pd.DataFrame(columns=["file_name", "COGs_created"])
 
-# name = '/Users/vgaur/ghgc-docs/data/casa-gfed/GEOSCarb_CASAGFED3v3_Flux.Monthly.x720_y360.2004.nc'
-# name = '/Users/vgaur/ghgc-docs/data/oco2geos-co2-daygrid-v10r/oco2_GEOS_L3CO2_day_20150101_B10206Ar.nc4'
-# name = '/Users/vgaur/ghgc-docs/data/tm54dvar-ch4flux-mask-monthgrid-v5/methane_emis_1999.nc'
-# name = '/Users/vgaur/ghgc-docs/data/gpw/gpw_v4_population_density_rev11_2000_30_sec.tif'
-# name = '/Users/vgaur/ghgc-docs/data/odiac_data/2000/odiac2022_1km_excl_intl_0001.tif'
 def transform_cog(name_list, nodata, raw_data_bucket, dest_data_bucket, cog_data_prefix, collection_name):
+    """This function calls the plugins (dataset specific transformation functions) and
+    generalizes the transformation of dataset to COGs.
+
+    Args:
+        name_list (str): List of the files to be transformed
+        nodata (str): _description_
+        raw_data_bucket (str): _description_
+        dest_data_bucket (str): _description_
+        cog_data_prefix (str): _description_
+        collection_name (str): _description_
+
+    Returns:
+        dict: _description_
+    """
             
     session = boto3.session.Session()
     s3_client = session.client("s3")
-    module = importlib.import_module('transformation_functions')
+    file_status = {}
+    module = importlib.import_module('automated_transformation.transformation_functions')
     function_name = f'{collection_name.replace("-", "_")}_transformation'
-
-    if hasattr(module, function_name):
-        for name in name_list:
-            url = f"s3://{raw_data_bucket}/{name}"
-            fs = s3fs.S3FileSystem()
-            print('the url is', url)
-            with fs.open(url, mode='rb') as file_obj:
-                transform_func = getattr(module, function_name)
-                data, cog_filename = transform_func(file_obj, name, nodata)
-
-                # generate COG
+    for name in name_list:
+        url = f"s3://{raw_data_bucket}/{name}"
+        fs = s3fs.S3FileSystem()
+        print('the url is', url)
+        with fs.open(url, mode='rb') as file_obj:
+            transform_func = getattr(module, function_name)
+            var_data_netcdf = transform_func(file_obj, name, nodata)
+                
+            for cog_filename, data in var_data_netcdf.items():
+            # generate COG
                 COG_PROFILE = {"driver": "COG", "compress": "DEFLATE"}
-
-                with tempfile.NamedTemporaryFile() as temp_file:
-                    data.rio.to_raster(temp_file.name, **COG_PROFILE)
-                    s3_client.upload_file(
-                        Filename=temp_file.name,
-                        Bucket=dest_data_bucket,
-                        Key=f"{cog_data_prefix}/{collection_name}/{cog_filename}",
-                    )
-            print(cog_filename)
+                try:
+                    with tempfile.NamedTemporaryFile() as temp_file:
+                        data.rio.to_raster(temp_file.name, **COG_PROFILE)
+                        s3_client.upload_file(
+                            Filename=temp_file.name,
+                            Bucket=dest_data_bucket,
+                            Key=f"{cog_data_prefix}/{collection_name}/{cog_filename}",
+                        )
+                    file_status[cog_filename] = f'file transformed and uploaded to "{cog_data_prefix}/{collection_name}/{cog_filename}" successfully'
+                except:
+                    file_status[cog_filename] = 'failed to upload/transform'
+        return file_status

@@ -1,7 +1,7 @@
 import pendulum
 from airflow import DAG
 from airflow.models.variable import Variable
-from airflow.providers.amazon.aws.operators.ecs import EcsRunTaskOperator
+from airflow.decorators import task
 from airflow.operators.dummy_operator import DummyOperator
 from airflow.utils.trigger_rule import TriggerRule
 
@@ -64,57 +64,12 @@ dag_args = {
 with DAG(dag_id="veda_generic_ingest_vector", params=templat_dag_run_conf, **dag_args) as dag:
     start = DummyOperator(task_id="Start", dag=dag)
     end = DummyOperator(task_id="End", trigger_rule=TriggerRule.ONE_SUCCESS, dag=dag)
+    @task()
+    def generic_ingest_vector(ti):
+        from veda_data_pipeline.utils.vector_ingest import handler
+        conf = ti.dag_run.conf.copy()
+        secret_name = Variable.get("VECTOR_SECRET_NAME")
+        return handler(secret_name, conf)
 
-    mwaa_stack_conf = Variable.get(
-        "MWAA_STACK_CONF", default_var={}, deserialize_json=True
-    )
-    vector_ecs_conf = Variable.get("VECTOR_ECS_CONF", deserialize_json=True)
 
-    generic_ingest_vector = EcsRunTaskOperator(
-        task_id="generic_ingest_vector",
-        trigger_rule=TriggerRule.NONE_FAILED,
-        cluster=f"{mwaa_stack_conf.get('PREFIX')}-cluster",
-        task_definition=f"{mwaa_stack_conf.get('PREFIX')}-generic-vector-tasks",
-        launch_type="FARGATE",
-        do_xcom_push=True,
-        execution_timeout=timedelta(minutes=120),
-        overrides={
-            "containerOverrides": [
-                {
-                    "name": f"{mwaa_stack_conf.get('PREFIX')}-veda-generic_vector_ingest",
-                    "command": [
-                        "/var/lang/bin/python",
-                        "handler.py",
-                        "--payload",
-                        "{}".format("{{ task_instance.dag_run.conf }}"),
-                    ],
-                    "environment": [
-                        {
-                            "name": "EXTERNAL_ROLE_ARN",
-                            "value": Variable.get(
-                                "ASSUME_ROLE_READ_ARN", default_var=""
-                            ),
-                        },
-                        {
-                            "name": "AWS_REGION",
-                            "value": mwaa_stack_conf.get("AWS_REGION"),
-                        },
-                        {
-                            "name": "VECTOR_SECRET_NAME",
-                            "value": Variable.get("VECTOR_SECRET_NAME"),
-                        },
-                    ],
-                },
-            ],
-        },
-        network_configuration={
-            "awsvpcConfiguration": {
-                    "securityGroups": vector_ecs_conf.get("VECTOR_SECURITY_GROUP") + mwaa_stack_conf.get("SECURITYGROUPS"),
-                    "subnets": vector_ecs_conf.get("VECTOR_SUBNETS"),
-            },
-        },
-        awslogs_group=mwaa_stack_conf.get("LOG_GROUP_NAME"),
-        awslogs_stream_prefix=f"ecs/{mwaa_stack_conf.get('PREFIX')}-veda-generic_vector_ingest",  # prefix with container name
-    )
-
-    start >> generic_ingest_vector >> end
+    start >> generic_ingest_vector() >> end

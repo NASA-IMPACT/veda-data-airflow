@@ -1,12 +1,11 @@
 import base64
-from argparse import ArgumentParser
 import boto3
 import os
-import ast
 import subprocess
 import json
 import smart_open
 from urllib.parse import urlparse
+
 
 def download_file(file_uri: str):
     """Downloads file from s3
@@ -32,6 +31,7 @@ def download_file(file_uri: str):
 
     s3.close()
     return target_filepath
+
 
 def assume_role(role_arn, session_name="veda-data-pipelines_vector-ingest"):
     """Assumes an AWS IAM role and returns temporary credentials.
@@ -60,7 +60,7 @@ def get_connection_string(secret: dict, as_uri: bool = False) -> str:
     if as_uri:
         return f"postgresql://{secret['username']}:{secret['password']}@{secret['host']}:5432/{secret['dbname']}"
     else:
-        #return f"PG:host=localhost port=5432 dbname=postgis user=username password=password"
+        # return f"PG:host=localhost port=5432 dbname=postgis user=username password=password"
         return f"PG:host={secret['host']} dbname={secret['dbname']} user={secret['username']} password={secret['password']}"
 
 
@@ -92,17 +92,16 @@ def get_secret(secret_name: str) -> None:
         return json.loads(base64.b64decode(get_secret_value_response["SecretBinary"]))
 
 
-
 def load_to_featuresdb(
-    filename: str,
-    layer_name: str,
-    x_possible: str = "longitude",
-    y_possible: str = "latitude",
-    source_projection : str ="EPSG:4326",
-    target_projection : str ="EPSG:4326",
-    extra_flags: list = ["-overwrite", "-progress"]
+        secret_name: str,
+        filename: str,
+        layer_name: str,
+        x_possible: str = "longitude",
+        y_possible: str = "latitude",
+        source_projection: str = "EPSG:4326",
+        target_projection: str = "EPSG:4326",
+        extra_flags: list = ["-overwrite", "-progress"]
 ):
-    secret_name = os.environ.get("VECTOR_SECRET_NAME")
     con_secrets = get_secret(secret_name)
     connection = get_connection_string(con_secrets)
 
@@ -118,7 +117,7 @@ def load_to_featuresdb(
         "-oo",
         f"Y_POSSIBLE_NAMES={y_possible}",
         "-nln",
-        layer_name, 
+        layer_name,
         "-s_srs",
         source_projection,
         "-t_srs",
@@ -138,7 +137,8 @@ def load_to_featuresdb(
 
     return {"status": "success"}
 
-def handler(payload_event):
+
+def handler(secret_name, payload_event):
     print("------Vector ingestion for Features API started------")
 
     s3_event = payload_event.pop("payload")
@@ -152,7 +152,6 @@ def handler(payload_event):
     layer_name = payload_event["collection"]
     collection_not_provided = layer_name == ""
 
-
     # Read the json to extract the discovered file paths
     with smart_open.open(s3_event, "r") as _file:
         s3_event_read = _file.read()
@@ -162,7 +161,7 @@ def handler(payload_event):
     status = list()
 
     for s3_object in s3_objects:
-        href = s3_object["assets"]["default"]["href"] 
+        href = s3_object["assets"]["default"]["href"]
         filename = href.split("/")[-1].split(".")[0]
 
         # Use id template when collection is not provided in the conf
@@ -171,10 +170,10 @@ def handler(payload_event):
 
         downloaded_filepath = download_file(href)
         print(f"[ COLLECTION ]: {layer_name}, [ DOWNLOAD FILEPATH ]: {downloaded_filepath}")
-        
-        coll_status = load_to_featuresdb(downloaded_filepath, layer_name, 
-                                         x_possible, y_possible, 
-                                         source_projection, target_projection, 
+
+        coll_status = load_to_featuresdb(secret_name, downloaded_filepath, layer_name,
+                                         x_possible, y_possible,
+                                         source_projection, target_projection,
                                          extra_flags)
         status.append(coll_status)
 
@@ -186,19 +185,5 @@ def handler(payload_event):
             raise Exception(coll_status["reason"])
 
     print("------Overall Status------\n", f"Done for {len(status)} discovered files\n", status)
+    return status
 
-
-if __name__ == "__main__":
-    parser = ArgumentParser(
-        prog="vector_ingest",
-        description="Ingest Vector",
-        epilog="Running the code as ECS task",
-    )
-    parser.add_argument(
-        "--payload", dest="payload", help="event passed to stac_handler function"
-    )
-    args = parser.parse_args()
-
-    # Extracting the payload passed from upstream task/dag or conf
-    payload_event = ast.literal_eval(args.payload)
-    handler(payload_event)

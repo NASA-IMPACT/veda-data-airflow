@@ -44,6 +44,7 @@ runs:
         AWS_DEFAULT_REGION: ${{ inputs.aws-region }}
         AWS_REGION: ${{ inputs.aws-region }}
       run: |
+        ls -al
         make sm2a-deploy ENV_FILE=${{ inputs.env-file }} SECRET_NAME=${{ inputs.env_aws_secret_name }}
 
     - name: Output workflows API endpoint

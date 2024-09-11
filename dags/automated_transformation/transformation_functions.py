@@ -1,7 +1,9 @@
-import boto3
-import xarray
 import re
 from datetime import datetime
+
+import boto3
+import xarray
+
 
 def get_all_s3_keys(bucket, model_name, ext):
     """Function fetches all the s3 keys from the given bucket and model name.
@@ -12,7 +14,7 @@ def get_all_s3_keys(bucket, model_name, ext):
         ext (str): extension of the file that is to be fetched.
 
     Returns:
-        list : List of all the keys that match the given criteria 
+        list : List of all the keys that match the given criteria
     """
     session = boto3.session.Session()
     s3_client = session.client("s3")
@@ -34,6 +36,7 @@ def get_all_s3_keys(bucket, model_name, ext):
     print(f"Discovered {len(keys)}")
     return keys
 
+
 """
 The naming convention for the transformation function is as follows:
 collectionname_transformation
@@ -45,6 +48,8 @@ where
    differentiate the transformation functions from any other functions in
    file.
 """
+
+
 def tm54dvar_ch4flux_mask_monthgrid_v5_transformation(file_obj, name, nodata):
     """Tranformation function for the tm5 ch4 influx dataset
 
@@ -56,7 +61,7 @@ def tm54dvar_ch4flux_mask_monthgrid_v5_transformation(file_obj, name, nodata):
     Returns:
         dict: Dictionary with the COG name and its corresponding data array.
     """
-    
+
     var_data_netcdf = {}
     xds = xarray.open_dataset(file_obj)
     xds = xds.rename({"latitude": "lat", "longitude": "lon"})
@@ -70,7 +75,7 @@ def tm54dvar_ch4flux_mask_monthgrid_v5_transformation(file_obj, name, nodata):
         for var in variable:
             data = getattr(xds.isel(months=time_increment), var)
             data = data.isel(lat=slice(None, None, -1))
-            data = data.where(data==nodata, -9999)
+            data = data.where(data == nodata, -9999)
             data.rio.set_spatial_dims("lon", "lat", inplace=True)
             data.rio.write_crs("epsg:4326", inplace=True)
             data.rio.write_nodata(-9999, inplace=True)
@@ -86,6 +91,7 @@ def tm54dvar_ch4flux_mask_monthgrid_v5_transformation(file_obj, name, nodata):
 
     return var_data_netcdf
 
+
 def gpw_transformation(file_obj, name, nodata):
     """Tranformation function for the gridded population dataset
 
@@ -99,14 +105,14 @@ def gpw_transformation(file_obj, name, nodata):
     """
 
     var_data_netcdf = {}
-    xds = xarray.open_dataarray(file_obj, engine='rasterio')
+    xds = xarray.open_dataarray(file_obj, engine="rasterio")
 
     filename = name.split("/")[-1]
     filename_elements = re.split("[_ .]", filename)
     # # insert date of generated COG into filename
     filename_elements.pop()
     filename_elements.append(filename_elements[-3])
-    xds = xds.where(xds==nodata, -9999)
+    xds = xds.where(xds == nodata, -9999)
     xds.rio.set_spatial_dims("x", "y", inplace=True)
     xds.rio.write_crs("epsg:4326", inplace=True)
     xds.rio.write_nodata(-9999, inplace=True)
@@ -116,6 +122,7 @@ def gpw_transformation(file_obj, name, nodata):
     cog_filename = f"{cog_filename}.tif"
     var_data_netcdf[cog_filename] = xds
     return var_data_netcdf
+
 
 def geos_oco2_transformation(file_obj, name, nodata):
     """Tranformation function for the oco2 geos dataset
@@ -132,20 +139,16 @@ def geos_oco2_transformation(file_obj, name, nodata):
     xds = xarray.open_dataset(file_obj)
     xds = xds.assign_coords(lon=(((xds.lon + 180) % 360) - 180)).sortby("lon")
     variable = [var for var in xds.data_vars]
-    filename = name.split("/ ")[-1]
-    filename_elements = re.split("[_ .]", filename)
-
     for time_increment in range(0, len(xds.time)):
         for var in variable:
             filename = name.split("/ ")[-1]
             filename_elements = re.split("[_ .]", filename)
             data = getattr(xds.isel(time=time_increment), var)
             data = data.isel(lat=slice(None, None, -1))
-            data = data.where(data==nodata, -9999)
+            data = data.where(data == nodata, -9999)
             data.rio.set_spatial_dims("lon", "lat", inplace=True)
             data.rio.write_crs("epsg:4326", inplace=True)
             data.rio.write_nodata(-9999, inplace=True)
-
             # # insert date of generated COG into filename
             filename_elements[-1] = filename_elements[-3]
             filename_elements.insert(2, var)
@@ -156,6 +159,7 @@ def geos_oco2_transformation(file_obj, name, nodata):
             var_data_netcdf[cog_filename] = data
 
     return var_data_netcdf
+
 
 def ecco_darwin_transformation(file_obj, name, nodata):
     """Tranformation function for the ecco darwin dataset
@@ -187,7 +191,7 @@ def ecco_darwin_transformation(file_obj, name, nodata):
             data = xds[var]
 
             data = data.reindex(latitude=list(reversed(data.latitude)))
-            data = data.where(data==nodata, -9999)
+            data = data.where(data == nodata, -9999)
             data.rio.set_spatial_dims("longitude", "latitude", inplace=True)
             data.rio.write_crs("epsg:4326", inplace=True)
             data.rio.write_nodata(-9999, inplace=True)

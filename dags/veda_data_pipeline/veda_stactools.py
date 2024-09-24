@@ -25,7 +25,7 @@ template_dag_run_conf = {
 }
 
 
-def get_discover_dag(id, event={}):
+def get_stactools_dag(id, event={}):
     params_dag_run_conf = event or template_dag_run_conf
     with DAG(
         id,
@@ -50,4 +50,4 @@ def get_discover_dag(id, event={}):
 
         return dag
 
-get_discover_dag("veda_discover")
+get_stactools_dag("veda_stactools")

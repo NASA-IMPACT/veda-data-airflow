@@ -1,0 +1,5 @@
+FROM apache/airflow:2.5.1-python3.10
+COPY dags/requirements.txt .
+COPY dags/requirements-constraints.txt .
+RUN pip install --no-cache-dir -r requirements.txt -c requirements-constraints.txt
+COPY --chown=airflow:root ./dags/ /opt/airflow/dags/

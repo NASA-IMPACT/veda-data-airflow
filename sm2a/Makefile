@@ -51,7 +51,6 @@ sm2a-local-build:
 sm2a-deploy:
 ifeq ($(GITHUB_ACTIONS_ENV),true)
 	@echo "Installing the deployment dependency"
-	pip install -r deploy_requirements.txt
 	@echo "Deploying SM2A"
 	python scripts/generate_env_file.py --secret-id ${SECRET_NAME} --env-file ${ENV_FILE}
 	@bash -c './scripts/deploy.sh ${ENV_FILE} <<< init'

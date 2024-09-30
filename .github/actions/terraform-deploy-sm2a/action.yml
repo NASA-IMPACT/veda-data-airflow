@@ -38,6 +38,10 @@ runs:
       with:
         terraform_version: 1.3.3
 
+    - name: Install python dependencies
+      shell: bash
+      run: pip install -r deploy_requirements.txt
+
     - name: Deploy
       working-directory: ${{ inputs.dir }}
       shell: bash

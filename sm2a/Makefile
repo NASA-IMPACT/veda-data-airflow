@@ -49,16 +49,16 @@ sm2a-local-build:
 	rm -rf dags
 
 sm2a-deploy:
-	ifeq ($(GITHUB_ACTIONS_ENV),true)
-		@echo "Installing the deployment dependency"
-		pip install -r deploy_requirements.txt
-		@echo "Deploying SM2A"
-		python scripts/generate_env_file.py --secret-id ${SECRET_NAME} --env-file ${ENV_FILE}
-		@bash -c './scripts/deploy.sh ${ENV_FILE} <<< init'
-		@bash -c './scripts/deploy.sh ${ENV_FILE} <<< deploy'
-	else
-		$(call important_message, "Wait a minute you are not github 😡")
-	endif
+ifeq ($(GITHUB_ACTIONS_ENV),true)
+	@echo "Installing the deployment dependency"
+	pip install -r deploy_requirements.txt
+	@echo "Deploying SM2A"
+	python scripts/generate_env_file.py --secret-id ${SECRET_NAME} --env-file ${ENV_FILE}
+	@bash -c './scripts/deploy.sh ${ENV_FILE} <<< init'
+	@bash -c './scripts/deploy.sh ${ENV_FILE} <<< deploy'
+else
+	$(call important_message, "Wait a minute you are not github 😡")
+endif
 
 clean: sm2a-local-stop
 	@echo "Cleaning local env"

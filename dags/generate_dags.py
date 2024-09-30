@@ -11,6 +11,7 @@ from veda_data_pipeline.veda_discover_pipeline import get_discover_dag
 def generate_dags():
     import boto3
     import json
+    from botocore.exceptions import ClientError, NoCredentialsError
 
     from pathlib import Path
 
@@ -18,9 +19,20 @@ def generate_dags():
     mwaa_stac_conf = Variable.get("MWAA_STACK_CONF", deserialize_json=True)
     bucket = mwaa_stac_conf["EVENT_BUCKET"]
 
-    client = boto3.client("s3")
-    response = client.list_objects_v2(Bucket=bucket, Prefix="collections/")
-
+    try:
+        client = boto3.client("s3")
+        response = client.list_objects_v2(Bucket=bucket, Prefix="collections/")
+    except ClientError as e:
+        # Handle general AWS service errors (e.g., wrong bucket name)
+        print(f"ClientError: {e}")
+        return
+    except NoCredentialsError:
+        # Handle missing credentials
+        print("Credentials not found.")
+        return
+    except Exception as ex:
+        print(f"An unexpected error occurred: {ex}")
+        return
     for file_ in response.get("Contents", []):
         key = file_["Key"]
         if key.endswith("/"):

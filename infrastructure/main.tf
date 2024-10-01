@@ -11,7 +11,7 @@ module "mwaa" {
   provision_s3_access_block        = var.provision_s3_access_block
   stage                            = var.stage
   airflow_version                  = "2.5.1"
-  airflow_configuration_options    = { "webserver.instance_name" = "${var.prefix} DAGs" }
+  airflow_configuration_options    = { "webserver.instance_name" = "${var.prefix} DAGs", "webserver.expose_config" = true }
   environment_class                = var.mwaa_environment_class
   min_workers                      = var.min_workers
   ecs_containers = [

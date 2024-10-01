@@ -41,8 +41,13 @@ def submit_to_stac_ingestor_task(built_stac: dict):
     airflow_vars_json = json.loads(airflow_vars)
     cognito_app_secret = airflow_vars_json.get("COGNITO_APP_SECRET")
     stac_ingestor_api_url = airflow_vars_json.get("STAC_INGESTOR_API_URL")
-    with smart_open.open(success_file, "r") as _file:
-        stac_items = json.loads(_file.read())
+    try:
+        success_file = event["payload"]["success_event_key"]
+        with smart_open.open(success_file, "r") as _file:
+            stac_items = json.loads(_file.read())
+    except KeyError:
+        log_task("No success file found - using event directly")
+        stac_items = [event]
 
     for item in stac_items:
         submission_handler(

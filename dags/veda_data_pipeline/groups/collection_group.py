@@ -1,7 +1,7 @@
 import requests
 from airflow.models.variable import Variable
-from airflow.operators.python import PythonOperator
-from airflow.utils.task_group import TaskGroup
+from airflow.decorators import task, task_group
+
 from veda_data_pipeline.utils.collection_generation import GenerateCollection
 from veda_data_pipeline.utils.submit_stac import submission_handler
 
@@ -23,8 +23,8 @@ def check_collection_exists(endpoint: str, collection_id: str):
         else "Collection.generate_collection"
     )
 
-
-def ingest_collection_task(ti):
+@task
+def ingest_collection_task(ti=None, collection=None):
     """
     Ingest a collection into the STAC catalog
 
@@ -60,6 +60,7 @@ def check_collection_exists_task(ti):
     )
 
 
+@task
 def generate_collection_task(ti):
     import json
     config = ti.dag_run.conf
@@ -77,15 +78,8 @@ def generate_collection_task(ti):
 
 group_kwgs = {"group_id": "Collection", "tooltip": "Collection"}
 
-
+@task_group(group_id="Collection", tooltip="Collection")
 def collection_task_group():
-    with TaskGroup(**group_kwgs) as collection_task_grp:
-        generate_collection = PythonOperator(
-            task_id="generate_collection", python_callable=generate_collection_task
-        )
-        ingest_collection = PythonOperator(
-            task_id="ingest_collection", python_callable=ingest_collection_task
-        )
-        generate_collection >> ingest_collection
+    generate_collection = generate_collection_task()
+    ingest_collection = ingest_collection_task(collection=generate_collection)
 
-        return collection_task_grp

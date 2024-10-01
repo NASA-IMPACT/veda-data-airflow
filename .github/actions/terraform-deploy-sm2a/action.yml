@@ -39,6 +39,7 @@ runs:
         terraform_version: 1.3.3
 
     - name: Deploy
+      working-directory: ${{ inputs.dir }}
       shell: bash
       env:
         AWS_DEFAULT_REGION: ${{ inputs.aws-region }}

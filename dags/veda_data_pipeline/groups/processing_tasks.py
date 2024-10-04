@@ -69,7 +69,7 @@ def build_stac_kwargs(event={}):
                         {
                             "name": "EVENT_BUCKET",
                             "value": mwaa_stack_conf.get("EVENT_BUCKET"),
-                        },
+                        }
                     ],
                     "memory": 2048,
                     "cpu": 1024,
@@ -130,6 +130,10 @@ def build_vector_kwargs(event={}):
                             "name": "VECTOR_SECRET_NAME",
                             "value": Variable.get("VECTOR_SECRET_NAME"),
                         },
+                        {
+                            "name": "AWS_STS_REGIONAL_ENDPOINTS",
+                            "value": "regional",  # to override this behavior, make sure AWS_REGION is set to `aws-global`
+                        }
                     ],
                 },
             ],
@@ -189,6 +193,10 @@ def build_generic_vector_kwargs(event={}):
                             "name": "VECTOR_SECRET_NAME",
                             "value": Variable.get("VECTOR_SECRET_NAME"),
                         },
+                        {
+                            "name": "AWS_STS_REGIONAL_ENDPOINTS",
+                            "value": "regional",  # to override this behavior, make sure AWS_REGION is set to `aws-global`
+                        }
                     ],
                 },
             ],

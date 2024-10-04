@@ -2,7 +2,6 @@ import base64
 from argparse import ArgumentParser
 import boto3
 import os
-import ast
 import subprocess
 import json
 import smart_open
@@ -19,9 +18,11 @@ from sqlalchemy.dialects.postgresql import DOUBLE_PRECISION, INTEGER, VARCHAR, T
 
 def download_file(file_uri: str):
     sts = boto3.client("sts")
+    print(f'Assuming role: {os.environ.get("EXTERNAL_ROLE_ARN")}')
+    role_arn = os.environ.get("EXTERNAL_ROLE_ARN")
     response = sts.assume_role(
-        RoleArn=os.environ.get("EXTERNAL_ROLE_ARN"),
-        RoleSessionName="sts-assume-114506680961",
+        RoleArn=role_arn,
+        RoleSessionName="airflow_vector_ingest",
     )
     new_session = boto3.Session(
         aws_access_key_id=response["Credentials"]["AccessKeyId"],
@@ -123,17 +124,19 @@ def delete_region(
     gpkg_path: str,
     table_name: str,
 ):
-    """delete all existing records by region name"""
     gdf = gpd.read_file(gpkg_path)
-    region_name = gdf["region"].iloc[0]
-    with engine.connect() as conn:
-        with conn.begin():
-            delete_sql = sqlalchemy.text(
-                f"""
-                    DELETE FROM {table_name} WHERE region='{region_name}'
-                """
-            )
-            conn.execute(delete_sql)
+    if 'region' in gdf.columns:
+        region_name = gdf["region"].iloc[0]
+        with engine.connect() as conn:
+            with conn.begin():
+                delete_sql = sqlalchemy.text(
+                    f"""
+                    DELETE FROM {table_name} WHERE region=:region_name
+                    """
+                )
+                conn.execute(delete_sql, {'region_name': region_name})
+    else:
+        print(f"'region' column not found in {gpkg_path}. No records deleted.")
 
 
 def upsert_to_postgis(
@@ -348,7 +351,7 @@ def handler():
     )
     args = parser.parse_args()
 
-    payload_event = ast.literal_eval(args.payload)
+    payload_event = json.loads(args.payload)
     s3_event = payload_event.pop("payload")
     with smart_open.open(s3_event, "r") as _file:
         s3_event_read = _file.read()

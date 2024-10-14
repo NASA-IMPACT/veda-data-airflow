@@ -14,10 +14,9 @@ def generate_dags():
     from botocore.exceptions import ClientError, NoCredentialsError
 
     from pathlib import Path
-
-
-    mwaa_stac_conf = Variable.get("MWAA_STACK_CONF", deserialize_json=True)
-    bucket = mwaa_stac_conf["EVENT_BUCKET"]
+    airflow_vars = Variable.get("aws_dags_variables")
+    airflow_vars_json = json.loads(airflow_vars)
+    bucket = airflow_vars_json.get("EVENT_BUCKET")
 
     try:
         client = boto3.client("s3")

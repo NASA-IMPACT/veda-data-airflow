@@ -21,4 +21,6 @@ fsspec
 s3fs
 xarray
 xstac
+rio-stac>=0.8.0
+
 

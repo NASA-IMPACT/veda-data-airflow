@@ -44,7 +44,7 @@ def subdag_transfer():
             op_kwargs={"text": "Copy files on S3"},
         )
 
-        mwaa_stack_conf = Variable.get("MWAA_STACK_CONF", deserialize_json=True)
+        mwaa_stack_conf = Variable.get("MWAA_STACK_CONF",default_var={}, deserialize_json=True)
         run_cogify_copy = EcsRunTaskOperator(
             task_id="cogify_and_copy_data",
             trigger_rule="none_failed",

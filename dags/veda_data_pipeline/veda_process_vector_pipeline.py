@@ -56,7 +56,7 @@ with DAG(dag_id="veda_ingest_vector", params=templat_dag_run_conf, **dag_args) a
     mwaa_stack_conf = Variable.get(
         "MWAA_STACK_CONF", default_var={}, deserialize_json=True
     )
-    vector_ecs_conf = Variable.get("VECTOR_ECS_CONF", deserialize_json=True)
+    vector_ecs_conf = Variable.get("VECTOR_ECS_CONF",default_var={}, deserialize_json=True)
 
     ingest_vector = EcsRunTaskOperator(
         task_id="ingest_vector",
@@ -89,7 +89,7 @@ with DAG(dag_id="veda_ingest_vector", params=templat_dag_run_conf, **dag_args) a
                         },
                         {
                             "name": "VECTOR_SECRET_NAME",
-                            "value": Variable.get("VECTOR_SECRET_NAME"),
+                            "value": Variable.get("VECTOR_SECRET_NAME", default_var=""),
                         },
                     ],
                 },

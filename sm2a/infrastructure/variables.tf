@@ -204,3 +204,15 @@ variable "project_name" {
   default = "SM2A"
 }
 
+variable "event_bucket" {
+  type    = string
+  default = "veda-pipeline-dev-mwaa-853558080719"
+}
+variable "workflows_client_secret" {
+  type    = string
+  default = "veda-auth-stack-dev/workflows-client"
+}
+variable "stac_ingestor_api_url" {
+  type    = string
+  default = "https://dev.openveda.cloud/api/ingest/"
+}

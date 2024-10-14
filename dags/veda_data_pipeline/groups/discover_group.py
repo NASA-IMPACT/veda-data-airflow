@@ -1,6 +1,6 @@
 import time
 import uuid
-
+import json
 from airflow.models.variable import Variable
 from airflow.models.xcom import LazyXComAccess
 from airflow.operators.dummy_operator import DummyOperator as EmptyOperator
@@ -8,9 +8,7 @@ from airflow.decorators import task_group
 from airflow.operators.python import BranchPythonOperator, PythonOperator, ShortCircuitOperator
 from airflow.utils.trigger_rule import TriggerRule
 from airflow_multi_dagrun.operators import TriggerMultiDagRunOperator
-from veda_data_pipeline.utils.s3_discovery import (
-    s3_discovery_handler, EmptyFileListError
-)
+
 
 group_kwgs = {"group_id": "Discover", "tooltip": "Discover"}
 
@@ -19,6 +17,9 @@ def discover_from_s3_task(ti, event={}, **kwargs):
     """Discover grouped assets/files from S3 in batches of 2800. Produce a list of such files stored on S3 to process.
     This task is used as part of the discover_group subdag and outputs data to EVENT_BUCKET.
     """
+    from veda_data_pipeline.utils.s3_discovery import (
+        s3_discovery_handler, EmptyFileListError
+    )
     config = {
         **event,
         **ti.dag_run.conf,
@@ -27,7 +28,9 @@ def discover_from_s3_task(ti, event={}, **kwargs):
     if event.get("schedule") and last_successful_execution:
         config["last_successful_execution"] = last_successful_execution.isoformat()
     # (event, chunk_size=2800, role_arn=None, bucket_output=None):
-    MWAA_STAC_CONF = Variable.get("MWAA_STACK_CONF", deserialize_json=True)
+    airflow_vars = Variable.get("aws_dags_variables")
+    airflow_vars_json = json.loads(airflow_vars)
+    event_bucket = airflow_vars_json.get("EVENT_BUCKET")
     read_assume_arn = Variable.get("ASSUME_ROLE_READ_ARN", default_var=None)
     # Making the chunk size small, this helped us process large data faster than
     # passing a large chunk of 500
@@ -36,7 +39,7 @@ def discover_from_s3_task(ti, event={}, **kwargs):
         return s3_discovery_handler(
             event=config,
             role_arn=read_assume_arn,
-            bucket_output=MWAA_STAC_CONF["EVENT_BUCKET"],
+            bucket_output=event_bucket,
             chunk_size=chunk_size
         )
     except EmptyFileListError as ex:

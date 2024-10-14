@@ -68,7 +68,7 @@ with DAG(dag_id="veda_generic_ingest_vector", params=templat_dag_run_conf, **dag
     mwaa_stack_conf = Variable.get(
         "MWAA_STACK_CONF", default_var={}, deserialize_json=True
     )
-    vector_ecs_conf = Variable.get("VECTOR_ECS_CONF", deserialize_json=True)
+    vector_ecs_conf = Variable.get("VECTOR_ECS_CONF",default_var={}, deserialize_json=True)
 
     generic_ingest_vector = EcsRunTaskOperator(
         task_id="generic_ingest_vector",
@@ -101,7 +101,7 @@ with DAG(dag_id="veda_generic_ingest_vector", params=templat_dag_run_conf, **dag
                         },
                         {
                             "name": "VECTOR_SECRET_NAME",
-                            "value": Variable.get("VECTOR_SECRET_NAME"),
+                            "value": Variable.get("VECTOR_SECRET_NAME", default_var=""),
                         },
                     ],
                 },
@@ -109,7 +109,8 @@ with DAG(dag_id="veda_generic_ingest_vector", params=templat_dag_run_conf, **dag
         },
         network_configuration={
             "awsvpcConfiguration": {
-                    "securityGroups": vector_ecs_conf.get("VECTOR_SECURITY_GROUP") + mwaa_stack_conf.get("SECURITYGROUPS"),
+                    "securityGroups": vector_ecs_conf.get("VECTOR_SECURITY_GROUP", "") +
+                                      mwaa_stack_conf.get("SECURITYGROUPS", ""),
                     "subnets": vector_ecs_conf.get("VECTOR_SUBNETS"),
             },
         },

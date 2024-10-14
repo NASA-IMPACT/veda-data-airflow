@@ -83,5 +83,11 @@ module "sma-base" {
   stage       = var.stage
   subdomain   = var.subdomain
   worker_cmd  = ["/home/airflow/.local/bin/airflow", "celery", "worker"]
+  airflow_custom_variables = {
+    EVENT_BUCKET = var.event_bucket
+    COGNITO_APP_SECRET = var.workflows_client_secret
+    STAC_INGESTOR_API_URL = var.stac_ingestor_api_url
+    Contact = "Abdelhak"
+  }
 }
 

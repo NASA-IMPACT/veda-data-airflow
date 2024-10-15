@@ -1,10 +1,12 @@
 from __future__ import annotations
-from airflow import DAG
-from airflow.providers.postgres.operators.postgres import PostgresOperator
-from airflow.hooks.postgres_hook import PostgresHook
-from datetime import datetime, date
+
 import json
+from datetime import date, datetime
+
+from airflow import DAG
 from airflow.decorators import task
+from airflow.hooks.postgres_hook import PostgresHook
+from airflow.providers.postgres.operators.postgres import PostgresOperator
 
 
 def json_serial(obj):

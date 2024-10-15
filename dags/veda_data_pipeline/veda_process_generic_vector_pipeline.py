@@ -1,11 +1,11 @@
+from datetime import timedelta
+
 import pendulum
 from airflow import DAG
 from airflow.models.variable import Variable
-from airflow.providers.amazon.aws.operators.ecs import EcsRunTaskOperator
 from airflow.operators.dummy_operator import DummyOperator
+from airflow.providers.amazon.aws.operators.ecs import EcsRunTaskOperator
 from airflow.utils.trigger_rule import TriggerRule
-
-from datetime import timedelta
 
 dag_doc_md = """
 ### Generic Ingest Vector

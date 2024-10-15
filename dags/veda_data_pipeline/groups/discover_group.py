@@ -1,14 +1,15 @@
+import json
 import time
 import uuid
-import json
+
+from airflow.decorators import task_group
 from airflow.models.variable import Variable
 from airflow.models.xcom import LazyXComAccess
 from airflow.operators.dummy_operator import DummyOperator as EmptyOperator
-from airflow.decorators import task_group
-from airflow.operators.python import BranchPythonOperator, PythonOperator, ShortCircuitOperator
+from airflow.operators.python import (BranchPythonOperator, PythonOperator,
+                                      ShortCircuitOperator)
 from airflow.utils.trigger_rule import TriggerRule
 from airflow_multi_dagrun.operators import TriggerMultiDagRunOperator
-
 
 group_kwgs = {"group_id": "Discover", "tooltip": "Discover"}
 
@@ -17,9 +18,8 @@ def discover_from_s3_task(ti, event={}, **kwargs):
     """Discover grouped assets/files from S3 in batches of 2800. Produce a list of such files stored on S3 to process.
     This task is used as part of the discover_group subdag and outputs data to EVENT_BUCKET.
     """
-    from veda_data_pipeline.utils.s3_discovery import (
-        s3_discovery_handler, EmptyFileListError
-    )
+    from veda_data_pipeline.utils.s3_discovery import (EmptyFileListError,
+                                                       s3_discovery_handler)
     config = {
         **event,
         **ti.dag_run.conf,
@@ -79,8 +79,12 @@ def vector_raster_choice(ti):
         return f"{dynamic_group_id}.parallel_run_process_vectors"
     return f"{dynamic_group_id}.parallel_run_process_rasters"
 
+
 @task_group
-def subdag_discover(event={}):
+def subdag_discover(event=None):
+    # Replace the mutable default parameter by None
+    if event is None:
+        event = dict()
     discover_from_s3 = ShortCircuitOperator(
         task_id="discover_from_s3",
         python_callable=discover_from_s3_task,
@@ -113,10 +117,9 @@ def subdag_discover(event={}):
     )
 
     # extra no-op, needed to run in dynamic mapping context
-    end_discover = EmptyOperator(task_id="end_discover", trigger_rule=TriggerRule.NONE_FAILED_MIN_ONE_SUCCESS,)
-    
+    end_discover = EmptyOperator(task_id="end_discover", trigger_rule=TriggerRule.NONE_FAILED_MIN_ONE_SUCCESS, )
+
     discover_from_s3 >> raster_vector_branching >> [run_process_raster, run_process_vector, run_process_generic_vector]
     run_process_raster >> end_discover
     run_process_vector >> end_discover
     run_process_generic_vector >> end_discover
-    

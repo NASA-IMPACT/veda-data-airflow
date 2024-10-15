@@ -194,11 +194,7 @@ variable "custom_worker_policy_statement" {
   ]
 
 }
-variable "airflow_custom_variables" {
-  description = "Airflow custom variables"
-  type        = map(string)
-  default     = {}
-}
+
 variable "project_name" {
   type    = string
   default = "SM2A"

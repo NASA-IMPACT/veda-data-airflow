@@ -5,7 +5,6 @@ from rasterio.session import AWSSession
 from rio_stac import stac
 from rio_stac.stac import PROJECTION_EXT_VERSION, RASTER_EXT_VERSION
 
-
 from . import events, regex, role
 
 

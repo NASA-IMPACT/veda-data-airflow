@@ -2,13 +2,13 @@ import itertools
 import json
 import os
 import re
+from datetime import datetime
+from pathlib import Path
 from typing import List
 from uuid import uuid4
-from pathlib import Path
 
-from datetime import datetime
-from dateutil.tz import tzlocal
 import boto3
+from dateutil.tz import tzlocal
 from smart_open import open as smrt_open
 
 

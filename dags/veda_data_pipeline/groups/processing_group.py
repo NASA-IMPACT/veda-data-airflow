@@ -1,12 +1,11 @@
 import json
 import logging
 from datetime import timedelta
-import json
+
 import smart_open
 from airflow.models.variable import Variable
 from airflow.operators.python import PythonOperator
 from airflow.utils.task_group import TaskGroup
-
 
 group_kwgs = {"group_id": "Process", "tooltip": "Process"}
 
@@ -17,9 +16,7 @@ def log_task(text: str):
 
 def submit_to_stac_ingestor_task(ti):
     """Submit STAC items to the STAC ingestor API."""
-    from veda_data_pipeline.utils.submit_stac import (
-        submission_handler,
-    )
+    from veda_data_pipeline.utils.submit_stac import submission_handler
     print("Submit STAC ingestor")
     event = ti.xcom_pull(task_ids=f"{group_kwgs['group_id']}.build_stac")
     success_file = event["payload"]["success_event_key"]
@@ -38,9 +35,7 @@ def submit_to_stac_ingestor_task(ti):
 
 
 def build_stac_task(ti):
-    from veda_data_pipeline.utils.build_stac import (
-        build_stac_handler,
-    )
+    from veda_data_pipeline.utils.build_stac import build_stac_handler
     config = ti.dag_run.conf
     airflow_vars = Variable.get("aws_dags_variables")
     airflow_vars_json = json.loads(airflow_vars)

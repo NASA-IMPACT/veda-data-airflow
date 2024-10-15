@@ -1,9 +1,9 @@
 import json
 from typing import Any, Dict, TypedDict, Union
 from uuid import uuid4
+
 import smart_open
-from veda_data_pipeline.utils import events
-from veda_data_pipeline.utils import stac
+from veda_data_pipeline.utils import events, stac
 
 
 class S3LinkOutput(TypedDict):

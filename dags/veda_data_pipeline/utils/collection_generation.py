@@ -1,10 +1,10 @@
+from datetime import datetime, timezone
 from typing import Any, Dict
 
 import fsspec
 import xarray as xr
 import xstac
 from veda_data_pipeline.utils.schemas import SpatioTemporalExtent
-from datetime import datetime, timezone
 
 
 class GenerateCollection:

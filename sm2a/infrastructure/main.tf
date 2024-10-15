@@ -44,7 +44,6 @@ module "sma-base" {
   rds_allocated_storage          = var.rds_configuration[var.stage].rds_allocated_storage
   rds_max_allocated_storage      = var.rds_configuration[var.stage].rds_max_allocated_storage
   workers_logs_retention_days    = var.workers_configuration[var.stage].workers_logs_retention_days
-  airflow_custom_variables       = var.airflow_custom_variables
 
   extra_airflow_task_common_environment = [
     {
@@ -84,10 +83,10 @@ module "sma-base" {
   subdomain   = var.subdomain
   worker_cmd  = ["/home/airflow/.local/bin/airflow", "celery", "worker"]
   airflow_custom_variables = {
-    EVENT_BUCKET = var.event_bucket
-    COGNITO_APP_SECRET = var.workflows_client_secret
+    EVENT_BUCKET          = var.event_bucket
+    COGNITO_APP_SECRET    = var.workflows_client_secret
     STAC_INGESTOR_API_URL = var.stac_ingestor_api_url
-    Contact = "Abdelhak"
+    Contact               = "Abdelhak"
   }
 }
 

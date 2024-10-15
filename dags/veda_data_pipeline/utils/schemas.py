@@ -2,6 +2,7 @@
 
 from datetime import datetime
 from typing import List, Union
+
 from stac_pydantic.collection import Extent, TimeInterval
 
 

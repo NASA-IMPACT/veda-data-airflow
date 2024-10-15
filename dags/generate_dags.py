@@ -4,16 +4,15 @@ These DAGs are used to discover and ingest items for each collection.
 """
 
 from airflow.models.variable import Variable
-
 from veda_data_pipeline.veda_discover_pipeline import get_discover_dag
 
 
 def generate_dags():
-    import boto3
     import json
-    from botocore.exceptions import ClientError, NoCredentialsError
-
     from pathlib import Path
+
+    import boto3
+    from botocore.exceptions import ClientError, NoCredentialsError
     airflow_vars = Variable.get("aws_dags_variables")
     airflow_vars_json = json.loads(airflow_vars)
     bucket = airflow_vars_json.get("EVENT_BUCKET")

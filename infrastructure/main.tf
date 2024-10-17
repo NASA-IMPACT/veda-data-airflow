@@ -32,6 +32,12 @@ module "mwaa" {
       docker_file_path          = "${path.module}/../docker_tasks/vector_ingest/Dockerfile"
       ecs_container_folder_path = "${path.module}/../docker_tasks/vector_ingest"
       ecr_repo_name             = "${var.prefix}-veda-vector_ingest"
+    },
+    {
+      handler_file_path         = "${path.module}/../docker_tasks/generic_vector_ingest/handler.py"
+      docker_file_path          = "${path.module}/../docker_tasks/generic_vector_ingest/Dockerfile"
+      ecs_container_folder_path = "${path.module}/../docker_tasks/generic_vector_ingest"
+      ecr_repo_name             = "${var.prefix}-veda-generic_vector_ingest"
     }
   ]
 }
@@ -95,16 +101,16 @@ resource "local_file" "mwaa_variables" {
       ecs_cluster_name        = module.mwaa.cluster_name
       log_group_name          = module.mwaa.log_group_name
       mwaa_execution_role_arn = module.mwaa.mwaa_role_arn
-      assume_role_read_arn    = var.assume_role_arns[0]
-      assume_role_write_arn   = var.assume_role_arns[0]
+      assume_role_read_arn    = length(var.assume_role_arns) > 0 ? var.assume_role_arns[0] : ""
+      assume_role_write_arn   = length(var.assume_role_arns) > 0 ? var.assume_role_arns[1] : ""
       account_id              = local.account_id
       aws_region              = local.aws_region
       cognito_app_secret      = var.workflows_client_secret
       stac_ingestor_api_url   = var.stac_ingestor_api_url
       stac_url                = var.stac_url
       vector_secret_name      = var.vector_secret_name
-      vector_subnet_1         = length(data.aws_subnets.private.ids) > 0 ? data.aws_subnets.private.ids[0] : ""
-      vector_subnet_2         = length(data.aws_subnets.private.ids) > 0 ? data.aws_subnets.private.ids[1] : ""
+      vector_subnet_1         = length(data.aws_subnets.subnet_ids.ids) > 0 ? data.aws_subnets.subnet_ids.ids[0] : ""
+      vector_subnet_2         = length(data.aws_subnets.subnet_ids.ids) > 0 ? data.aws_subnets.subnet_ids.ids[1] : ""
       vector_security_group   = length(aws_security_group.vector_sg) > 0 ? aws_security_group.vector_sg[0].id : ""
       vector_vpc              = var.vector_vpc
   })

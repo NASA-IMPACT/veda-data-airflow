@@ -1,0 +1,57 @@
+name: Deploy SM2A
+
+inputs:
+  env_aws_secret_name:
+    required: true
+    type: string
+  env-file:
+    type: string
+    default: ".env"
+  dir:
+    required: false
+    type: string
+    default: "."
+  aws-region:
+    required: false
+    type: string
+    default: "us-west-2"
+  script_path:
+    type: string
+  backend_stack_name:
+    type: string
+  auth_stack_name:
+    type: string
+
+
+runs:
+  using: "composite"
+
+  steps:
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.11"
+        cache: "pip"
+
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v1
+      with:
+        terraform_version: 1.3.3
+
+    - name: Deploy
+      working-directory: ${{ inputs.dir }}
+      shell: bash
+      env:
+        AWS_DEFAULT_REGION: ${{ inputs.aws-region }}
+        AWS_REGION: ${{ inputs.aws-region }}
+      run: |
+        make sm2a-deploy ENV_FILE=${{ inputs.env-file }} SECRET_NAME=${{ inputs.env_aws_secret_name }}
+
+    - name: Output workflows API endpoint
+      id: output_sm2a_workflows_endpoint
+      shell: bash
+      working-directory: ${{ inputs.dir }}
+      run: |
+        cd ./infrastructure
+        terraform output -json Airflow_url > ${HOME}/output_sm2a_workflows_endpoint.json
+

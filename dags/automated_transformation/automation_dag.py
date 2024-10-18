@@ -18,13 +18,13 @@ dag_run_config = {
     ),  # To add Other protocols (HTTP, SFTP...)
     "raw_data_bucket": "ghgc-data-store-develop",
     "raw_data_prefix": Param(
-        "delivery/tm54dvar-ch4flux-mask-monthgrid-v5",
+        "delivery/gpw",
         type="string",
         pattern="^[^/].*[^/]$",
     ),
     "dest_data_bucket": "ghgc-data-store-develop",
     "data_prefix": Param("transformed_cogs", type="string", pattern="^[^/].*[^/]$"),
-    "collection_name": "tm54dvar-ch4flux-mask-monthgrid-v5",
+    "collection_name": "gpw",
     "nodata": Param(-9999, type="number"),
     "ext": Param(".nc", type="string", pattern="^\\..*$"),
 }
@@ -51,7 +51,7 @@ with DAG(
             raise Exception(
                 f"The function {function_name} does not exist in the module {module}."
             )
-        return f"The function {function_name} does not exist in the module {module}."
+        return f"The function {function_name} exists in the module {module}."
 
     @task
     def discover_files(ti):

@@ -189,7 +189,7 @@ def ecco_darwin_transformation(file_obj, name, nodata):
 
     for _ in xds.time.values:
         for var in variable[2:]:
-            filename = name.split("/ ")[-1]
+            filename = name.split("/")[-1]
             filename_elements = re.split("[_ .]", filename)
             data = xds[var]
 

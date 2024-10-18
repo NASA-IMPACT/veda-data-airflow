@@ -216,7 +216,7 @@ def s3_discovery_handler(event, chunk_size=2800, role_arn=None, bucket_output=No
     key = f"s3://{bucket_output}/events/{collection}"
     records = 0
     out_keys = []
-    discovered = 0
+    discovered = []
 
     kwargs = assume_role(role_arn=role_arn) if role_arn else {}
     s3client = boto3.client("s3", **kwargs)
@@ -277,13 +277,13 @@ def s3_discovery_handler(event, chunk_size=2800, role_arn=None, bucket_output=No
         if records == chunk_size:
             out_keys.append(generate_payload(s3_prefix_key=key, payload=payload))
             records = 0
-            discovered += len(payload["objects"])
+            discovered.append(len(payload["objects"]))
             payload["objects"] = []
         records += 1
 
     if payload["objects"]:
         out_keys.append(generate_payload(s3_prefix_key=key, payload=payload))
-        discovered += len(payload["objects"])
+        discovered.append(len(payload["objects"]))
     # We need to make sure the payload isn't too large for ECS overrides
     try:
         del event["assets"]

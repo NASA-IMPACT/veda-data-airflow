@@ -25,7 +25,7 @@ dag_run_config = {
     "dest_data_bucket": "ghgc-data-store-develop",
     "data_prefix": Param("transformed_cogs", type="string", pattern="^[^/].*[^/]$"),
     "collection_name": "tm54dvar-ch4flux-mask-monthgrid-v5",
-    "nodata": Param(-9999, type="numbers"),
+    "nodata": Param(-9999, type="number"),
     "ext": Param(".nc", type="string", pattern="^\\..*$"),
 }
 

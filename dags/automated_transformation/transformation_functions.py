@@ -5,7 +5,7 @@ import boto3
 import xarray
 
 
-def get_all_s3_keys(bucket, model_name, ext):
+def get_all_s3_keys(bucket, model_name, ext) -> list:
     """Function fetches all the s3 keys from the given bucket and model name.
 
     Args:
@@ -34,7 +34,7 @@ def get_all_s3_keys(bucket, model_name, ext):
             except KeyError:
                 break
     except Exception as ex:
-        return f"Error returned is {ex}"
+        raise Exception(f"Error returned is {ex}")
 
     print(f"Discovered {len(keys)}")
     return keys

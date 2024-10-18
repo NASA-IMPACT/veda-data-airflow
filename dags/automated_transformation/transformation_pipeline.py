@@ -60,38 +60,38 @@ def transform_cog(
                             Key=f"{data_prefix}/{collection_name}/{cog_filename}",
                         )
                         raster_data = rasterio.open(temp_file.name).read()
-                        raster_data[raster_data == -9999] = np.nan
+                        raster_data[raster_data == nodata] = np.nan
                         min_value_cog = np.nanmin(raster_data)
                         max_value_cog = np.nanmax(raster_data)
                         mean_value_cog = np.nanmean(raster_data)
                         std_value_cog = np.nanstd(raster_data)
                         json_dict.update(
-                            {
-                                "original_file_url": name,
-                                "transformed_filename": cog_filename,
-                                "transformed_cog_s3uri": f"s3://{dest_data_bucket}\
-                                    /{data_prefix}/{cog_filename}",
-                                "minimum_value_cog": f"{min_value_cog:.4f}",
-                                "maximum_value_cog": f"{max_value_cog:.4f}",
-                                "std_value_cog": f"{std_value_cog:.4f}",
-                                "mean_value_cog": f"{mean_value_cog:.4f}",
-                                "minimum_value_netcdf": f"{min_value_netcdf:.4f}",
-                                "maximum_value_netcdf": f"{max_value_netcdf:.4f}",
-                                "std_value_netcdf": f"{std_value_netcdf:.4f}",
-                                "mean_value_netcdf": f"{mean_value_netcdf:.4f}",
-                            }
-                        )
-                        with tempfile.NamedTemporaryFile as json_temp:
-                            with open(json_temp.name, "w") as fp:
-                                json.dump(json_dict, fp, indent=4)
+                    {
+                        "original_file_url": name,
+                        "transformed_filename": cog_filename,
+                        "transformed_cog_s3uri": f"s3://{dest_data_bucket}\
+                            /{data_prefix}/{cog_filename}",
+                        "minimum_value_cog": f"{min_value_cog:.4f}",
+                        "maximum_value_cog": f"{max_value_cog:.4f}",
+                        "std_value_cog": f"{std_value_cog:.4f}",
+                        "mean_value_cog": f"{mean_value_cog:.4f}",
+                        "minimum_value_netcdf": f"{min_value_netcdf:.4f}",
+                        "maximum_value_netcdf": f"{max_value_netcdf:.4f}",
+                        "std_value_netcdf": f"{std_value_netcdf:.4f}",
+                        "mean_value_netcdf": f"{mean_value_netcdf:.4f}",
+                    }
+                )
+                    with tempfile.NamedTemporaryFile as json_temp:
+                        with open(json_temp.name, "w") as fp:
+                            json.dump(json_dict, fp, indent=4)
 
-                        # Upload the file to the specified S3 bucket and folder
-                            s3_client.upload_file(
-                                Filename=json_temp,
-                                Bucket=dest_data_bucket,
-                                Key=f"{data_prefix}/{collection_name}/{cog_filename[:-4]}.json",
-                                ExtraArgs={"ContentType": "application/json"},
-                            )
+                    # Upload the file to the specified S3 bucket and folder
+                        s3_client.upload_file(
+                            Filename=json_temp,
+                            Bucket=dest_data_bucket,
+                            Key=f"{data_prefix}/{collection_name}/{cog_filename[:-4]}.json",
+                            ExtraArgs={"ContentType": "application/json"},
+                        )
                         status = {
                             "transformed_filename": cog_filename,
                             "statistics_file": f"{cog_filename[:-4]}.json",

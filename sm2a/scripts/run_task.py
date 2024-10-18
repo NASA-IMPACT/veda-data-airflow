@@ -16,19 +16,29 @@ except ImportError:
     sys.exit(1)
 
 
-def list_public_subnet_ids(botocore_ec2_client, vpc_id: str) -> List[str]:
+def list_public_subnet_ids(botocore_ec2_client) -> List[str]:
     """
     Use botocore_ec2_client to obtain a list of public subnet ids for vpc named {vpc_name}
     """
+    subnet_tag_name = os.getenv('PUBLIC_SUBNETS_TAGNAME')
+    vpc_id = os.getenv('VPC_ID')
+    if not vpc_id:
+        raise Exception("Provide VPC_ID as environment variable")
+    if not subnet_tag_name:
+        raise Exception("Provide PUBLIC_SUBNETS_TAGNAME as environment variable")
 
     subnets = botocore_ec2_client.describe_subnets(
-        Filters=[{"Name": "vpc-id", "Values": [vpc_id]}]
+        Filters=[{"Name": "vpc-id", "Values": [vpc_id]},
+                 {"Name": "tag:Name", "Values": [f"*{subnet_tag_name}*"]}]
     )
     public_subnet_ids = [
         subnet["SubnetId"]
         for subnet in subnets["Subnets"]
         if subnet["MapPublicIpOnLaunch"]
     ]
+
+    if not public_subnet_ids:
+        raise Exception(f"No public subnets for {vpc_id}")
     return public_subnet_ids
 
 
@@ -48,6 +58,8 @@ def get_security_group_id(botocore_ec2_client, security_group_name: str) -> str:
 
 if __name__ == "__main__":
     prefix = os.getenv("PREFIX")
+    if not prefix:
+        raise Exception("Provide PREFIX as environment variable")
     parser = argparse.ArgumentParser(
         formatter_class=argparse.RawTextHelpFormatter,
         description=dedent(
@@ -86,12 +98,6 @@ if __name__ == "__main__":
         type=str,
         default=os.getenv("AWS_PROFILE"),
         help="The name of the awscli profile to use. Defaults to 'default'.",
-    )
-    parser.add_argument(
-        "--vpc-id",
-        type=str,
-        default=os.getenv("VPC_ID"),
-        help="The shared VPC_ID",
     )
     parser.add_argument(
         "--security-group-name",
@@ -139,10 +145,7 @@ if __name__ == "__main__":
     os.environ["AWS_DEFAULT_REGION"] = os.getenv("AWS_REGION")
     session = botocore.session.Session(profile=args.profile)
     ec2_client = session.create_client("ec2")
-    public_subnet_ids = list_public_subnet_ids(ec2_client, args.vpc_id)
-
-    if not public_subnet_ids:
-        raise Exception(f"No public subnets available on VPC '{args.vpc_id}'")
+    public_subnet_ids = list_public_subnet_ids(ec2_client)
 
     print("Finding security group id")
     security_group_id = get_security_group_id(ec2_client, args.security_group_name)

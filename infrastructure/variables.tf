@@ -76,6 +76,11 @@ variable "vector_vpc" {
   default = "null"
 }
 
+variable "deploy_vector_automation" {
+  type    = bool
+  default = "false"
+}
+
 variable "data_access_role_arn" {
   type = string
 }

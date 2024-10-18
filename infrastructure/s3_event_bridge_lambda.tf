@@ -10,7 +10,7 @@ variable "DEPLOY_VECTOR_AUTOMATION" {
 # Execution Role
 #####################################################
 resource "aws_iam_role" "lambda_exec_role" {
-  count = var.DEPLOY_VECTOR_AUTOMATION ? 1 : 0
+  count = var.deploy_vector_automation ? 1 : 0
 
   provider = aws.aws_current
   name = "lambda-exec-role-s3-event-bridge-veda-${var.stage}"
@@ -36,7 +36,7 @@ EOF
 # Logging
 ###############################
 resource "aws_iam_policy" "lambda_logging" {
-  count = var.DEPLOY_VECTOR_AUTOMATION ? 1 : 0
+  count = var.deploy_vector_automation ? 1 : 0
 
   provider = aws.aws_current
   name        = "lambda-logging-veda-${var.stage}"
@@ -62,7 +62,7 @@ EOF
 }
 
 resource "aws_iam_role_policy_attachment" "lambda_logs" {
-  count = var.DEPLOY_VECTOR_AUTOMATION ? 1 : 0
+  count = var.deploy_vector_automation ? 1 : 0
 
   provider = aws.aws_current
   role       = aws_iam_role.lambda_exec_role[0].name
@@ -73,7 +73,7 @@ resource "aws_iam_role_policy_attachment" "lambda_logs" {
 # SFN StartExecution Policy
 ###############################
 resource "aws_iam_policy" "lambda_sfn_start_exec" {
-  count = var.DEPLOY_VECTOR_AUTOMATION ? 1 : 0
+  count = var.deploy_vector_automation ? 1 : 0
 
   provider = aws.aws_current
   name        = "lambda-startexec-on-sfn-veda-${var.stage}"
@@ -97,7 +97,7 @@ EOF
 }
 
 resource "aws_iam_role_policy_attachment" "lambda_sfn_start_exec" {
-  count = var.DEPLOY_VECTOR_AUTOMATION ? 1 : 0
+  count = var.deploy_vector_automation ? 1 : 0
 
   provider = aws.aws_current
   role       = aws_iam_role.lambda_exec_role[0].name
@@ -108,7 +108,7 @@ resource "aws_iam_role_policy_attachment" "lambda_sfn_start_exec" {
 # MWAA Trigger Permissions
 ###############################
 resource "aws_iam_policy" "lambda_trigger_mwaa_job" {
-  count = var.DEPLOY_VECTOR_AUTOMATION ? 1 : 0
+  count = var.deploy_vector_automation ? 1 : 0
 
   provider = aws.aws_current
   name        = "lambda-trigger-mwaa-veda-${var.stage}"
@@ -139,7 +139,7 @@ EOF
 }
 
 resource "aws_iam_role_policy_attachment" "lambda_trigger_mwaa_job" {
-  count = var.DEPLOY_VECTOR_AUTOMATION ? 1 : 0
+  count = var.deploy_vector_automation ? 1 : 0
 
   provider = aws.aws_current
   role       = aws_iam_role.lambda_exec_role[0].name
@@ -150,7 +150,7 @@ resource "aws_iam_role_policy_attachment" "lambda_trigger_mwaa_job" {
 # Lambda
 #####################################################
 data "archive_file" "archive" {
-  count = var.DEPLOY_VECTOR_AUTOMATION ? 1 : 0
+  count = var.deploy_vector_automation ? 1 : 0
 
   type        = "zip"
   source_dir  = "functions/s3_event_bridge_to_sfn_execute"
@@ -158,7 +158,7 @@ data "archive_file" "archive" {
 }
 
 resource "aws_lambda_function" "lambda" {
-  count = var.DEPLOY_VECTOR_AUTOMATION ? 1 : 0
+  count = var.deploy_vector_automation ? 1 : 0
 
   provider = aws.aws_current
   filename         = "s3_event_bridge_to_sfn_execute.zip"
@@ -180,7 +180,7 @@ resource "aws_lambda_function" "lambda" {
 }
 
 resource "aws_cloudwatch_log_group" "group" {
-  count = var.DEPLOY_VECTOR_AUTOMATION ? 1 : 0
+  count = var.deploy_vector_automation ? 1 : 0
 
   provider = aws.aws_current
   name              = "/aws/lambda/${aws_lambda_function.lambda[0].function_name}"
@@ -191,7 +191,7 @@ resource "aws_cloudwatch_log_group" "group" {
 # RESOURCE POLICY for EVENT INVOCATION
 #####################################################
 resource "aws_lambda_permission" "s3_invoke" {
-  count = var.DEPLOY_VECTOR_AUTOMATION ? 1 : 0
+  count = var.deploy_vector_automation ? 1 : 0
 
   provider = aws.aws_current
   action           = "lambda:InvokeFunction"

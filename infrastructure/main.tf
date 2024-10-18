@@ -61,7 +61,7 @@ data "aws_subnets" "private" {
   }
 
   tags = {
-    "Scope" = "private"
+    Scope = "private"
   }
 }
 

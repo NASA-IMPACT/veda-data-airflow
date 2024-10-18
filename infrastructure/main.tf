@@ -54,7 +54,7 @@ module "custom_policy" {
   vector_secret_name = var.vector_secret_name
 }
 
-data "aws_subnets" "private" {
+data "aws_subnets" "vector_aws_subnets" {
   filter {
     name   = "vpc-id"
     values = [var.vector_vpc == null ? "" : var.vector_vpc]
@@ -109,8 +109,8 @@ resource "local_file" "mwaa_variables" {
       stac_ingestor_api_url   = var.stac_ingestor_api_url
       stac_url                = var.stac_url
       vector_secret_name      = var.vector_secret_name
-      vector_subnet_1         = length(data.aws_subnets.subnet_ids.ids) > 0 ? data.aws_subnets.subnet_ids.ids[0] : ""
-      vector_subnet_2         = length(data.aws_subnets.subnet_ids.ids) > 0 ? data.aws_subnets.subnet_ids.ids[1] : ""
+      vector_subnet_1         = length(data.aws_subnets.vector_aws_subnets.subnet_ids.ids) > 0 ? data.aws_subnets.vector_aws_subnets.subnet_ids.ids[0] : ""
+      vector_subnet_2         = length(data.aws_subnets.vector_aws_subnets.subnet_ids.ids) > 0 ? data.aws_subnets.vector_aws_subnets.subnet_ids.ids[1] : ""
       vector_security_group   = length(aws_security_group.vector_sg) > 0 ? aws_security_group.vector_sg[0].id : ""
       vector_vpc              = var.vector_vpc
   })

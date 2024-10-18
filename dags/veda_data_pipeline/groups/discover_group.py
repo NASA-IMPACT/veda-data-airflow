@@ -70,10 +70,13 @@ def vector_raster_choice(ti):
     payload = ti.dag_run.conf
     dynamic_group_id = ti.task_id.split(".")[0]
 
-    if payload.get("vector"):
+    # New generic pipeline payloads should be identified as generic
+    if payload.get("vector_generic"):
         return f"{dynamic_group_id}.parallel_run_process_generic_vectors"
-    if payload.get("vector_eis"):
+    # Existing EIS fire vector paloyds should be processed as usual
+    if payload.get("vector"):
         return f"{dynamic_group_id}.parallel_run_process_vectors"
+    
     return f"{dynamic_group_id}.parallel_run_process_rasters"
 
 @task_group

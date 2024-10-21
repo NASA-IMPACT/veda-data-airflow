@@ -273,8 +273,9 @@ resource "null_resource" "update_workflows_lambda_image" {
 
 # API Gateway HTTP API
 resource "aws_apigatewayv2_api" "workflows_http_api" {
-  name          = "${var.prefix}_workflows_http_api"
-  protocol_type = "HTTP"
+  name                         = "${var.prefix}_workflows_http_api"
+  protocol_type                = "HTTP"
+  disable_execute_api_endpoint = true
 }
 
 # Lambda Integration for API Gateway

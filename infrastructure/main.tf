@@ -275,7 +275,7 @@ resource "null_resource" "update_workflows_lambda_image" {
 resource "aws_apigatewayv2_api" "workflows_http_api" {
   name                         = "${var.prefix}_workflows_http_api"
   protocol_type                = "HTTP"
-  disable_execute_api_endpoint = true
+  disable_execute_api_endpoint = var.disable_default_apigw_endpoint
 }
 
 # Lambda Integration for API Gateway
@@ -305,20 +305,4 @@ resource "aws_lambda_permission" "api-gateway" {
   function_name = aws_lambda_function.workflows_api_handler.arn
   principal     = "apigateway.amazonaws.com"
   source_arn    = "${aws_apigatewayv2_api.workflows_http_api.execution_arn}/*/$default"
-}
-
-# Cloudfront update
-
-resource "null_resource" "update_cloudfront" {
-  triggers = {
-    always_run = "${timestamp()}"
-  }
-
-  count = coalesce(var.cloudfront_id, false) != false ? 1 : 0
-
-  provisioner "local-exec" {
-    command = "${path.module}/cf_update.sh ${var.cloudfront_id} workflows_api_origin \"${aws_apigatewayv2_api.workflows_http_api.api_endpoint}\""
-  }
-
-  depends_on = [aws_apigatewayv2_api.workflows_http_api]
 }

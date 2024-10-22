@@ -1,21 +1,25 @@
+from datetime import timedelta
 import time
 import uuid
 
 from airflow.models.variable import Variable
 from airflow.models.xcom import LazyXComAccess
 from airflow.operators.dummy_operator import DummyOperator as EmptyOperator
-from airflow.decorators import task_group
+from airflow.decorators import task_group, task
+from airflow.models.baseoperator import chain
 from airflow.operators.python import BranchPythonOperator, PythonOperator, ShortCircuitOperator
 from airflow.utils.trigger_rule import TriggerRule
-from airflow_multi_dagrun.operators import TriggerMultiDagRunOperator
+from airflow.providers.amazon.aws.operators.ecs import EcsRunTaskOperator
 from veda_data_pipeline.utils.s3_discovery import (
     s3_discovery_handler, EmptyFileListError
 )
+from veda_data_pipeline.groups.processing_tasks import build_stac_kwargs, submit_to_stac_ingestor_task
+
 
 group_kwgs = {"group_id": "Discover", "tooltip": "Discover"}
 
-
-def discover_from_s3_task(ti, event={}, **kwargs):
+@task(retries=1, retry_delay=timedelta(minutes=1))
+def discover_from_s3_task(ti=None, event={}, **kwargs):
     """Discover grouped assets/files from S3 in batches of 2800. Produce a list of such files stored on S3 to process.
     This task is used as part of the discover_group subdag and outputs data to EVENT_BUCKET.
     """
@@ -23,6 +27,7 @@ def discover_from_s3_task(ti, event={}, **kwargs):
         **event,
         **ti.dag_run.conf,
     }
+    # TODO test that this context var is available in taskflow
     last_successful_execution = kwargs.get("prev_start_date_success")
     if event.get("schedule") and last_successful_execution:
         config["last_successful_execution"] = last_successful_execution.isoformat()
@@ -41,79 +46,45 @@ def discover_from_s3_task(ti, event={}, **kwargs):
         )
     except EmptyFileListError as ex:
         print(f"Received an exception {ex}")
-        return []
+        # TODO test continued short circuit operator behavior (no files -> skip remaining tasks)
+        return {}
 
-
-def get_files_to_process(ti):
+@task
+def get_files_to_process(payload, ti=None):
     """Get files from S3 produced by the discovery task.
     Used as part of both the parallel_run_process_rasters and parallel_run_process_vectors tasks.
     """
-    dynamic_group_id = ti.task_id.split(".")[0]
-    payload = ti.xcom_pull(task_ids=f"{dynamic_group_id}.discover_from_s3")
-    if isinstance(payload, LazyXComAccess):
+    if isinstance(payload, LazyXComAccess): # if used as part of a dynamic task mapping
         payloads_xcom = payload[0].pop("payload", [])
         payload = payload[0]
     else:
         payloads_xcom = payload.pop("payload", [])
     dag_run_id = ti.dag_run.run_id
-    for indx, payload_xcom in enumerate(payloads_xcom):
-        time.sleep(2)
-        yield {
+    return [{
             "run_id": f"{dag_run_id}_{uuid.uuid4()}_{indx}",
             **payload,
             "payload": payload_xcom,
-        }
+        } for indx, payload_xcom in enumerate(payloads_xcom)]
 
+@task
+def get_dataset_files_to_process(payload, ti=None):
+    """Get files from S3 produced by the dataset task.
+    This is different from the get_files_to_process task as it produces a combined structure from repeated mappings.
+    """
+    dag_run_id = ti.dag_run.run_id
 
-def vector_raster_choice(ti):
-    """Choose whether to process rasters or vectors based on the payload."""
-    payload = ti.dag_run.conf
-    dynamic_group_id = ti.task_id.split(".")[0]
-
-    if payload.get("vector"):
-        return f"{dynamic_group_id}.parallel_run_process_generic_vectors"
-    if payload.get("vector_eis"):
-        return f"{dynamic_group_id}.parallel_run_process_vectors"
-    return f"{dynamic_group_id}.parallel_run_process_rasters"
-
-@task_group
-def subdag_discover(event={}):
-    discover_from_s3 = ShortCircuitOperator(
-        task_id="discover_from_s3",
-        python_callable=discover_from_s3_task,
-        op_kwargs={"text": "Discover from S3", "event": event},
-        trigger_rule=TriggerRule.NONE_FAILED,
-        provide_context=True,
-    )
-
-    raster_vector_branching = BranchPythonOperator(
-        task_id="raster_vector_branching",
-        python_callable=vector_raster_choice,
-    )
-
-    run_process_raster = TriggerMultiDagRunOperator(
-        task_id="parallel_run_process_rasters",
-        trigger_dag_id="veda_ingest_raster",
-        python_callable=get_files_to_process,
-    )
-
-    run_process_vector = TriggerMultiDagRunOperator(
-        task_id="parallel_run_process_vectors",
-        trigger_dag_id="veda_ingest_vector",
-        python_callable=get_files_to_process,
-    )
-
-    run_process_generic_vector = TriggerMultiDagRunOperator(
-        task_id="parallel_run_process_generic_vectors",
-        trigger_dag_id="veda_generic_ingest_vector",
-        python_callable=get_files_to_process,
-    )
-
-    # extra no-op, needed to run in dynamic mapping context
-    end_discover = EmptyOperator(task_id="end_discover", trigger_rule=TriggerRule.NONE_FAILED_MIN_ONE_SUCCESS,)
-    
-    discover_from_s3 >> raster_vector_branching >> [run_process_raster, run_process_vector, run_process_generic_vector]
-    run_process_raster >> end_discover
-    run_process_vector >> end_discover
-    run_process_generic_vector >> end_discover
-    
+    result = []
+    for x in payload:
+        if isinstance(x, LazyXComAccess): # if used as part of a dynamic task mapping
+            payloads_xcom = x[0].pop("payload", [])
+            payload_0 = x[0]
+        else:
+            payloads_xcom = x.pop("payload", [])
+            payload_0 = x
+        for indx, payload_xcom in enumerate(payloads_xcom):
+            result.append({
+                    "run_id": f"{dag_run_id}_{uuid.uuid4()}_{indx}",
+                    **payload_0,
+                    "payload": payload_xcom,
+                })
+    return result

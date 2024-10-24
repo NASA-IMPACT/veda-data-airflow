@@ -1,7 +1,6 @@
 import pendulum
 from airflow import DAG
 from airflow.operators.dummy_operator import DummyOperator
-from airflow.utils.trigger_rule import TriggerRule
 from airflow.decorators import task
 from airflow.models.variable import Variable
 import json
@@ -73,7 +72,7 @@ template_dag_run_conf = {
 }
 
 
-@task(max_active_tis_per_dag=3)
+@task(max_active_tis_per_dag=5)
 def build_stac_task(payload):
     from veda_data_pipeline.utils.build_stac.handler import stac_handler
     airflow_vars = Variable.get("aws_dags_variables")

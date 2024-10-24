@@ -4,10 +4,28 @@ from uuid import uuid4
 import smart_open
 from veda_data_pipeline.utils.build_stac.utils import events
 from veda_data_pipeline.utils.build_stac.utils import stac
+from concurrent.futures import ThreadPoolExecutor, as_completed
+
 
 
 class S3LinkOutput(TypedDict):
     stac_file_url: str
+
+
+def using_pool(objects, workers_count: int):
+    returned_results = []
+    with ThreadPoolExecutor(max_workers=workers_count) as executor:
+        # Submit tasks to the executor
+        futures = {executor.submit(handler, obj): obj for obj in objects}
+
+        for future in as_completed(futures):
+            try:
+                result = future.result()  # Get result from future
+                returned_results.append(result)
+            except Exception as nex:
+                print(f"Error {nex} with object {futures[future]}")
+
+    return returned_results
 
 
 class StacItemOutput(TypedDict):
@@ -81,7 +99,12 @@ def stac_handler(payload_src: dict, bucket_output):
         s3_event_read = _file.read()
     event_received = json.loads(s3_event_read)
     objects = event_received["objects"]
-    payloads = sequential_processing(objects)
+    use_multithreading = payload_event.get("use_multithreading", True)
+    payloads = (
+        using_pool(objects, workers_count=4)
+        if use_multithreading
+        else sequential_processing(objects)
+    )
     for payload in payloads:
         stac_item = payload["stac_item"]
         if "error" in stac_item:

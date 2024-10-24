@@ -54,14 +54,14 @@ module "custom_policy" {
   vector_secret_name = var.vector_secret_name
 }
 
-data "aws_subnets" "private" {
+data "aws_subnets" "vector_aws_subnets" {
   filter {
     name   = "vpc-id"
     values = [var.vector_vpc == null ? "" : var.vector_vpc]
   }
 
   tags = {
-    "Scope" = "private"
+    Scope = "private"
   }
 }
 
@@ -109,8 +109,8 @@ resource "local_file" "mwaa_variables" {
       stac_ingestor_api_url   = var.stac_ingestor_api_url
       stac_url                = var.stac_url
       vector_secret_name      = var.vector_secret_name
-      vector_subnet_1         = length(data.aws_subnets.subnet_ids.ids) > 0 ? data.aws_subnets.subnet_ids.ids[0] : ""
-      vector_subnet_2         = length(data.aws_subnets.subnet_ids.ids) > 0 ? data.aws_subnets.subnet_ids.ids[1] : ""
+      vector_subnet_1         = length(data.aws_subnets.vector_aws_subnets.ids) > 0 ? data.aws_subnets.vector_aws_subnets.ids[0] : data.aws_subnets.subnet_ids.ids[0]
+      vector_subnet_2         = length(data.aws_subnets.vector_aws_subnets.ids) > 0 ? data.aws_subnets.vector_aws_subnets.ids[1] : data.aws_subnets.subnet_ids.ids[1]
       vector_security_group   = length(aws_security_group.vector_sg) > 0 ? aws_security_group.vector_sg[0].id : ""
       vector_vpc              = var.vector_vpc
   })
@@ -273,8 +273,9 @@ resource "null_resource" "update_workflows_lambda_image" {
 
 # API Gateway HTTP API
 resource "aws_apigatewayv2_api" "workflows_http_api" {
-  name          = "${var.prefix}_workflows_http_api"
-  protocol_type = "HTTP"
+  name                         = "${var.prefix}_workflows_http_api"
+  protocol_type                = "HTTP"
+  disable_execute_api_endpoint = var.disable_default_apigw_endpoint
 }
 
 # Lambda Integration for API Gateway
@@ -304,20 +305,4 @@ resource "aws_lambda_permission" "api-gateway" {
   function_name = aws_lambda_function.workflows_api_handler.arn
   principal     = "apigateway.amazonaws.com"
   source_arn    = "${aws_apigatewayv2_api.workflows_http_api.execution_arn}/*/$default"
-}
-
-# Cloudfront update
-
-resource "null_resource" "update_cloudfront" {
-  triggers = {
-    always_run = "${timestamp()}"
-  }
-
-  count = coalesce(var.cloudfront_id, false) != false ? 1 : 0
-
-  provisioner "local-exec" {
-    command = "${path.module}/cf_update.sh ${var.cloudfront_id} workflows_api_origin \"${aws_apigatewayv2_api.workflows_http_api.api_endpoint}\""
-  }
-
-  depends_on = [aws_apigatewayv2_api.workflows_http_api]
 }

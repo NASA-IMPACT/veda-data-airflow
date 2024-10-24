@@ -76,6 +76,11 @@ variable "vector_vpc" {
   default = "null"
 }
 
+variable "deploy_vector_automation" {
+  type    = bool
+  default = "false"
+}
+
 variable "data_access_role_arn" {
   type = string
 }
@@ -91,10 +96,6 @@ variable "stac_url" {
 variable "workflow_root_path" {
   type    = string
   default = "/api/workflows"
-}
-
-variable "cloudfront_id" {
-  type = string
 }
 
 variable "cognito_domain" {
@@ -128,4 +129,9 @@ variable "ecs_task_cpu" {
 variable "ecs_task_memory" {
   type    = number
   default = 4096
+}
+
+variable "disable_default_apigw_endpoint" {
+  type    = bool
+  default = false
 }

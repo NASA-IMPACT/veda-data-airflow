@@ -98,10 +98,6 @@ variable "workflow_root_path" {
   default = "/api/workflows"
 }
 
-variable "cloudfront_id" {
-  type = string
-}
-
 variable "cognito_domain" {
   type = string
 }
@@ -133,4 +129,9 @@ variable "ecs_task_cpu" {
 variable "ecs_task_memory" {
   type    = number
   default = 4096
+}
+
+variable "disable_default_apigw_endpoint" {
+  type    = bool
+  default = false
 }

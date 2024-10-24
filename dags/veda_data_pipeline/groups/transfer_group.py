@@ -2,12 +2,9 @@ from datetime import timedelta
 
 from airflow.models.variable import Variable
 from airflow.operators.python import BranchPythonOperator, PythonOperator
-from airflow.providers.amazon.aws.operators.ecs import EcsRunTaskOperator
+import json
 from airflow.utils.task_group import TaskGroup
 from airflow.utils.trigger_rule import TriggerRule
-from veda_data_pipeline.utils.transfer import (
-    data_transfer_handler,
-)
 
 group_kwgs = {"group_id": "Transfer", "tooltip": "Transfer"}
 
@@ -22,12 +19,27 @@ def cogify_choice(ti):
         return f"{group_kwgs['group_id']}.copy_data"
 
 
+def cogify_copy_task(ti):
+    from veda_data_pipeline.utils.cogify_transfer.handler import cogify_transfer_handler
+    config = ti.dag_run.conf
+    airflow_vars = Variable.get("aws_dags_variables")
+    airflow_vars_json = json.loads(airflow_vars)
+    external_role_arn = airflow_vars_json.get("ASSUME_ROLE_WRITE_ARN")
+    return cogify_transfer_handler(event_src=config, external_role_arn=external_role_arn)
+
+
 def transfer_data(ti):
     """Transfer data from one S3 bucket to another; s3 copy, no need for docker"""
+    from veda_data_pipeline.utils.transfer import (
+        data_transfer_handler,
+    )
     config = ti.dag_run.conf
-    role_arn = Variable.get("ASSUME_ROLE_READ_ARN", default_var="")
+    airflow_vars = Variable.get("aws_dags_variables")
+    airflow_vars_json = json.loads(airflow_vars)
+    external_role_arn = airflow_vars_json.get("ASSUME_ROLE_WRITE_ARN")
     # (event, chunk_size=2800, role_arn=None, bucket_output=None):
-    return data_transfer_handler(event=config, role_arn=role_arn)
+    return data_transfer_handler(event=config, role_arn=external_role_arn)
+
 
 # TODO: cogify_transfer handler is missing arg parser so this subdag will not work
 def subdag_transfer():
@@ -43,47 +55,10 @@ def subdag_transfer():
             python_callable=transfer_data,
             op_kwargs={"text": "Copy files on S3"},
         )
-
-        mwaa_stack_conf = Variable.get("MWAA_STACK_CONF", deserialize_json=True)
-        run_cogify_copy = EcsRunTaskOperator(
+        run_cogify_copy = PythonOperator(
             task_id="cogify_and_copy_data",
             trigger_rule="none_failed",
-            cluster=f"{mwaa_stack_conf.get('PREFIX')}-cluster",
-            task_definition=f"{mwaa_stack_conf.get('PREFIX')}-transfer-tasks",
-            launch_type="FARGATE",
-            do_xcom_push=True,
-            execution_timeout=timedelta(minutes=120),
-            overrides={
-                "containerOverrides": [
-                    {
-                        "name": f"{mwaa_stack_conf.get('PREFIX')}-veda-cogify-transfer",
-                        "command": [
-                            "/usr/local/bin/python",
-                            "handler.py",
-                            "--payload",
-                            "{}".format("{{ task_instance.dag_run.conf }}"),
-                        ],
-                        "environment": [
-                            {
-                                "name": "EXTERNAL_ROLE_ARN",
-                                "value": Variable.get(
-                                    "ASSUME_ROLE_READ_ARN", default_var=""
-                                ),
-                            },
-                        ],
-                        "memory": 2048,
-                        "cpu": 1024,
-                    },
-                ],
-            },
-            network_configuration={
-                "awsvpcConfiguration": {
-                    "securityGroups": mwaa_stack_conf.get("SECURITYGROUPS"),
-                    "subnets": mwaa_stack_conf.get("SUBNETS"),
-                },
-            },
-            awslogs_group=mwaa_stack_conf.get("LOG_GROUP_NAME"),
-            awslogs_stream_prefix=f"ecs/{mwaa_stack_conf.get('PREFIX')}-veda-cogify-transfer",  # prefix with container name
+            python_callable=cogify_copy_task
         )
 
         (cogify_branching >> [run_copy, run_cogify_copy])

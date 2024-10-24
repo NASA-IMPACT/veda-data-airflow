@@ -1,16 +1,11 @@
 import pendulum
-from datetime import timedelta
-
+from airflow.decorators import task
 from airflow import DAG
 from airflow.models.variable import Variable
-from airflow.providers.amazon.aws.operators.ecs import EcsRunTaskOperator
+import json
 from airflow.operators.dummy_operator import DummyOperator
 from airflow.utils.trigger_rule import TriggerRule
-from airflow.models.variable import Variable
-
-from veda_data_pipeline.groups.processing_tasks import build_generic_vector_kwargs
 from veda_data_pipeline.groups.discover_group import discover_from_s3_task, get_files_to_process
-
 
 dag_doc_md = """
 ### Generic Ingest Vector
@@ -66,27 +61,24 @@ dag_args = {
     "doc_md": dag_doc_md,
 }
 
+
+@task
+def ingest_vector_task(payload):
+    from veda_data_pipeline.utils.vector_ingest.handler import handler
+    airflow_vars = Variable.get("aws_dags_variables")
+    airflow_vars_json = json.loads(airflow_vars)
+    read_role_arn = airflow_vars_json.get("ASSUME_ROLE_READ_ARN")
+    vector_secret_name = airflow_vars_json.get("VECTOR_SECRET_NAME")
+    return handler(payload_src=payload, vector_secret_name=vector_secret_name,
+                   assume_role_arn=read_role_arn)
+
+
 with DAG(dag_id="veda_generic_ingest_vector", params=template_dag_run_conf, **dag_args) as dag:
-    # ECS dependency variable
-    mwaa_stack_conf = Variable.get("MWAA_STACK_CONF", deserialize_json=True)
 
     start = DummyOperator(task_id="Start", dag=dag)
     end = DummyOperator(task_id="End", trigger_rule=TriggerRule.ONE_SUCCESS, dag=dag)
-
     discover = discover_from_s3_task()
     get_files = get_files_to_process(payload=discover)
-    build_generic_vector_kwargs_task = build_generic_vector_kwargs.expand(event=get_files)
-    vector_ingest = EcsRunTaskOperator.partial(
-            task_id="generic_ingest_vector",
-            execution_timeout=timedelta(minutes=60),
-            trigger_rule=TriggerRule.NONE_FAILED,
-            cluster=f"{mwaa_stack_conf.get('PREFIX')}-cluster",
-            task_definition=f"{mwaa_stack_conf.get('PREFIX')}-generic_vector-tasks",
-            launch_type="FARGATE",
-            do_xcom_push=True
-        ).expand_kwargs(build_generic_vector_kwargs_task)
-    
+    vector_ingest = ingest_vector_task.expand(payload=get_files)
     discover.set_upstream(start)
     vector_ingest.set_downstream(end)
-
-

@@ -1,15 +1,11 @@
 import pendulum
-
-from datetime import timedelta
 from airflow import DAG
 from airflow.operators.dummy_operator import DummyOperator
-from airflow.utils.trigger_rule import TriggerRule
+from airflow.decorators import task
 from airflow.models.variable import Variable
-from airflow.providers.amazon.aws.operators.ecs import EcsRunTaskOperator
-
+import json
 from veda_data_pipeline.groups.discover_group import discover_from_s3_task, get_files_to_process
-from veda_data_pipeline.groups.processing_tasks import build_stac_kwargs, submit_to_stac_ingestor_task
-
+from veda_data_pipeline.groups.processing_tasks import submit_to_stac_ingestor_task
 
 dag_doc_md = """
 ### Discover files from S3
@@ -76,42 +72,41 @@ template_dag_run_conf = {
 }
 
 
-def get_discover_dag(id, event={}):
+@task(max_active_tis_per_dag=5)
+def build_stac_task(payload):
+    from veda_data_pipeline.utils.build_stac.handler import stac_handler
+    airflow_vars = Variable.get("aws_dags_variables")
+    airflow_vars_json = json.loads(airflow_vars)
+    event_bucket = airflow_vars_json.get("EVENT_BUCKET")
+    return stac_handler(payload_src=payload, bucket_output=event_bucket)
+
+
+def get_discover_dag(id, event=None):
+    if not event:
+        event = {}
     params_dag_run_conf = event or template_dag_run_conf
     with DAG(
-        id,
-        schedule_interval=event.get("schedule"),
-        params=params_dag_run_conf,
-        **dag_args
+            id,
+            schedule_interval=event.get("schedule"),
+            params=params_dag_run_conf,
+            **dag_args
     ) as dag:
-        # ECS dependency variable
-        mwaa_stack_conf = Variable.get("MWAA_STACK_CONF", deserialize_json=True)
-
         start = DummyOperator(task_id="Start", dag=dag)
         end = DummyOperator(
-            task_id="End", trigger_rule=TriggerRule.ONE_SUCCESS, dag=dag
+            task_id="End", dag=dag
         )
         # define DAG using taskflow notation
-        
+
         discover = discover_from_s3_task(event=event)
         get_files = get_files_to_process(payload=discover)
-        build_stac_kwargs_task = build_stac_kwargs.expand(event=get_files)
-        # partial() is needed for the operator to be used with taskflow inputs
-        build_stac = EcsRunTaskOperator.partial(
-            task_id="build_stac",
-            execution_timeout=timedelta(minutes=60),
-            trigger_rule=TriggerRule.NONE_FAILED,
-            cluster=f"{mwaa_stack_conf.get('PREFIX')}-cluster",
-            task_definition=f"{mwaa_stack_conf.get('PREFIX')}-tasks",
-            launch_type="FARGATE",
-            do_xcom_push=True
-        ).expand_kwargs(build_stac_kwargs_task)
+        build_stac = build_stac_task.expand(payload=get_files)
         # .output is needed coming from a non-taskflow operator
-        submit_stac = submit_to_stac_ingestor_task.expand(built_stac=build_stac.output)
+        submit_stac = submit_to_stac_ingestor_task.expand(built_stac=build_stac)
 
         discover.set_upstream(start)
         submit_stac.set_downstream(end)
 
         return dag
+
 
 get_discover_dag("veda_discover")

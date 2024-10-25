@@ -9,11 +9,22 @@ from src.config import settings
 from src.monitoring import LoggerRouteHandler, logger, metrics, tracer
 from aws_lambda_powertools.metrics import MetricUnit
 
-from fastapi import Body, Depends, FastAPI, HTTPException, APIRouter
+from fastapi import Body, Depends, FastAPI, Form, HTTPException, APIRouter
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from fastapi.encoders import jsonable_encoder
 from starlette.requests import Request
+from pydantic import BaseModel, Field
+from typing import Dict, List, Literal, Optional
+
+
+class ExampleDataset(BaseModel):
+    collection: str
+    title: str
+    description: str
+    license: str
+    is_periodic: Optional[bool] = Field(default=False, alias='dashboard:is_periodic')
+    time_density: Optional[str] = Field(default=None, alias='dashboard:time_density')
 
 
 collection_publisher = CollectionPublisher()
@@ -115,6 +126,17 @@ async def publish_dataset(
 
     return return_dict
 
+@workflows_app.post(
+    "forms/cog-dataset/publish", tags=["Forms"],
+    description="Configure and trigger COG dataset ingestion workflow",
+    summary="Configure COG Dataset",
+    dependencies=[Depends(auth.validated_token)]
+)
+async def publish_form_dataset(
+    dataset: schemas.COGDataset = Form(),
+):
+    return dataset
+
 def filter_unwanted_keys(collection_data: dict, unwanted_keys : list[str]):
     for key in unwanted_keys:
         if key in collection_data:
@@ -130,6 +152,23 @@ def filter_unwanted_keys(collection_data: dict, unwanted_keys : list[str]):
 )
 async def start_discovery_workflow_execution(
     input: schemas.S3Input = Body(...),
+) -> schemas.WorkflowExecutionResponse:
+    """
+    Triggers the ingestion workflow
+    """
+    return airflow_helpers.trigger_discover(jsonable_encoder(input))
+
+@workflows_app.post(
+    "forms/discovery",
+    response_model=schemas.WorkflowExecutionResponse,
+    tags=["Forms"],
+    description="Configure and trigger S3 item discovery workflow for an existing Collection",
+    summary="Configure S3 Discovery",
+    status_code=201,
+    dependencies=[Depends(auth.validated_token)],
+)
+async def start_form_discovery_workflow_execution(
+    input: schemas.S3Input = Form(),
 ) -> schemas.WorkflowExecutionResponse:
     """
     Triggers the ingestion workflow

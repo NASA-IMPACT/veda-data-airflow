@@ -194,13 +194,27 @@ variable "custom_worker_policy_statement" {
   ]
 
 }
-variable "airflow_custom_variables" {
-  description = "Airflow custom variables"
-  type        = map(string)
-  default     = {}
-}
+
 variable "project_name" {
   type    = string
   default = "SM2A"
 }
 
+
+variable "event_bucket" {
+  default = "veda-pipeline-sit-mwaa-853558080719"
+}
+variable "workflows_client_secret" {
+  default = "veda-auth-stack-dev/workflows-client"
+}
+variable "stac_ingestor_api_url" {
+  default = "https://dev.openveda.cloud/api/ingest/"
+}
+
+variable "stac_url" {
+  default = "https://dev.openveda.cloud/api/stac/"
+}
+
+variable "vector_secret_name" {
+  default = "veda-features-api-dev/features-tipg-db/7c4b47e4"
+}

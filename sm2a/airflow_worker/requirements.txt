@@ -21,4 +21,10 @@ fsspec
 s3fs
 xarray
 xstac
+pystac
+rasterio
+rio-stac
+GeoAlchemy2
+geopandas==0.14.4
+fiona==1.9.6
 

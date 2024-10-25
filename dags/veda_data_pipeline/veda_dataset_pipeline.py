@@ -1,16 +1,12 @@
 import pendulum
-from datetime import timedelta
-
 from airflow import DAG
 from airflow.decorators import task
 from airflow.operators.dummy_operator import DummyOperator as EmptyOperator
-from airflow.utils.trigger_rule import TriggerRule
 from airflow.models.variable import Variable
-from airflow.providers.amazon.aws.operators.ecs import EcsRunTaskOperator
-
+import json
 from veda_data_pipeline.groups.collection_group import collection_task_group
 from veda_data_pipeline.groups.discover_group import discover_from_s3_task, get_dataset_files_to_process
-from veda_data_pipeline.groups.processing_tasks import build_stac_kwargs, submit_to_stac_ingestor_task
+from veda_data_pipeline.groups.processing_tasks import submit_to_stac_ingestor_task
 
 dag_doc_md = """
 ### Dataset Pipeline
@@ -48,6 +44,7 @@ dag_args = {
     "tags": ["collection", "discovery"],
 }
 
+
 @task
 def extract_discovery_items(**kwargs):
     ti = kwargs.get("ti")
@@ -55,52 +52,50 @@ def extract_discovery_items(**kwargs):
     print(discovery_items)
     return discovery_items
 
+
+@task(max_active_tis_per_dag=3)
+def build_stac_task(payload):
+    from veda_data_pipeline.utils.build_stac.handler import stac_handler
+    airflow_vars = Variable.get("aws_dags_variables")
+    airflow_vars_json = json.loads(airflow_vars)
+    event_bucket = airflow_vars_json.get("EVENT_BUCKET")
+    return stac_handler(payload_src=payload, bucket_output=event_bucket)
+
+
 template_dag_run_conf = {
-    "collection": "<collection-id>", 
-    "data_type": "cog", 
-    "description": "<collection-description>", 
-    "discovery_items": 
+    "collection": "<collection-id>",
+    "data_type": "cog",
+    "description": "<collection-description>",
+    "discovery_items":
         [
             {
-                "bucket": "<bucket-name>", 
-                "datetime_range": "<range>", 
-                "discovery": "s3", 
-                "filename_regex": "<regex>", 
+                "bucket": "<bucket-name>",
+                "datetime_range": "<range>",
+                "discovery": "s3",
+                "filename_regex": "<regex>",
                 "prefix": "<example-prefix/>"
             }
-        ], 
-    "is_periodic": "<true|false>", 
-    "license": "<collection-LICENSE>", 
-    "time_density": "<time-density>", 
+        ],
+    "is_periodic": "<true|false>",
+    "license": "<collection-LICENSE>",
+    "time_density": "<time-density>",
     "title": "<collection-title>"
 }
 
 with DAG("veda_dataset_pipeline", params=template_dag_run_conf, **dag_args) as dag:
     # ECS dependency variable
-    mwaa_stack_conf = Variable.get("MWAA_STACK_CONF", deserialize_json=True)
 
     start = EmptyOperator(task_id="start", dag=dag)
     end = EmptyOperator(task_id="end", dag=dag)
 
     collection_grp = collection_task_group()
     discover = discover_from_s3_task.expand(event=extract_discovery_items())
-    discover.set_upstream(collection_grp) # do not discover until collection exists
+    discover.set_upstream(collection_grp)  # do not discover until collection exists
     get_files = get_dataset_files_to_process(payload=discover)
-    build_stac_kwargs_task = build_stac_kwargs.expand(event=get_files)
-    # partial() is needed for the operator to be used with taskflow inputs
-    build_stac = EcsRunTaskOperator.partial(
-        task_id="build_stac",
-        execution_timeout=timedelta(minutes=60),
-        trigger_rule=TriggerRule.NONE_FAILED,
-        cluster=f"{mwaa_stack_conf.get('PREFIX')}-cluster",
-        task_definition=f"{mwaa_stack_conf.get('PREFIX')}-tasks",
-        launch_type="FARGATE",
-        do_xcom_push=True
-    ).expand_kwargs(build_stac_kwargs_task)
+
+    build_stac = build_stac_task.expand(payload=get_files)
     # .output is needed coming from a non-taskflow operator
-    submit_stac = submit_to_stac_ingestor_task.expand(built_stac=build_stac.output)
+    submit_stac = submit_to_stac_ingestor_task.expand(built_stac=build_stac)
 
     collection_grp.set_upstream(start)
     submit_stac.set_downstream(end)
-
-

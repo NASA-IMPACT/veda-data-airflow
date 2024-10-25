@@ -23,9 +23,9 @@ def lambda_handler(event, context):
         s3_filename_no_ext = os.path.splitext(s3_filename_target)[0]
         print(f"[ S3 FILENAME NO EXT ]: {s3_filename_no_ext}")
 
-        bucket_key_prefix = "EIS/FEDSoutput/Snapshot/"
+        bucket_key_prefix = "EIS/FEDSoutput/Snapshot_COPY/"
         if s3_filename_no_ext.startswith("lf_"):
-            bucket_key_prefix = "EIS/FEDSoutput/LFArchive/"
+            bucket_key_prefix = "EIS/FEDSoutput/LFArchive_COPY/"
 
         # get web token
         mwaa_cli_token = client.create_cli_token(

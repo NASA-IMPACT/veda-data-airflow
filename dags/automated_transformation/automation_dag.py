@@ -55,7 +55,7 @@ with DAG(
 
     @task
     def discover_files(ti):
-        from dags.automated_transformation.transformation_functions import \
+        from dags.automated_transformation.transformation_pipeline import \
             get_all_s3_keys
 
         config = ti.dag_run.conf.copy()

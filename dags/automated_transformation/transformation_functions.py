@@ -5,21 +5,6 @@ import boto3
 import xarray
 
 
-
-
-"""
-The naming convention for the transformation function is as follows:
-collectionname_transformation
-where
-1. collection name refers to the STAC collection name that we want to provide
-   for the given dataset. Make sure that the collection name in the function
-   is same to the one passed as argument when running the DAG.
-2. Collection name will be followed by the word transformation which will
-   differentiate the transformation functions from any other functions in
-   file.
-"""
-
-
 def tm54dvar_ch4flux_mask_monthgrid_v5_transformation(file_obj, name, nodata):
     """Tranformation function for the tm5 ch4 influx dataset
 

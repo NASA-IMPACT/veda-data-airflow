@@ -26,7 +26,7 @@ dag_run_config = {
     "data_prefix": Param("transformed_cogs", type="string", pattern="^[^/].*[^/]$"),
     "collection_name": "gpw",
     "nodata": Param(-9999, type="number"),
-    "ext": Param(".nc", type="string", pattern="^\\..*$"),
+    "ext": Param(".tif", type="string", pattern="^\\..*$"),
 }
 
 with DAG(
@@ -41,17 +41,22 @@ with DAG(
 
     @task
     def check_function_exists(ti):
+        import boto3
+        from botocore.exceptions import ClientError
         config = ti.dag_run.conf.copy()
-        collection_name = config.get("collection_name")
-        module = importlib.import_module(
-            "automated_transformation.transformation_functions"
-        )
-        function_name = f'{collection_name.replace("-", "_")}_transformation'
-        if not hasattr(module, function_name):
-            raise Exception(
-                f"The function {function_name} does not exist in the module {module}."
-            )
-        return f"The function {function_name} exists in the module {module}."
+        bucket_name = config.get("raw_data_bucket")
+        folder_name = 'data_transformation_plugins'
+        file_name = f'{config.get("collection_name")}_transformation.py'.replace("-", "_")
+    
+        s3 = boto3.client('s3') 
+        try:
+            s3.head_object(Bucket=bucket_name, Key=f'{folder_name}/{file_name}')
+            return f"The {file_name} exists in {folder_name} in the bucket {bucket_name}."
+        except ClientError as e:
+            if e.response['Error']['Code'] == '404':
+                return(f"{file_name} does not exist in {folder_name} in the bukcet {bucket_name}.")
+            else:
+                return (f"Error checking file existence: {e}")
 
     @task
     def discover_files(ti):
@@ -62,7 +67,6 @@ with DAG(
         bucket = config.get("raw_data_bucket")
         model_name = config.get("raw_data_prefix")
         ext = config.get("ext")  # .nc as well
-        # return get_all_s3_keys(bucket, model_name, ext)
         generated_list = get_all_s3_keys(bucket, model_name, ext)
         chunk_size = int(len(generated_list) / 900) + 1
         return [

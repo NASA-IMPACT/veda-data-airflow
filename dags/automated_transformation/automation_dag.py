@@ -74,7 +74,7 @@ with DAG(
             for i in range(0, len(generated_list), chunk_size)
         ]
 
-    @task(max_active_tis_per_dag=10)
+    @task(max_active_tis_per_dag=1)
     def process_files(file_url, **kwargs):
         dag_run = kwargs.get("dag_run")
         from dags.automated_transformation.transformation_pipeline import \

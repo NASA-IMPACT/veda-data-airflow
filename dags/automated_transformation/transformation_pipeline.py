@@ -108,7 +108,7 @@ def transform_cog(
     s3_client = session.client("s3")
     json_dict = {}
     function_name = f'{collection_name.replace("-", "_")}_transformation'
-    temp_file_path = download_python_file_from_s3(raw_data_bucket, f'data_transformation_plugins/{function_name}')
+    temp_file_path = download_python_file_from_s3(raw_data_bucket, f'data_transformation_plugins/{function_name}.py')
     for name in name_list:
         url = f"s3://{raw_data_bucket}/{name}"
         fs = s3fs.S3FileSystem()

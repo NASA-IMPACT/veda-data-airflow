@@ -161,7 +161,6 @@ resource "aws_lambda_permission" "s3_invoke" {
 resource "aws_s3_bucket_notification" "bucket_notification" {
   bucket = var.storage_bucket_name
 
-
   lambda_function {
     lambda_function_arn = aws_lambda_function.lambda.arn
     events              = ["s3:ObjectCreated:*"]

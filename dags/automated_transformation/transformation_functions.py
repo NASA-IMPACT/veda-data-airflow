@@ -5,37 +5,6 @@ import boto3
 import xarray
 
 
-def get_all_s3_keys(bucket, model_name, ext):
-    """Function fetches all the s3 keys from the given bucket and model name.
-
-    Args:
-        bucket (str): Name of the bucket from where we want to fetch the data
-        model_name (str): Dataset name/folder name where the data is stored
-        ext (str): extension of the file that is to be fetched.
-
-    Returns:
-        list : List of all the keys that match the given criteria
-    """
-    session = boto3.session.Session()
-    s3_client = session.client("s3")
-    keys = []
-
-    kwargs = {"Bucket": bucket, "Prefix": f"{model_name}"}
-    while True:
-        resp = s3_client.list_objects_v2(**kwargs)
-        print("response is ", resp)
-        for obj in resp["Contents"]:
-            if obj["Key"].endswith(ext) and "historical" not in obj["Key"]:
-                keys.append(obj["Key"])
-
-        try:
-            kwargs["ContinuationToken"] = resp["NextContinuationToken"]
-        except KeyError:
-            break
-
-    print(f"Discovered {len(keys)}")
-    return keys
-
 
 """
 The naming convention for the transformation function is as follows:

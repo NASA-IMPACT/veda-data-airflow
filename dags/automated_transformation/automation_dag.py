@@ -42,20 +42,31 @@ with DAG(
     @task
     def check_function_exists(ti):
         config = ti.dag_run.conf.copy()
-        collection_name = config.get("collection_name")
+        folder_name = 'data_transformation_plugins'
+        file_name = f'{config.get("collection_name")}_transformation.py'
         module = importlib.import_module(
             "automated_transformation.transformation_functions"
         )
-        function_name = f'{collection_name.replace("-", "_")}_transformation'
+        function_name = f'{file_name.replace("-", "_")}_transformation'
         if not hasattr(module, function_name):
             raise Exception(
                 f"The function {function_name} does not exist in the module {module}."
             )
         return f"The function {function_name} does not exist in the module {module}."
 
+        s3 = boto3.client('s3')
+        try:
+            s3.head_object(Bucket=bucket_name, Key=f'{folder_name}/{file_name}')
+            return f"The {file_name} does not exist in the folder {folder_name} in the bukcet {bucket_name}."
+        except ClientError as e:
+            if e.response['Error']['Code'] == '404':
+                return(f"File {file_name} does not exist in the folder {folder_name} in the bukcet {bucket_name}.")
+            else:
+                return (f"Error checking file existence: {e}")
+
     @task
     def discover_files(ti):
-        from dags.automated_transformation.transformation_functions import (
+        from dags.automated_transformation.transformation_pipeline import (
             get_all_s3_keys,
         )
 
@@ -63,7 +74,6 @@ with DAG(
         bucket = config.get("raw_data_bucket")
         model_name = config.get("raw_data_prefix")
         ext = config.get("ext")  # .nc as well
-        # return get_all_s3_keys(bucket, model_name, ext)
         generated_list = get_all_s3_keys(bucket, model_name, ext)
         chunk_size = int(len(generated_list) / 900) + 1
         return [

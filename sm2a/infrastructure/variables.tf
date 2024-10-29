@@ -218,3 +218,18 @@ variable "stac_url" {
 variable "vector_secret_name" {
   default = "veda-features-api-dev/features-tipg-db/7c4b47e4"
 }
+
+variable "storage_bucket_name" {
+  default = "veda-data-store-dev"
+}
+
+variable "s3_invoke_filter_prefix" {
+  default = "EIS/FEDSoutput/"
+}
+variable "sm2a_secret_manager_name" {
+  default = "sm2a-dev-Airflow-master-secrets"
+}
+
+variable "target_dag_id" {
+  default = "veda_ingest_vector"
+}

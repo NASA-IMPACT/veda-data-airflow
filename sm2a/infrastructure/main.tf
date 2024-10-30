@@ -68,7 +68,7 @@ module "sma-base" {
     },
     {
       name  = "GH_USER_TEAM_ID"
-      value = "csda-airflow-data-pipeline-users"
+      value = var.gh_user_team_id
     }
 
 
@@ -84,11 +84,11 @@ module "sma-base" {
   worker_cmd  = ["/home/airflow/.local/bin/airflow", "celery", "worker"]
 
   airflow_custom_variables = {
-    EVENT_BUCKET          = var.event_bucket
+    EVENT_BUCKET          = var.state_bucketname
     COGNITO_APP_SECRET    = var.workflows_client_secret
     STAC_INGESTOR_API_URL = var.stac_ingestor_api_url
-    STAC_URL = var.stac_url
-    VECTOR_SECRET_NAME = var.vector_secret_name
+    STAC_URL              = var.stac_url
+    VECTOR_SECRET_NAME    = var.vector_secret_name
   }
 }
 

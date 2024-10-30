@@ -201,35 +201,28 @@ variable "project_name" {
 }
 
 
-variable "event_bucket" {
-  default = "veda-pipeline-sit-mwaa-853558080719"
+variable "gh_user_team_id" {
+  default = "csda-airflow-data-pipeline-users"
 }
+
 variable "workflows_client_secret" {
-  default = "veda-auth-stack-dev/workflows-client"
 }
 variable "stac_ingestor_api_url" {
-  default = "https://dev.openveda.cloud/api/ingest/"
 }
 
 variable "stac_url" {
-  default = "https://dev.openveda.cloud/api/stac/"
 }
 
 variable "vector_secret_name" {
-  default = "veda-features-api-dev/features-tipg-db/7c4b47e4"
 }
 
 variable "storage_bucket_name" {
-  default = "veda-data-store-dev"
 }
 
 variable "s3_invoke_filter_prefix" {
-  default = "EIS/FEDSoutput/"
 }
 variable "sm2a_secret_manager_name" {
-  default = "sm2a-dev-Airflow-master-secrets"
 }
 
 variable "target_dag_id" {
-  default = "veda_ingest_vector"
 }

@@ -102,7 +102,14 @@ with DAG(
     def generate_report(reports, **kwargs):
         dag_run = kwargs.get("dag_run")
         collection_name = dag_run.conf.get("collection_name")
-        return {"collection": collection_name, "successes": len(reports)}
+        count, failed_files = 0, []
+        for report in reports:
+            if 'failed' in report.values():
+                failed_files.append(report)
+            elif 'success' in report.values():
+                count += 1
+                    
+        return {"collection": collection_name, "successes": count, "failures":failed_files}
 
     urls = start >> check_function_exists() >> discover_files()
     report_data = process_files.expand(file_url=urls)

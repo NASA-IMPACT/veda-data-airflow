@@ -7,9 +7,7 @@ permissions:
 on:
   push:
     branches:
-      - main
       - dev
-      - production
   pull_request:
     branches:
       - main
@@ -36,12 +34,8 @@ jobs:
       - name: Set the environment based on the branch
         id: define_environment
         run: |
-          if [ "${{ github.ref }}" = "refs/heads/main" ]; then
-            echo "env_name=staging" >> $GITHUB_OUTPUT
-          elif [ "${{ github.ref }}" = "refs/heads/dev" ]; then
+          if [ "${{ github.ref }}" = "refs/heads/dev" ]; then
             echo "env_name=development" >> $GITHUB_OUTPUT
-          elif [ "${{ github.ref }}" = "refs/heads/production" ]; then
-            echo "env_name=production" >> $GITHUB_OUTPUT
           fi
       - name: Print the environment
         run: echo "The environment is ${{ steps.define_environment.outputs.env_name }}"

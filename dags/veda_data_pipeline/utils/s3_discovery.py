@@ -359,7 +359,7 @@ def asset_exists(s3_client, bucket_name: str, asset_href: str) -> bool:
         return False
 
 # Reduced chunk size to reflect more assets per item
-def cmip_discovery_handler(event, chunk_size=900, role_arn=None, bucket_output=None):
+def cmip_discovery_handler(event, chunk_size=200, role_arn=None, bucket_output=None):
     variables = event.get("variables", ["rlds", "huss", "hurs"])
     date_fields = propagate_forward_datetime_args(event)
     frequency = date_fields.get("datetime_range", "month")  # Frequency (daily, monthly, yearly)

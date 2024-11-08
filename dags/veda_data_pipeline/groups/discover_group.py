@@ -42,7 +42,6 @@ def discover_from_s3_task(ti=None, event={}, asset_prediction=False, **kwargs):
                 event=config,
                 role_arn=read_assume_arn,
                 bucket_output=MWAA_STAC_CONF["EVENT_BUCKET"],
-                chunk_size=chunk_size
             )
     except EmptyFileListError as ex:
         print(f"Received an exception {ex}")

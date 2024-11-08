@@ -1,25 +1,17 @@
 from datetime import timedelta
-import time
 import uuid
 
 from airflow.models.variable import Variable
 from airflow.models.xcom import LazyXComAccess
-from airflow.operators.dummy_operator import DummyOperator as EmptyOperator
-from airflow.decorators import task_group, task
-from airflow.models.baseoperator import chain
-from airflow.operators.python import BranchPythonOperator, PythonOperator, ShortCircuitOperator
-from airflow.utils.trigger_rule import TriggerRule
-from airflow.providers.amazon.aws.operators.ecs import EcsRunTaskOperator
+from airflow.decorators import task
 from veda_data_pipeline.utils.s3_discovery import (
-    s3_discovery_handler, EmptyFileListError
+    s3_discovery_handler, EmptyFileListError, cmip_discovery_handler
 )
-from veda_data_pipeline.groups.processing_tasks import build_stac_kwargs, submit_to_stac_ingestor_task
-
 
 group_kwgs = {"group_id": "Discover", "tooltip": "Discover"}
 
 @task(retries=1, retry_delay=timedelta(minutes=1))
-def discover_from_s3_task(ti=None, event={}, **kwargs):
+def discover_from_s3_task(ti=None, event={}, asset_prediction=False, **kwargs):
     """Discover grouped assets/files from S3 in batches of 2800. Produce a list of such files stored on S3 to process.
     This task is used as part of the discover_group subdag and outputs data to EVENT_BUCKET.
     """
@@ -38,12 +30,20 @@ def discover_from_s3_task(ti=None, event={}, **kwargs):
     # passing a large chunk of 500
     chunk_size = config.get("chunk_size", 500)
     try:
-        return s3_discovery_handler(
-            event=config,
-            role_arn=read_assume_arn,
-            bucket_output=MWAA_STAC_CONF["EVENT_BUCKET"],
-            chunk_size=chunk_size
-        )
+        if not asset_prediction:
+            return s3_discovery_handler(
+                event=config,
+                role_arn=read_assume_arn,
+                bucket_output=MWAA_STAC_CONF["EVENT_BUCKET"],
+                chunk_size=chunk_size
+            )
+        else:
+            return cmip_discovery_handler(
+                event=config,
+                role_arn=read_assume_arn,
+                bucket_output=MWAA_STAC_CONF["EVENT_BUCKET"],
+                chunk_size=chunk_size
+            )
     except EmptyFileListError as ex:
         print(f"Received an exception {ex}")
         # TODO test continued short circuit operator behavior (no files -> skip remaining tasks)

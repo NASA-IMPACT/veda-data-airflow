@@ -12,7 +12,7 @@ count_down = \
 	@echo "Spinning up the system please wait..."; \
 	secs=40; \
 	while [ $secs -gt 0 ]; do \
-		printf "%d\033[0K\r" $secs; \
+		printf "%d\033[0K\r" "$secs"; \
 		sleep 1; \
 		((secs--)); \
 	done;
@@ -23,6 +23,8 @@ count_down = \
 	list
 
 all: sm2a-local-init sm2a-local-run
+
+refresh: sm2a-local-build sm2a-local-run
 
 sm2a-local-run: sm2a-local-stop
 	@echo "Running SM2A"

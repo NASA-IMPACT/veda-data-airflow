@@ -216,10 +216,10 @@ variable "stac_url" {
 variable "vector_secret_name" {
 }
 
-variable "storage_bucket_name" {
+variable "eis_storage_bucket_name" {
 }
 
-variable "s3_invoke_filter_prefix" {
+variable "eis_s3_invoke_filter_prefix" {
 }
 variable "sm2a_secret_manager_name" {
 }

@@ -10,11 +10,11 @@ info_message = \
 
 count_down = \
 	@echo "Spinning up the system please wait..."; \
-	secs=40 ;\
-	while [ $$secs -gt 0 ]; do \
-		printf "%d\033[0K\r" $$secs; \
+	secs=40; \
+	while [ $secs -gt 0 ]; do \
+		printf "%d\033[0K\r" $secs; \
 		sleep 1; \
-		: $$((secs--)); \
+		((secs--)); \
 	done;
 
 .PHONY:

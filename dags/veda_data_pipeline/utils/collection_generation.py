@@ -27,6 +27,7 @@ class GenerateCollection:
         "is_periodic",
         "time_density",
         "type",
+        "transfer"
     ]
 
     def get_template(self, dataset: Dict[str, Any]) -> dict:

@@ -214,15 +214,23 @@ variable "stac_url" {
 }
 
 variable "vector_secret_name" {
+  type = string
+  default = null
 }
 
 variable "eis_storage_bucket_name" {
+  type = string
+  default = null
 }
 
 variable "eis_s3_invoke_filter_prefix" {
+  type = string
+  default = null
 }
 variable "sm2a_secret_manager_name" {
 }
 
 variable "target_dag_id" {
+  type = string
+  default = null
 }

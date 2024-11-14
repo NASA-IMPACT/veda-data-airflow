@@ -28,22 +28,22 @@ module "sma-base" {
   public_subnets_tagname         = var.public_subnets_tagname
   vpc_id                         = var.vpc_id
   state_bucketname               = var.state_bucketname
-  desired_max_workers_count      = var.workers_configuration[var.stage].max_desired_workers
+  desired_max_workers_count      = var.desired_max_workers_count
   airflow_admin_password         = random_password.password.result
   airflow_admin_username         = "admin"
   rds_publicly_accessible        = var.rds_publicly_accessible
   permission_boundaries_arn      = var.permission_boundaries_arn
   custom_worker_policy_statement = var.custom_worker_policy_statement
-  worker_cpu                     = var.workers_configuration[var.stage].cpu
-  worker_memory                  = var.workers_configuration[var.stage].memory
+  worker_cpu                     = tonumber(var.workers_cpu)
+  worker_memory                  = tonumber(var.workers_memory)
   number_of_schedulers           = var.number_of_schedulers
-  scheduler_cpu                  = var.scheduler_cpu
-  scheduler_memory               = var.scheduler_memory
-  rds_engine_version             = var.rds_configuration[var.stage].rds_engine_version
-  rds_instance_class             = var.rds_configuration[var.stage].rds_instance_class
-  rds_allocated_storage          = var.rds_configuration[var.stage].rds_allocated_storage
-  rds_max_allocated_storage      = var.rds_configuration[var.stage].rds_max_allocated_storage
-  workers_logs_retention_days    = var.workers_configuration[var.stage].workers_logs_retention_days
+  scheduler_cpu                  = tonumber(var.scheduler_cpu)
+  scheduler_memory               = tonumber(var.scheduler_memory)
+  rds_engine_version             = var.rds_engine_version
+  rds_instance_class             = var.rds_instance_class
+  rds_allocated_storage          = tonumber(var.rds_allocated_storage)
+  rds_max_allocated_storage      = tonumber(var.rds_max_allocated_storage)
+  workers_logs_retention_days    = tonumber(var.workers_logs_retention_days)
 
   extra_airflow_task_common_environment = [
     {
@@ -52,7 +52,7 @@ module "sma-base" {
     },
     {
       name  = "AIRFLOW__CORE__DEFAULT_TASK_RETRIES"
-      value = var.workers_configuration[var.stage].task_retries
+      value = var.workers_task_retries
     },
     {
       name  = "GH_CLIENT_ID"

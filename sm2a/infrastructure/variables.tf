@@ -65,101 +65,9 @@ variable "subdomain" {
   default = "null"
 }
 
-
-variable "rds_configuration" {
-  type = object({
-    dev = object({
-      rds_instance_class        = string,
-      rds_allocated_storage     = number,
-      rds_max_allocated_storage = number,
-      rds_engine_version        = string
-    })
-    staging = object({
-      rds_instance_class        = string,
-      rds_allocated_storage     = number,
-      rds_max_allocated_storage = number,
-      rds_engine_version        = string
-    })
-    prod = object({
-      rds_instance_class        = string,
-      rds_allocated_storage     = number,
-      rds_max_allocated_storage = number,
-      rds_engine_version        = string
-    })
-
-  })
-  default = {
-    dev = {
-      rds_instance_class        = "db.t4g.medium",
-      rds_allocated_storage     = 20,
-      rds_max_allocated_storage = 100,
-      rds_engine_version        = "13"
-    },
-    staging = {
-      rds_instance_class        = "db.t4g.large",
-      rds_allocated_storage     = 40,
-      rds_max_allocated_storage = 100,
-      rds_engine_version        = "13"
-    },
-    prod = {
-      rds_instance_class        = "db.r5.xlarge",
-      rds_allocated_storage     = 100,
-      rds_max_allocated_storage = 200,
-      rds_engine_version        = "13"
-    }
-  }
+variable "desired_max_workers_count" {
+  default = "5"
 }
-
-variable "workers_configuration" {
-  type = object({
-    dev = object({
-      cpu                         = number,
-      memory                      = number,
-      max_desired_workers         = string,
-      task_retries                = string,
-      workers_logs_retention_days = number
-
-    })
-    staging = object({
-      cpu                         = number,
-      memory                      = number,
-      max_desired_workers         = string,
-      task_retries                = string,
-      workers_logs_retention_days = number
-    })
-    prod = object({
-      cpu                         = number,
-      memory                      = number,
-      max_desired_workers         = string,
-      task_retries                = string,
-      workers_logs_retention_days = number
-    })
-  })
-  default = {
-    dev = {
-      cpu                         = 2048,
-      memory                      = 4096,
-      max_desired_workers         = "5"
-      task_retries                = "0"
-      workers_logs_retention_days = 1
-    },
-    staging = {
-      cpu                         = 4096,
-      memory                      = 8192,
-      max_desired_workers         = "10",
-      task_retries                = "1",
-      workers_logs_retention_days = 1
-    },
-    prod = {
-      cpu                         = 8192,
-      memory                      = 16384,
-      max_desired_workers         = "30",
-      task_retries                = "1",
-      workers_logs_retention_days = 14
-    }
-  }
-}
-
 
 variable "gh_app_client_id" {
 
@@ -228,9 +136,39 @@ variable "eis_s3_invoke_filter_prefix" {
   default = null
 }
 variable "sm2a_secret_manager_name" {
+  type = string
+  default = null
 }
 
 variable "target_dag_id" {
   type = string
   default = null
+}
+
+
+variable "workers_cpu" {
+  default = 2048
+}
+variable "workers_memory" {
+  default = 4096
+}
+
+variable "rds_engine_version" {
+  default = "13"
+}
+variable "rds_instance_class" {
+  default = "db.t4g.medium"
+}
+variable "rds_allocated_storage" {
+  default = 20
+}
+variable "rds_max_allocated_storage" {
+  default = 200
+}
+variable "workers_logs_retention_days" {
+  default = 1
+}
+
+variable "workers_task_retries" {
+  default = "1"
 }

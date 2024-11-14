@@ -140,7 +140,7 @@ resource "aws_cloudwatch_log_group" "group" {
 
 
   provider          = aws.aws_current
-  name              = "/aws/lambda/${aws_lambda_function.lambda.function_name}"
+  name              = "/aws/lambda/${aws_lambda_function.lambda[count.index].function_name}"
   retention_in_days = 5
 }
 
@@ -153,7 +153,7 @@ resource "aws_lambda_permission" "s3_invoke" {
 
   provider      = aws.aws_current
   action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.lambda.function_name
+  function_name = aws_lambda_function.lambda[count.index].function_name
   principal     = "s3.amazonaws.com"
   statement_id  = "AllowInvocationFromS3Bucket-veda-${var.stage}"
   source_arn    = "arn:aws:s3:::${var.eis_storage_bucket_name}"
@@ -167,7 +167,7 @@ resource "aws_s3_bucket_notification" "bucket_notification" {
   bucket = var.eis_storage_bucket_name
 
   lambda_function {
-    lambda_function_arn = aws_lambda_function.lambda.arn
+    lambda_function_arn = aws_lambda_function.lambda[count.index].arn
     events              = ["s3:ObjectCreated:*"]
     filter_prefix       = var.eis_s3_invoke_filter_prefix
     filter_suffix       = ".gpkg"

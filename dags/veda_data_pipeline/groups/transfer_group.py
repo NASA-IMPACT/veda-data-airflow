@@ -5,6 +5,7 @@ from airflow.operators.python import BranchPythonOperator, PythonOperator
 import json
 from airflow.utils.task_group import TaskGroup
 from airflow.utils.trigger_rule import TriggerRule
+from airflow.decorators import task
 
 group_kwgs = {"group_id": "Transfer", "tooltip": "Transfer"}
 
@@ -27,13 +28,22 @@ def cogify_copy_task(ti):
     external_role_arn = airflow_vars_json.get("ASSUME_ROLE_WRITE_ARN")
     return cogify_transfer_handler(event_src=config, external_role_arn=external_role_arn)
 
-
-def transfer_data(ti):
+@task
+def transfer_data(ti, payload):
     """Transfer data from one S3 bucket to another; s3 copy, no need for docker"""
     from veda_data_pipeline.utils.transfer import (
         data_transfer_handler,
     )
-    config = ti.dag_run.conf
+    # use task-provided payload if provided, otherwise fall back on ti values
+    # payload will generally have the same values expected by discovery, so some renames are needed when combining the dicts
+    config = {
+        **payload,
+        **ti.dag_run.conf,
+        "origin_bucket": payload.get("bucket", ti.dag_run.conf.get("origin_bucket", "veda-data-store")),
+        "origin_prefix": payload.get("prefix", ti.dag_run.conf.get("origin_prefix", "s3-prefix/")),
+        "target_bucket": payload.get("target_bucket", ti.dag_run.conf.get("target_bucket", "veda-data-store")),
+        "dry_run": payload.get("dry_run", ti.dag_run.conf.get("dry_run", True)),# TODO default false before merge
+    }
     airflow_vars = Variable.get("aws_dags_variables")
     airflow_vars_json = json.loads(airflow_vars)
     external_role_arn = airflow_vars_json.get("ASSUME_ROLE_WRITE_ARN")

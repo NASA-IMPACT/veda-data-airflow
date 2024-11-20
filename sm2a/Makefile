@@ -12,9 +12,9 @@ count_down = \
 	@echo "Spinning up the system please wait..."; \
 	secs=40; \
 	while [ $secs -gt 0 ]; do \
-		printf "%d\033[0K\r" "$secs"; \
+		printf "%d\033[0K\r" "$$secs"; \
 		sleep 1; \
-		((secs--)); \
+		secs=$$((secs - 1)); \
 	done;
 
 .PHONY:

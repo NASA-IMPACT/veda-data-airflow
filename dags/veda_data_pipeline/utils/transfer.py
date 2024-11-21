@@ -66,12 +66,14 @@ def transfer_files_within_s3(
             )
         except s3_client.exceptions.ClientError as err:
             if err.response["Error"]["Code"] == "404":
-                # print(f"Copying file: {filename}")
+                print(f"404 Error copying file: {filename}")
                 s3_client.copy_object(
                     CopySource=copy_source,
                     Bucket=destination_bucket,
                     Key=target_key
                 )
+        except Exception as e:
+            print(f"Exception copying file: {filename} exception: {e}")
 
 
 def data_transfer_handler(event, role_arn=None):

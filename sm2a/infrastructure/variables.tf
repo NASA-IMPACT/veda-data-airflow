@@ -123,26 +123,26 @@ variable "stac_url" {
 
 variable "vector_secret_name" {
   type = string
-  default = null
+  default = "null"
 }
 
 variable "eis_storage_bucket_name" {
   type = string
-  default = null
+  default = "null"
 }
 
 variable "eis_s3_invoke_filter_prefix" {
   type = string
-  default = null
+  default = "null"
 }
 variable "sm2a_secret_manager_name" {
   type = string
-  default = null
+  default = "null"
 }
 
 variable "target_dag_id" {
   type = string
-  default = null
+  default = "null"
 }
 
 
@@ -171,4 +171,14 @@ variable "workers_logs_retention_days" {
 
 variable "workers_task_retries" {
   default = "1"
+}
+
+variable "assume_role_read_arn" {
+  type = string
+  default = ""
+}
+
+variable "assume_role_write_arn" {
+  type = string
+  default = ""
 }

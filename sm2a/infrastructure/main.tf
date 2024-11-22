@@ -89,6 +89,8 @@ module "sma-base" {
     STAC_INGESTOR_API_URL = var.stac_ingestor_api_url
     STAC_URL              = var.stac_url
     VECTOR_SECRET_NAME    = var.vector_secret_name
+    ASSUME_ROLE_READ_ARN = var.assume_role_read_arn
+    ASSUME_ROLE_WRITE_ARN = var.assume_role_write_arn
   }
 }
 

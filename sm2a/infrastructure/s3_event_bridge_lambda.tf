@@ -113,6 +113,7 @@ data "archive_file" "python_lambda_package" {
 
 
 resource "aws_lambda_function" "lambda" {
+  count = var.eis_storage_bucket_name != null ? 1 : 0
 
   provider         = aws.aws_current
   filename         = "/tmp/s3_event_bridge_to_sfn_execute.zip"
@@ -127,17 +128,19 @@ resource "aws_lambda_function" "lambda" {
     variables = {
       TARGET_DAG_ID            = var.target_dag_id
       SM2A_SECRET_MANAGER_NAME = var.sm2a_secret_manager_name
-      STORAGE_BUCKET           = var.storage_bucket_name
-      S3_FILTER_PREFIX         = var.s3_invoke_filter_prefix
+      STORAGE_BUCKET           = var.eis_storage_bucket_name
+      S3_FILTER_PREFIX         = var.eis_s3_invoke_filter_prefix
     }
   }
 }
 
 resource "aws_cloudwatch_log_group" "group" {
 
+  count = var.eis_storage_bucket_name != null ? 1 : 0
+
 
   provider          = aws.aws_current
-  name              = "/aws/lambda/${aws_lambda_function.lambda.function_name}"
+  name              = "/aws/lambda/${aws_lambda_function.lambda[count.index].function_name}"
   retention_in_days = 5
 }
 
@@ -146,25 +149,27 @@ resource "aws_cloudwatch_log_group" "group" {
 #####################################################
 
 resource "aws_lambda_permission" "s3_invoke" {
+  count = var.eis_storage_bucket_name != null ? 1 : 0
 
   provider      = aws.aws_current
   action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.lambda.function_name
+  function_name = aws_lambda_function.lambda[count.index].function_name
   principal     = "s3.amazonaws.com"
   statement_id  = "AllowInvocationFromS3Bucket-veda-${var.stage}"
-  source_arn    = "arn:aws:s3:::${var.storage_bucket_name}"
+  source_arn    = "arn:aws:s3:::${var.eis_storage_bucket_name}"
 }
 
 
 
 
 resource "aws_s3_bucket_notification" "bucket_notification" {
-  bucket = var.storage_bucket_name
+  count = var.eis_storage_bucket_name != null ? 1 : 0
+  bucket = var.eis_storage_bucket_name
 
   lambda_function {
-    lambda_function_arn = aws_lambda_function.lambda.arn
+    lambda_function_arn = aws_lambda_function.lambda[count.index].arn
     events              = ["s3:ObjectCreated:*"]
-    filter_prefix       = var.s3_invoke_filter_prefix
+    filter_prefix       = var.eis_s3_invoke_filter_prefix
     filter_suffix       = ".gpkg"
   }
 

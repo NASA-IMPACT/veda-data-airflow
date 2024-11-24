@@ -31,18 +31,20 @@ dag_args = {
 }
 
 template_dag_run_conf = {
-    "collection": "<collection-id>", 
-    "data_type": "cog", 
-    "description": "<collection-description>", 
-    "is_periodic": "<true|false>", 
-    "license": "<collection-LICENSE>", 
-    "time_density": "<time-density>", 
-    "title": "<collection-title>"
+    "collection": "<collection-id>",
+    "data_type": "cog",
+    "description": "<collection-description>",
+    "is_periodic": "<true|false>",
+    "license": "<collection-LICENSE>",
+    "time_density": "<time-density>",
+    "title": "<collection-title>",
 }
 
 with DAG("veda_collection_pipeline", params=template_dag_run_conf, **dag_args) as dag:
     start = EmptyOperator(task_id="start", dag=dag)
-    end = EmptyOperator(task_id="end", trigger_rule=TriggerRule.NONE_FAILED_MIN_ONE_SUCCESS, dag=dag)
+    end = EmptyOperator(
+        task_id="end", trigger_rule=TriggerRule.NONE_FAILED_MIN_ONE_SUCCESS, dag=dag
+    )
 
     collection_grp = collection_task_group()
 

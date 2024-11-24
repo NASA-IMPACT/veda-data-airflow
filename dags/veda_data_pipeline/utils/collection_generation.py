@@ -97,14 +97,14 @@ class GenerateCollection:
 
         # Override the extents if they exists
         if spatial_extent := dataset.get("spatial_extent"):
-            collection_stac["extent"]["spatial"] = {"bbox": [list(spatial_extent.values())]},
+            collection_stac["extent"]["spatial"] = {"bbox": [list(spatial_extent.values())]}
         
         if temporal_extent := dataset.get("temporal_extent"):
             collection_stac["extent"]["temporal"] = {
                 "interval": [
                     # most of our data uses the Z suffix for UTC - isoformat() doesn't
                     [
-                        datetime.fromisoformat(x).astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
+                        x
                         if x else None
                         for x in list(temporal_extent.values())
                     ]

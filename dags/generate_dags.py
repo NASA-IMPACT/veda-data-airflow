@@ -15,9 +15,8 @@ def generate_dags():
 
     from pathlib import Path
 
-    airflow_vars = Variable.get("aws_dags_variables")
-    airflow_vars_json = json.loads(airflow_vars)
-    bucket = airflow_vars_json.get("EVENT_BUCKET")
+    airflow_vars = Variable.get("aws_dags_variables", default_var={}, deserialize_json=True)
+    bucket = airflow_vars.get("EVENT_BUCKET")
 
     try:
         client = boto3.client("s3")

@@ -118,6 +118,7 @@ class GenerateCollection:
                 "description": "Cloud optimized default layer to display on map",
             }
         }
+        print(collection_stac)
         return collection_stac
 
     def generate_stac(

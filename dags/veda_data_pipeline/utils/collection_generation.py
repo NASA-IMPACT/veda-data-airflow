@@ -97,7 +97,7 @@ class GenerateCollection:
 
         # Override the extents if they exists
         if spatial_extent := dataset.get("spatial_extent"):
-            collection_stac["extent"]["spatial"] = {"bbox": [list(spatial_extent.values())]},
+            collection_stac["extent"]["spatial"] = {"bbox": [list(spatial_extent.values())]}
         
         if temporal_extent := dataset.get("temporal_extent"):
             collection_stac["extent"]["temporal"] = {
@@ -118,7 +118,6 @@ class GenerateCollection:
                 "description": "Cloud optimized default layer to display on map",
             }
         }
-        print(collection_stac)
         return collection_stac
 
     def generate_stac(

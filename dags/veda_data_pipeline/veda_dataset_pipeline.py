@@ -61,6 +61,18 @@ def build_stac_task(payload):
     event_bucket = airflow_vars_json.get("EVENT_BUCKET")
     return stac_handler(payload_src=payload, bucket_output=event_bucket)
 
+@task()
+def mutate_payload(**kwargs):
+    ti = kwargs.get("ti")
+    payload = ti.dag_run.conf
+    if assets := payload.get("assets"):
+        # is first key thumbnail
+        if "thumbnail" in assets.keys():
+            assets.pop("thumbnail")
+        if not assets:
+            payload.pop("assets")
+    return payload
+
 
 template_dag_run_conf = {
     "collection": "<collection-id>",
@@ -89,7 +101,8 @@ with DAG("veda_dataset_pipeline", params=template_dag_run_conf, **dag_args) as d
     end = EmptyOperator(task_id="end", dag=dag)
 
     collection_grp = collection_task_group()
-    discover = discover_from_s3_task.expand(event=extract_discovery_items())
+    mutate_assets_task = mutate_payload()
+    discover = discover_from_s3_task.partial(alt_payload=mutate_assets_task()).expand(event=extract_discovery_items())
     discover.set_upstream(collection_grp)  # do not discover until collection exists
     get_files = get_dataset_files_to_process(payload=discover)
 
@@ -98,4 +111,5 @@ with DAG("veda_dataset_pipeline", params=template_dag_run_conf, **dag_args) as d
     submit_stac = submit_to_stac_ingestor_task.expand(built_stac=build_stac)
 
     collection_grp.set_upstream(start)
+    mutate_assets_task.set_upstream(start)
     submit_stac.set_downstream(end)

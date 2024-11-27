@@ -101,8 +101,8 @@ with DAG("veda_dataset_pipeline", params=template_dag_run_conf, **dag_args) as d
     end = EmptyOperator(task_id="end", dag=dag)
 
     collection_grp = collection_task_group()
-    mutate_assets_task = mutate_payload()
-    discover = discover_from_s3_task.partial(alt_payload=mutate_assets_task()).expand(event=extract_discovery_items())
+    mutate_payload_task = mutate_payload()
+    discover = discover_from_s3_task.partial(alt_payload=mutate_payload_task()).expand(event=extract_discovery_items())
     discover.set_upstream(collection_grp)  # do not discover until collection exists
     get_files = get_dataset_files_to_process(payload=discover)
 
@@ -111,5 +111,5 @@ with DAG("veda_dataset_pipeline", params=template_dag_run_conf, **dag_args) as d
     submit_stac = submit_to_stac_ingestor_task.expand(built_stac=build_stac)
 
     collection_grp.set_upstream(start)
-    mutate_assets_task.set_upstream(start)
+    mutate_payload_task.set_upstream(start)
     submit_stac.set_downstream(end)

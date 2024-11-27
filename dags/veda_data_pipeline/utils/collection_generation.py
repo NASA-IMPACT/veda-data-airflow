@@ -95,7 +95,7 @@ class GenerateCollection:
     def create_cog_collection(self, dataset: Dict[str, Any]) -> dict:
         collection_stac = self.get_template(dataset)
 
-        # Override the extents if they exists
+        # Override the collection template extents if they exists
         if spatial_extent := dataset.get("spatial_extent"):
             collection_stac["extent"]["spatial"] = {"bbox": [list(spatial_extent.values())]}
         
@@ -110,14 +110,34 @@ class GenerateCollection:
                 ]
             }
 
-        collection_stac["item_assets"] = {
-            "cog_default": {
-                "type": "image/tiff; application=geotiff; profile=cloud-optimized",
-                "roles": ["data", "layer"],
-                "title": "Default COG Layer",
-                "description": "Cloud optimized default layer to display on map",
+        # Handle conflicting STAC<>Dataset keys
+        discovery_items_assets = []
+        if (dataset.get("discovery_items", None)):
+            discovery_items_assets = [
+                discovery_item.get("assets") for discovery_item in dataset.get("discovery_items") if discovery_item.get("assets", None) is not None
+            ]
+
+        # Use item asset descriptions from discovery if provided
+        if dataset.get("item_assets", None):
+            collection_stac["item_assets"] = dataset.get("item_assets", None)
+
+        # Also update item asset descriptions with any additional assets defined in discovery config
+        for discovery_asset in discovery_items_assets:
+            for key, asset in discovery_asset.items():
+                collection_stac["item_assets"][key] = {
+                    k: v for k, v in asset.items() if k != "regex"
+                }
+        # If no item asset descriptions provided in dataset or discovery config, add cog_default
+        if dataset.get("item_assets", None) is None:
+            collection_stac["item_assets"] = {
+                "cog_default": {
+                    "type": "image/tiff; application=geotiff; profile=cloud-optimized",
+                    "roles": ["data", "layer"],
+                    "title": "Default COG Layer",
+                    "description": "Cloud optimized default layer to display on map"
+                }
             }
-        }
+
         return collection_stac
 
     def generate_stac(

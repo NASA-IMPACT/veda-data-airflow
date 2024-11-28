@@ -66,11 +66,15 @@ def mutate_payload(**kwargs):
     ti = kwargs.get("ti")
     payload = ti.dag_run.conf
     if assets := payload.get("assets"):
-        # is first key thumbnail
+        # remove thumbnail asset if provided in collection config
         if "thumbnail" in assets.keys():
             assets.pop("thumbnail")
+        # if thumbnail was only asset, delete assets
         if not assets:
             payload.pop("assets")
+        # finally put the mutated assets back in the payload
+        else:
+            payload["assets"] = assets
     return payload
 
 

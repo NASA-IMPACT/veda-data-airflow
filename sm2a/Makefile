@@ -29,7 +29,7 @@ sm2a-local-run: sm2a-local-stop
 	docker compose up -d
 	$(call important_message, "Give the resources a minute to be healthy 💪")
 	$(count_down)
-	$(call info_message, "Please visit http://localhost:8080")
+	$(call info_message, "Please visit http://localhost:$${SM2A_PORT:-8080}")
 	@echo "username:airflow | password:airflow"
 	@echo "To use local SM2A with AWS update ${SM2A_FOLDER}/sm2a-local-config/.env AWS credentials"
 

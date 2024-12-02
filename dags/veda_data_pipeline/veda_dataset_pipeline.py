@@ -1,8 +1,9 @@
 import pendulum
 from airflow import DAG
 from airflow.models.param import Param
+from airflow.decorators import task
+from airflow.operators.trigger_dagrun import TriggerDagRunOperator
 from airflow.operators.dummy_operator import DummyOperator as EmptyOperator
-from airflow_multi_dagrun.operators import TriggerMultiDagRunOperator
 from veda_data_pipeline.groups.collection_group import collection_task_group
 
 template_dag_run_conf = {
@@ -42,22 +43,21 @@ dag_args = {
     "tags": ["collection", "discovery"],
 }
 
-
-def trigger_discover_and_build_task(ti):
-    discovery_items = ti.dag_run.conf.get("discovery_items")
-    for discovery_item in discovery_items:
-        yield discovery_item
-
-
 with DAG("veda_dataset_pipeline", params=template_dag_run_conf, **dag_args) as dag:
     start = EmptyOperator(task_id="start")
     end = EmptyOperator(task_id="end")
 
-    run_discover_build_and_push = TriggerMultiDagRunOperator(
-        task_id="trigger_discover_items_dag",
-        dag=dag,
-        trigger_dag_id="veda_discover",
-        python_callable=trigger_discover_and_build_task,
-    )
 
-    start >> collection_task_group() >> run_discover_build_and_push >> end
+    @task
+    def get_items(**kwargs):
+        ti = kwargs['ti']
+        return ti.dag_run.conf.get('discovery_items')
+
+
+    items = start >> collection_task_group() >> get_items()
+    run_discover_build_and_push = TriggerDagRunOperator.partial(
+        task_id="trigger_discover_items_dag",
+        trigger_dag_id="veda_discover",
+        wait_for_completion=True,
+
+    ).expand(conf=items) >> end

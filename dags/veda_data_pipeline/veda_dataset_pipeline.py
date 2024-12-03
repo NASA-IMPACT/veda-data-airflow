@@ -106,7 +106,7 @@ with DAG("veda_dataset_pipeline", params=template_dag_run_conf, **dag_args) as d
 
     collection_grp = collection_task_group()
     mutate_payload_task = mutate_payload()
-    discover = discover_from_s3_task.partial(alt_payload=mutate_payload_task()).expand(event=extract_discovery_items())
+    discover = discover_from_s3_task.partial(alt_payload=mutate_payload_task).expand(event=extract_discovery_items())
     discover.set_upstream(collection_grp)  # do not discover until collection exists
     get_files = get_dataset_files_to_process(payload=discover)
 

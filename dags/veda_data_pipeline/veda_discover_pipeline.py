@@ -4,7 +4,7 @@ from airflow.operators.dummy_operator import DummyOperator
 from airflow.decorators import task
 from airflow.models.variable import Variable
 import json
-from veda_data_pipeline.groups.discover_group import discover_from_s3_task, get_files_to_process
+from veda_data_pipeline.groups.discover_group import discover_from_s3_task, get_files_task
 from veda_data_pipeline.groups.processing_tasks import submit_to_stac_ingestor_task
 
 dag_doc_md = """
@@ -98,7 +98,7 @@ def get_discover_dag(id, event=None):
         # define DAG using taskflow notation
 
         discover = discover_from_s3_task(event=event)
-        get_files = get_files_to_process(payload=discover)
+        get_files = get_files_task(payload=discover)
         build_stac = build_stac_task.expand(payload=get_files)
         # .output is needed coming from a non-taskflow operator
         submit_stac = submit_to_stac_ingestor_task.expand(built_stac=build_stac)

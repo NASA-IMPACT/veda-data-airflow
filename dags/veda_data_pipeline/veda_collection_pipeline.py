@@ -46,6 +46,4 @@ with DAG("veda_collection_pipeline", params=template_dag_run_conf, **dag_args) a
         task_id="end", trigger_rule=TriggerRule.NONE_FAILED_MIN_ONE_SUCCESS, dag=dag
     )
 
-    collection_grp = collection_task_group()
-
-    start >> collection_grp >> end
+    start >> collection_task_group() >> end

@@ -103,7 +103,7 @@ def submission_handler(
     cognito_app_secret=None,
     stac_ingestor_api_url=None,
     context=None,
-) -> None:
+) -> [Dict[str, Any], None]:
     if context is None:
         context = {}
 
@@ -121,7 +121,7 @@ def submission_handler(
         secret_id=cognito_app_secret,
         base_url=stac_ingestor_api_url,
     )
-    ingestor.submit(event=stac_item, endpoint=endpoint)
+    return ingestor.submit(event=stac_item, endpoint=endpoint)
 
 
 if __name__ == "__main__":

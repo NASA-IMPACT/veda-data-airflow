@@ -17,7 +17,6 @@ data products and STAC metadata for interfaces such as https://github.com/NASA-I
 
 First time setting up the repo:
 `git submodule update --init --recursive`
-
 Afterwards:
 `git submodule update --recursive --remote`
 

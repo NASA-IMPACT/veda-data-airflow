@@ -100,7 +100,6 @@ def get_discover_dag(id, event=None):
         discover = discover_from_s3_task(event=event)
         get_files = get_files_task(payload=discover)
         build_stac = build_stac_task.expand(payload=get_files)
-        # .output is needed coming from a non-taskflow operator
         submit_stac = submit_to_stac_ingestor_task.expand(built_stac=build_stac)
 
         discover.set_upstream(start)

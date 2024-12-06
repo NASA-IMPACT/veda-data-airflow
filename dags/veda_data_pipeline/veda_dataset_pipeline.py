@@ -11,19 +11,20 @@ template_dag_run_conf = {
     "collection": "<collection-id>",
     "data_type": "cog",
     "description": "<collection-description>",
-    "discovery_items": [
-        {
-            "bucket": "<bucket-name>",
-            "datetime_range": "<range>",
-            "discovery": "s3",
-            "filename_regex": "<regex>",
-            "prefix": "<example-prefix/>",
-        }
-    ],
-    "is_periodic": "<true|false>",
+    "discovery_items":
+        [
+            {
+                "bucket": "<bucket-name>",
+                "datetime_range": "<range>",
+                "discovery": "s3",
+                "filename_regex": "<regex>",
+                "prefix": "<example-prefix/>"
+            }
+        ],
+    "is_periodic": Param(True, type="boolean"),
     "license": "<collection-LICENSE>",
     "time_density": "<time-density>",
-    "title": "<collection-title>",
+    "title": "<collection-title>"
 }
 
 dag_doc_md = f"""
@@ -44,25 +45,7 @@ dag_args = {
     "tags": ["collection", "discovery"],
 }
 
-template_dag_run_conf = {
-    "collection": "<collection-id>",
-    "data_type": "cog",
-    "description": "<collection-description>",
-    "discovery_items":
-        [
-            {
-                "bucket": "<bucket-name>",
-                "datetime_range": "<range>",
-                "discovery": "s3",
-                "filename_regex": "<regex>",
-                "prefix": "<example-prefix/>"
-            }
-        ],
-    "is_periodic": "<true|false>",
-    "license": "<collection-LICENSE>",
-    "time_density": "<time-density>",
-    "title": "<collection-title>"
-}
+
 
 with DAG("veda_dataset_pipeline", params=template_dag_run_conf, **dag_args) as dag:
     start = EmptyOperator(task_id="start")

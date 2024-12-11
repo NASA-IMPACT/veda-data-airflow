@@ -8,33 +8,27 @@ from airflow.decorators import task
 from veda_data_pipeline.utils.s3_discovery import (
     s3_discovery_handler, EmptyFileListError
 )
+from deprecated import deprecated
 
 group_kwgs = {"group_id": "Discover", "tooltip": "Discover"}
 
 
 @task(retries=1, retry_delay=timedelta(minutes=1))
-def discover_from_s3_task(ti=None, event={}, alt_payload = None, **kwargs):
+def discover_from_s3_task(ti=None, event={}, **kwargs):
     """Discover grouped assets/files from S3 in batches of 2800. Produce a list of such files stored on S3 to process.
     This task is used as part of the discover_group subdag and outputs data to EVENT_BUCKET.
     """
-    if alt_payload:
-        config = {
-            **event,
-            **alt_payload
-        }
-    else:
-        config = {
-            **event,
-            **ti.dag_run.conf,
-        }
+    payload = kwargs.get("payload", ti.dag_run.conf)
+    config = {
+        **event,
+        **payload,
+    }
     # TODO test that this context var is available in taskflow
     last_successful_execution = kwargs.get("prev_start_date_success")
     if event.get("schedule") and last_successful_execution:
         config["last_successful_execution"] = last_successful_execution.isoformat()
     # (event, chunk_size=2800, role_arn=None, bucket_output=None):
 
-    if event.get("item_assets") and event.get("assets"):
-        config["assets"] = event.get("item_assets")
     airflow_vars = Variable.get("aws_dags_variables")
     airflow_vars_json = json.loads(airflow_vars)
     event_bucket = airflow_vars_json.get("EVENT_BUCKET")
@@ -56,6 +50,36 @@ def discover_from_s3_task(ti=None, event={}, alt_payload = None, **kwargs):
 
 
 @task
+def get_files_task(payload, ti=None):
+    """
+    Get files from S3 produced by discovery or dataset tasks.
+    Handles both single payload and multiple payload scenarios.
+    """
+    dag_run_id = ti.dag_run.run_id
+    results = []
+
+    # Handle multiple payloads (dataset and items case)
+    payloads = payload if isinstance(payload, list) else [payload]
+
+    for item in payloads:
+        if isinstance(item, LazyXComAccess):  # Dynamic task mapping case
+            payloads_xcom = item[0].pop("payload", [])
+            base_payload = item[0]
+        else:
+            payloads_xcom = item.pop("payload", [])
+            base_payload = item
+
+        for indx, payload_xcom in enumerate(payloads_xcom):
+            results.append({
+                "run_id": f"{dag_run_id}_{uuid.uuid4()}_{indx}",
+                **base_payload,
+                "payload": payload_xcom,
+            })
+
+    return results
+
+@task
+@deprecated(reason="Please use get_files_task function that handles both files and dataset files use cases")
 def get_files_to_process(payload, ti=None):
     """Get files from S3 produced by the discovery task.
     Used as part of both the parallel_run_process_rasters and parallel_run_process_vectors tasks.
@@ -74,6 +98,7 @@ def get_files_to_process(payload, ti=None):
 
 
 @task
+@deprecated(reason="Please use get_files_task airflow task instead. This will be removed in the new release")
 def get_dataset_files_to_process(payload, ti=None):
     """Get files from S3 produced by the dataset task.
     This is different from the get_files_to_process task as it produces a combined structure from repeated mappings.

@@ -1,20 +1,31 @@
-import ast
 import json
-import os
-from argparse import ArgumentParser
-from contextlib import closing
-from multiprocessing import Pool, cpu_count
-from time import sleep, time
 from typing import Any, Dict, TypedDict, Union
 from uuid import uuid4
-
 import smart_open
-from utils import events
-from utils import stac as stac
+from veda_data_pipeline.utils.build_stac.utils import events
+from veda_data_pipeline.utils.build_stac.utils import stac
+from concurrent.futures import ThreadPoolExecutor, as_completed
+
 
 
 class S3LinkOutput(TypedDict):
     stac_file_url: str
+
+
+def using_pool(objects, workers_count: int):
+    returned_results = []
+    with ThreadPoolExecutor(max_workers=workers_count) as executor:
+        # Submit tasks to the executor
+        futures = {executor.submit(handler, obj): obj for obj in objects}
+
+        for future in as_completed(futures):
+            try:
+                result = future.result()  # Get result from future
+                returned_results.append(result)
+            except Exception as nex:
+                print(f"Error {nex} with object {futures[future]}")
+
+    return returned_results
 
 
 class StacItemOutput(TypedDict):
@@ -57,18 +68,6 @@ def handler(event: Dict[str, Any]) -> Union[S3LinkOutput, StacItemOutput]:
     return output
 
 
-def using_pool(objects, workers_count: int):
-    returned_results = []
-    with closing(Pool(processes=workers_count)) as pool:
-        results = pool.imap_unordered(handler, objects)
-        for result in results:
-            try:
-                returned_results.append(result)
-            except Exception as nex:
-                print(f"Error {nex}")
-    return returned_results
-
-
 def sequential_processing(objects):
     returned_results = []
     for _object in objects:
@@ -89,22 +88,21 @@ def write_outputs_to_s3(key, payload_success, payload_failures):
     return [success_key, dead_letter_key]
 
 
-def stac_handler(payload_event):
+def stac_handler(payload_src: dict, bucket_output):
+    payload_event = payload_src.copy()
     s3_event = payload_event.pop("payload")
     collection = payload_event.get("collection", "not_provided")
-    bucket_output = os.environ["EVENT_BUCKET"]
     key = f"s3://{bucket_output}/events/{collection}"
-    use_multiprocessing = payload_event.get("use_multiprocessing", True)
-    workers_count = payload_event.get("cpu_count", cpu_count())
     payload_success = []
     payload_failures = []
     with smart_open.open(s3_event, "r") as _file:
         s3_event_read = _file.read()
     event_received = json.loads(s3_event_read)
     objects = event_received["objects"]
+    use_multithreading = payload_event.get("use_multithreading", True)
     payloads = (
-        using_pool(objects, workers_count=workers_count)
-        if use_multiprocessing
+        using_pool(objects, workers_count=4)
+        if use_multithreading
         else sequential_processing(objects)
     )
     for payload in payloads:
@@ -133,28 +131,3 @@ def stac_handler(payload_event):
             },
         }
     }
-
-
-if __name__ == "__main__":
-    parser = ArgumentParser(
-        prog="build_stac",
-        description="Build STAC",
-        epilog="Contact Abdelhak Marouane for extra help",
-    )
-    parser.add_argument(
-        "--payload", dest="payload", help="event passed to stac_handler function"
-    )
-    args = parser.parse_args()
-    # For cloud watch log to work the task should stay alife for at least 30 s
-    start = time()
-    print(f"Start at {start}")
-    print(args)
-    payload_event = json.loads(args.payload)
-    building_stac_response = stac_handler(payload_event)
-    response = json.dumps({**payload_event, **building_stac_response})
-    end = time() - start
-    print(f"Actual processing took {end:.2f} seconds")
-    # Check if it took less than 50 seconds
-    if end - start < 50:
-        sleep(50)
-    print(response)

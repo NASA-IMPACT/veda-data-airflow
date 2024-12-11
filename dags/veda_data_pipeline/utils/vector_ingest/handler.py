@@ -16,20 +16,20 @@ import concurrent.futures
 from sqlalchemy.dialects.postgresql import DOUBLE_PRECISION, INTEGER, VARCHAR, TIMESTAMP
 
 
-def download_file(file_uri: str):
-    sts = boto3.client("sts")
-    print(f'Assuming role: {os.environ.get("EXTERNAL_ROLE_ARN")}')
-    role_arn = os.environ.get("EXTERNAL_ROLE_ARN")
-    response = sts.assume_role(
-        RoleArn=role_arn,
-        RoleSessionName="airflow_vector_ingest",
-    )
-    new_session = boto3.Session(
-        aws_access_key_id=response["Credentials"]["AccessKeyId"],
-        aws_secret_access_key=response["Credentials"]["SecretAccessKey"],
-        aws_session_token=response["Credentials"]["SessionToken"],
-    )
-    s3 = new_session.client("s3")
+def download_file(file_uri: str, role_arn:[str, None]):
+    session = boto3.Session()
+    if role_arn:
+        sts = boto3.client("sts")
+        response = sts.assume_role(
+            RoleArn=role_arn,
+            RoleSessionName="airflow_vector_ingest",
+        )
+        session = boto3.Session(
+            aws_access_key_id=response["Credentials"]["AccessKeyId"],
+            aws_secret_access_key=response["Credentials"]["SecretAccessKey"],
+            aws_session_token=response["Credentials"]["SessionToken"],
+        )
+    s3 = session.client("s3")
 
     url_parse = urlparse(file_uri)
 
@@ -42,7 +42,7 @@ def download_file(file_uri: str):
 
     print(f"downloaded {target_filepath}")
 
-    sts.close()
+
     return target_filepath
 
 
@@ -200,7 +200,7 @@ def upsert_to_postgis(
         executor.map(upsert_batch, batches)
 
 
-def get_secret(secret_name: str) -> None:
+def get_secret(secret_name: str, region_name: str = "us-west-2") -> None:
     """Retrieve secrets from AWS Secrets Manager
 
     Args:
@@ -211,7 +211,7 @@ def get_secret(secret_name: str) -> None:
     """
 
     # Create a Secrets Manager client
-    session = boto3.session.Session(region_name=os.environ.get("AWS_REGION"))
+    session = boto3.session.Session(region_name=region_name)
     client = session.client(service_name="secretsmanager")
 
     # In this sample we only handle the specific exceptions for the 'GetSecretValue' API.
@@ -231,13 +231,14 @@ def get_secret(secret_name: str) -> None:
 def load_to_featuresdb(
     filename: str,
     collection: str,
+    vector_secret_name: str,
     extra_flags: list = None,
     target_projection: str = "EPSG:4326",
 ):
     if extra_flags is None:
         extra_flags = ["-overwrite", "-progress"]
 
-    secret_name = os.environ.get("VECTOR_SECRET_NAME")
+    secret_name = vector_secret_name
 
     con_secrets = get_secret(secret_name)
     connection = get_connection_string(con_secrets)
@@ -272,6 +273,7 @@ def load_to_featuresdb(
 def load_to_featuresdb_eis(
     filename: str,
     collection: str,
+    vector_secret_name: str,
     target_projection: int = 4326,
 ):
     """create table if not exists and upload GPKG
@@ -281,7 +283,7 @@ def load_to_featuresdb_eis(
     :param target_projection: srid for the target table
     :return: None
     """
-    secret_name = os.environ.get("VECTOR_SECRET_NAME")
+    secret_name = vector_secret_name
     conn_secrets = get_secret(secret_name)
     connection_string = get_connection_string(conn_secrets, as_uri=True)
 
@@ -307,7 +309,7 @@ def load_to_featuresdb_eis(
     return {"status": "success"}
 
 
-def alter_datetime_add_indexes_eis(collection: str):
+def alter_datetime_add_indexes_eis(collection: str,vector_secret_name: str ):
     # NOTE: about `collection.rsplit` below:
     #
     # EIS Fire team naming convention for outputs
@@ -319,7 +321,7 @@ def alter_datetime_add_indexes_eis(collection: str):
     #     e.g. `snapshot_perimeter_nrt_conus` this gets inserted into the table `eis_fire_snapshot_perimeter_nrt`
     collection = collection.rsplit("_", 1)[0]
 
-    secret_name = os.environ.get("VECTOR_SECRET_NAME")
+    secret_name = vector_secret_name
     conn_secrets = get_secret(secret_name)
     conn = psycopg2.connect(
         host=conn_secrets["host"],
@@ -339,19 +341,9 @@ def alter_datetime_add_indexes_eis(collection: str):
     conn.commit()
 
 
-def handler():
-    print("Vector ingest started")
-    parser = ArgumentParser(
-        prog="vector_ingest",
-        description="Ingest Vector",
-        epilog="Running the code as ECS task",
-    )
-    parser.add_argument(
-        "--payload", dest="payload", help="event passed to stac_handler function"
-    )
-    args = parser.parse_args()
+def handler(payload_src: dict, vector_secret_name: str, assume_role_arn: [str, None]):
 
-    payload_event = json.loads(args.payload)
+    payload_event = payload_src.copy()
     s3_event = payload_event.pop("payload")
     with smart_open.open(s3_event, "r") as _file:
         s3_event_read = _file.read()
@@ -361,27 +353,25 @@ def handler():
     for s3_object in s3_objects:
         href = s3_object["assets"]["default"]["href"]
         collection = s3_object["collection"]
-        downloaded_filepath = download_file(href)
+        downloaded_filepath = download_file(href, assume_role_arn)
         print(f"[ DOWNLOAD FILEPATH ]: {downloaded_filepath}")
         print(f"[ COLLECTION ]: {collection}")
 
         s3_object_prefix = event_received["prefix"]
         if s3_object_prefix.startswith("EIS/"):
-            coll_status = load_to_featuresdb_eis(downloaded_filepath, collection)
+            coll_status = load_to_featuresdb_eis(downloaded_filepath, collection, vector_secret_name)
         else:
-            coll_status = load_to_featuresdb(downloaded_filepath, collection)
+            coll_status = load_to_featuresdb(downloaded_filepath, collection, vector_secret_name)
 
         status.append(coll_status)
         # delete file after ingest
         os.remove(downloaded_filepath)
 
         if coll_status["status"] == "success" and s3_object_prefix.startswith("EIS/"):
-            alter_datetime_add_indexes_eis(collection)
+            alter_datetime_add_indexes_eis(collection, vector_secret_name)
         elif coll_status["status"] != "success":
             # bubble exception so Airflow shows it as a failure
             raise Exception(coll_status["reason"])
-    print(status)
+    return status
 
 
-if __name__ == "__main__":
-    handler()

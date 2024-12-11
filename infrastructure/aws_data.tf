@@ -8,6 +8,7 @@ terraform {
 
 
 provider "aws" {
+  alias = "aws_current"
   profile = var.aws_profile
   region  = var.aws_region
 }

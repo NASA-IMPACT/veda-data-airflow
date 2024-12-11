@@ -44,6 +44,7 @@ def get_matching_files(s3_client, bucket, prefix, regex_pattern):
 def transfer_files_within_s3(
     s3_client, origin_bucket, matching_files, destination_bucket, collection
 ):
+    transfer_exceptions = False
     for file_key in matching_files:
         filename = file_key.split("/")[-1]
         # print(f"Transferring file: {filename}")
@@ -66,12 +67,22 @@ def transfer_files_within_s3(
             )
         except s3_client.exceptions.ClientError as err:
             if err.response["Error"]["Code"] == "404":
-                # print(f"Copying file: {filename}")
+                # File not found OK to copy
                 s3_client.copy_object(
                     CopySource=copy_source,
                     Bucket=destination_bucket,
                     Key=target_key
                 )
+            else:
+                msg = f"ClientError copying {filename=} {err=}"
+                print(msg)
+                transfer_exceptions = True
+        except Exception as e:
+            msg = f"Exception copying {filename=} {e=}"
+            print(msg)
+            transfer_exceptions = True
+    if transfer_exceptions:
+        raise Exception(f"{transfer_exceptions=}")
 
 
 def data_transfer_handler(event, role_arn=None):

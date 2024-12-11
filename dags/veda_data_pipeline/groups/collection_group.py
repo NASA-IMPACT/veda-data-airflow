@@ -32,28 +32,40 @@ def ingest_collection_task(ti):
         dataset (Dict[str, Any]): dataset dictionary (JSON)
         role_arn (str): role arn for Zarr collection generation
     """
+    import json
     collection = ti.xcom_pull(task_ids='Collection.generate_collection')
+    airflow_vars = Variable.get("aws_dags_variables")
+    airflow_vars_json = json.loads(airflow_vars)
+    cognito_app_secret = airflow_vars_json.get("COGNITO_APP_SECRET")
+    stac_ingestor_api_url = airflow_vars_json.get("STAC_INGESTOR_API_URL")
 
     return submission_handler(
         event=collection,
         endpoint="/collections",
-        cognito_app_secret=Variable.get("COGNITO_APP_SECRET"),
-        stac_ingestor_api_url=Variable.get("STAC_INGESTOR_API_URL"),
+        cognito_app_secret=cognito_app_secret,
+        stac_ingestor_api_url=stac_ingestor_api_url
     )
 
 
 # NOTE unused, but useful for item ingests, since collections are a dependency for items
 def check_collection_exists_task(ti):
+    import json
     config = ti.dag_run.conf
+    airflow_vars = Variable.get("aws_dags_variables")
+    airflow_vars_json = json.loads(airflow_vars)
+    stac_url = airflow_vars_json.get("STAC_URL")
     return check_collection_exists(
-        endpoint=Variable.get("STAC_URL", default_var=None),
+        endpoint=stac_url,
         collection_id=config.get("collection"),
     )
 
 
 def generate_collection_task(ti):
+    import json
     config = ti.dag_run.conf
-    role_arn = Variable.get("ASSUME_ROLE_READ_ARN", default_var=None)
+    airflow_vars = Variable.get("aws_dags_variables")
+    airflow_vars_json = json.loads(airflow_vars)
+    role_arn = airflow_vars_json.get("ASSUME_ROLE_READ_ARN")
 
     # TODO it would be ideal if this also works with complete collections where provided - this would make the collection ingest more re-usable
     collection = generator.generate_stac(

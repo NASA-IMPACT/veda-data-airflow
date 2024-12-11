@@ -1,8 +1,9 @@
 import pendulum
 from airflow import DAG
 from airflow.operators.dummy_operator import DummyOperator
-from airflow.utils.trigger_rule import TriggerRule
-from veda_data_pipeline.groups.discover_group import subdag_discover
+from veda_data_pipeline.groups.discover_group import discover_from_s3_task, get_files_task
+
+from veda_data_pipeline.groups.processing_tasks import submit_to_stac_ingestor_task, build_stac_task
 
 dag_doc_md = """
 ### Discover files from S3
@@ -46,7 +47,7 @@ dag_args = {
     "is_paused_upon_creation": False,
 }
 
-templat_dag_run_conf = {
+template_dag_run_conf = {
     "collection": "<coll_name>",
     "bucket": "<bucket>",
     "prefix": "<prefix>/",
@@ -69,22 +70,33 @@ templat_dag_run_conf = {
 }
 
 
-def get_discover_dag(id, event={}):
-    params_dag_run_conf = event or templat_dag_run_conf
+
+
+
+def get_discover_dag(id, event=None):
+    if not event:
+        event = {}
+    params_dag_run_conf = event or template_dag_run_conf
     with DAG(
-        id,
-        schedule_interval=event.get("schedule"),
-        params=params_dag_run_conf,
-        **dag_args
+            id,
+            schedule_interval=event.get("schedule"),
+            params=params_dag_run_conf,
+            **dag_args
     ) as dag:
         start = DummyOperator(task_id="Start", dag=dag)
         end = DummyOperator(
-            task_id="End", trigger_rule=TriggerRule.ONE_SUCCESS, dag=dag
+            task_id="End", dag=dag
         )
+        # define DAG using taskflow notation
 
-        discover_grp = subdag_discover(event)
+        discover = discover_from_s3_task(event=event)
+        get_files = get_files_task(payload=discover)
+        build_stac = build_stac_task.expand(payload=get_files)
+        # .output is needed coming from a non-taskflow operator
+        submit_stac = submit_to_stac_ingestor_task.expand(built_stac=build_stac)
 
-        start >> discover_grp >> end
+        discover.set_upstream(start)
+        submit_stac.set_downstream(end)
 
         return dag
 

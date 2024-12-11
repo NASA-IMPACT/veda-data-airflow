@@ -15,9 +15,6 @@ airflow_multi_dagrun
 apache-airflow-providers-postgres
 apache-airflow-providers-common-sql
 apache-airflow-providers-http
-apache-airflow-providers-slack
-
-apache-airflow-providers-slack[http]
 typing-extensions
 pyOpenSSL
 stac-pydantic
@@ -33,3 +30,5 @@ geopandas==0.14.4
 fiona==1.9.6
 h5netcdf
 rioxarray
+apache-airflow-providers-slack
+apache-airflow-providers-slack[http]

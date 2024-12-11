@@ -1,12 +1,13 @@
 import importlib
 import tempfile
 import os
-
+import requests
 import boto3
 import s3fs
 import rasterio
 import numpy as np
 import json
+
 
 def get_all_s3_keys(bucket, model_name, ext) -> list:
     """Function fetches all the s3 keys from the given bucket and model name.
@@ -66,6 +67,32 @@ def download_python_file_from_s3(bucket_name, s3_key):
 
     return temp_file.name
 
+
+def download_python_file_from_github(url):
+    try:
+        # Send a GET request to the URL
+        response = requests.get(url)
+        response.raise_for_status()  # Raise an error for HTTP errors
+
+        # Extract the file name from the URL
+        file_name = os.path.basename(url)
+
+        # Create a temporary directory and file with the same name
+        temp_dir = tempfile.gettempdir()
+        temp_file_path = os.path.join(temp_dir, file_name)
+
+        # Write the content to the temporary file
+        with open(temp_file_path, 'wb') as temp_file:
+            temp_file.write(response.content)
+
+        print(f"File downloaded to: {temp_file_path}")
+        return temp_file_path
+
+    except requests.exceptions.RequestException as e:
+        print(f"Error downloading the file: {e}")
+        return None
+
+
 def load_function_from_file(file_path, function_name):
     """
     Dynamically loads a function from a Python file.
@@ -87,12 +114,13 @@ def load_function_from_file(file_path, function_name):
 
 
 def transform_cog(
-    name_list, nodata, raw_data_bucket, dest_data_bucket, data_prefix, collection_name
+        name_list, nodata, raw_data_bucket, dest_data_bucket, data_prefix, collection_name, plugin_url
 ):
     """This function calls the plugins (dataset specific transformation functions) and
     generalizes the transformation of dataset to COGs.
 
     Args:
+        plugin_url:
         name_list (str): List of the files to be transformed
         nodata (str): Nodata value as mentioned by the data provider
         raw_data_bucket (str): Name of the bucket where the raw data resides
@@ -108,7 +136,7 @@ def transform_cog(
     s3_client = session.client("s3")
     json_dict = {}
     function_name = f'{collection_name.replace("-", "_")}_transformation'
-    temp_file_path = download_python_file_from_s3(raw_data_bucket, f'data_transformation_plugins/{function_name}.py')
+    temp_file_path = download_python_file_from_github(f"{plugin_url}/data_transformation_plugins/{function_name}.py")  #download_python_file_from_s3(raw_data_bucket, f'data_transformation_plugins/{function_name}.py')
     for name in name_list:
         url = f"s3://{raw_data_bucket}/{name}"
         fs = s3fs.S3FileSystem()
@@ -150,14 +178,14 @@ def transform_cog(
                                 "minimum_value_netcdf": f"{min_value_netcdf:.4f}",
                                 "maximum_value_netcdf": f"{max_value_netcdf:.4f}",
                                 "std_value_netcdf": f"{std_value_netcdf:.4f}",
-                                "mean_value_netcdf": f"{mean_value_netcdf:.4f}" }
+                                "mean_value_netcdf": f"{mean_value_netcdf:.4f}"}
                         )
                     with tempfile.NamedTemporaryFile() as json_temp:
                         with open(json_temp.name, "w") as fp:
                             json.dump(json_dict, fp, indent=4)
-                        print('JSON dictionary is ',json_dict)
+                        print('JSON dictionary is ', json_dict)
 
-                    # Upload the file to the specified S3 bucket and folder
+                        # Upload the file to the specified S3 bucket and folder
                         s3_client.upload_file(
                             Filename=json_temp.name,
                             Bucket=dest_data_bucket,
@@ -165,10 +193,10 @@ def transform_cog(
                             ExtraArgs={"ContentType": "application/json"},
                         )
                         status = {
-                        "transformed_filename": cog_filename,
-                        "statistics_file" : f"{cog_filename.split('.')[0]}.json",
-                        "s3uri": f"s3://{dest_data_bucket}/{data_prefix}/{collection_name}/{cog_filename}",
-                        "status": "success",
+                            "transformed_filename": cog_filename,
+                            "statistics_file": f"{cog_filename.split('.')[0]}.json",
+                            "s3uri": f"s3://{dest_data_bucket}/{data_prefix}/{collection_name}/{cog_filename}",
+                            "status": "success",
                         }
 
 

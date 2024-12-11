@@ -1,6 +1,6 @@
 import logging
 import time
-from slack_notifications import slack_fail_alert
+
 import pendulum
 from airflow import DAG
 from airflow.operators.dummy_operator import DummyOperator as EmptyOperator
@@ -34,7 +34,6 @@ def generate_cmr_metadata_task(text):
 
 
 def push_to_cmr_task(text):
-    raise Exception("Hello me")
     log_task(text)
 
 
@@ -43,7 +42,6 @@ with DAG(
     start_date=pendulum.today("UTC").add(days=-1),
     schedule_interval=None,
     tags=["example"],
-    on_failure_callback=slack_fail_alert
 ) as dag:
 
     start = EmptyOperator(task_id="start", dag=dag)

@@ -78,7 +78,7 @@ def get_files_task(payload, ti=None):
     return results
 
 @task
-@deprecated(reason="Please use get_files_task function that hundles both files and dataset files use cases")
+@deprecated(reason="Please use get_files_task function that handles both files and dataset files use cases")
 def get_files_to_process(payload, ti=None):
     """Get files from S3 produced by the discovery task.
     Used as part of both the parallel_run_process_rasters and parallel_run_process_vectors tasks.

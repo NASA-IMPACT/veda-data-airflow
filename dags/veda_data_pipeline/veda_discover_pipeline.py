@@ -2,6 +2,7 @@ import pendulum
 from airflow import DAG
 from airflow.operators.dummy_operator import DummyOperator
 from veda_data_pipeline.groups.discover_group import discover_from_s3_task, get_files_task
+
 from veda_data_pipeline.groups.processing_tasks import submit_to_stac_ingestor_task, build_stac_task
 
 dag_doc_md = """

@@ -1,5 +1,6 @@
 import pendulum
 from airflow import DAG
+from copy import deepcopy
 from airflow.models.param import Param
 from airflow.decorators import task
 from veda_data_pipeline.groups.discover_group import discover_from_s3_task, get_files_task
@@ -45,8 +46,6 @@ dag_args = {
     "tags": ["collection", "discovery"],
 }
 
-
-
 with DAG("veda_dataset_pipeline", params=template_dag_run_conf, **dag_args) as dag:
     start = EmptyOperator(task_id="start")
     end = EmptyOperator(task_id="end")
@@ -54,7 +53,7 @@ with DAG("veda_dataset_pipeline", params=template_dag_run_conf, **dag_args) as d
 
     @task()
     def remove_thumbnail_asset(ti):
-        payload = ti.dag_run.conf.copy()
+        payload = ti.dag_run.conf
         payloads = list()
         assets = payload.get("assets", {})
         if assets.get("thumbnail"):

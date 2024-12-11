@@ -53,7 +53,7 @@ with DAG("veda_dataset_pipeline", params=template_dag_run_conf, **dag_args) as d
 
     @task()
     def remove_thumbnail_asset(ti):
-        payload = ti.dag_run.conf
+        payload = deepcopy(ti.dag_run.conf)
         payloads = list()
         assets = payload.get("assets", {})
         if assets.get("thumbnail"):
@@ -72,7 +72,7 @@ with DAG("veda_dataset_pipeline", params=template_dag_run_conf, **dag_args) as d
 
 
     mutated_payloads = start >> collection_task_group() >> remove_thumbnail_asset()
-    discover = discover_from_s3_task.expand(event=mutated_payloads)
+    discover = discover_from_s3_task.expand(payload=mutated_payloads)
     get_files = get_files_task(payload=discover)
     build_stac = build_stac_task.expand(payload=get_files)
     submit_stac = submit_to_stac_ingestor_task.expand(built_stac=build_stac) >> end

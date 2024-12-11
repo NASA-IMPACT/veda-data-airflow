@@ -18,9 +18,10 @@ def discover_from_s3_task(ti=None, event={}, **kwargs):
     """Discover grouped assets/files from S3 in batches of 2800. Produce a list of such files stored on S3 to process.
     This task is used as part of the discover_group subdag and outputs data to EVENT_BUCKET.
     """
+    payload = kwargs.get("payload", ti.dag_run.conf)
     config = {
         **event,
-        **ti.dag_run.conf,
+        **payload,
     }
     # TODO test that this context var is available in taskflow
     last_successful_execution = kwargs.get("prev_start_date_success")

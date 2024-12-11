@@ -1,12 +1,13 @@
 import importlib
-import tempfile
-import os
-import requests
-import boto3
-import s3fs
-import rasterio
-import numpy as np
 import json
+import os
+import tempfile
+
+import boto3
+import numpy as np
+import rasterio
+import requests
+import s3fs
 
 
 def get_all_s3_keys(bucket, model_name, ext) -> list:
@@ -55,7 +56,7 @@ def download_python_file_from_s3(bucket_name, s3_key):
     Returns:
     - str: Path to the temporary file.
     """
-    s3 = boto3.client('s3')
+    s3 = boto3.client("s3")
 
     # Create a temporary file
     temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".py")
@@ -63,16 +64,31 @@ def download_python_file_from_s3(bucket_name, s3_key):
 
     # Download the S3 file to the temporary file location
     s3.download_file(bucket_name, s3_key, temp_file.name)
-    print(f"Downloaded {s3_key} from bucket {bucket_name} to temporary file {temp_file.name}")
+    print(
+        f"Downloaded {s3_key} from bucket {bucket_name} to temporary file {temp_file.name}"
+    )
 
     return temp_file.name
 
 
-def download_python_file_from_github(url):
+def download_python_file(uri: str, check_exist=False):
+    if uri.startswith("s3://"):
+        # Remove the 's3://' prefix
+        s3_path = uri[5:]
+        # Split into bucket and key
+        parts = s3_path.split("/", 1)
+        bucket_name, key = parts
+        return download_python_file_from_s3(bucket_name=bucket_name, s3_key=key)
+    return download_python_file_from_github(url=uri, check_exist=check_exist)
+
+
+def download_python_file_from_github(url, check_exist=False):
     try:
         # Send a GET request to the URL
         response = requests.get(url)
         response.raise_for_status()  # Raise an error for HTTP errors
+        if check_exist:
+            return True
 
         # Extract the file name from the URL
         file_name = os.path.basename(url)
@@ -82,7 +98,7 @@ def download_python_file_from_github(url):
         temp_file_path = os.path.join(temp_dir, file_name)
 
         # Write the content to the temporary file
-        with open(temp_file_path, 'wb') as temp_file:
+        with open(temp_file_path, "wb") as temp_file:
             temp_file.write(response.content)
 
         print(f"File downloaded to: {temp_file_path}")
@@ -114,7 +130,13 @@ def load_function_from_file(file_path, function_name):
 
 
 def transform_cog(
-        name_list, nodata, raw_data_bucket, dest_data_bucket, data_prefix, collection_name, plugin_url
+    name_list,
+    nodata,
+    raw_data_bucket,
+    dest_data_bucket,
+    data_prefix,
+    collection_name,
+    plugin_url,
 ):
     """This function calls the plugins (dataset specific transformation functions) and
     generalizes the transformation of dataset to COGs.
@@ -136,7 +158,7 @@ def transform_cog(
     s3_client = session.client("s3")
     json_dict = {}
     function_name = f'{collection_name.replace("-", "_")}_transformation'
-    temp_file_path = download_python_file_from_github(f"{plugin_url}/data_transformation_plugins/{function_name}.py")  #download_python_file_from_s3(raw_data_bucket, f'data_transformation_plugins/{function_name}.py')
+    temp_file_path = download_python_file(plugin_url)
     for name in name_list:
         url = f"s3://{raw_data_bucket}/{name}"
         fs = s3fs.S3FileSystem()
@@ -178,12 +200,13 @@ def transform_cog(
                                 "minimum_value_netcdf": f"{min_value_netcdf:.4f}",
                                 "maximum_value_netcdf": f"{max_value_netcdf:.4f}",
                                 "std_value_netcdf": f"{std_value_netcdf:.4f}",
-                                "mean_value_netcdf": f"{mean_value_netcdf:.4f}"}
+                                "mean_value_netcdf": f"{mean_value_netcdf:.4f}",
+                            }
                         )
                     with tempfile.NamedTemporaryFile() as json_temp:
                         with open(json_temp.name, "w") as fp:
                             json.dump(json_dict, fp, indent=4)
-                        print('JSON dictionary is ', json_dict)
+                        print("JSON dictionary is ", json_dict)
 
                         # Upload the file to the specified S3 bucket and folder
                         s3_client.upload_file(
@@ -198,7 +221,6 @@ def transform_cog(
                             "s3uri": f"s3://{dest_data_bucket}/{data_prefix}/{collection_name}/{cog_filename}",
                             "status": "success",
                         }
-
 
             except Exception as ex:
                 status = {

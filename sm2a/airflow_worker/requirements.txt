@@ -16,6 +16,7 @@ apache-airflow-providers-postgres
 apache-airflow-providers-common-sql
 apache-airflow-providers-http
 apache-airflow-providers-slack
+
 apache-airflow-providers-slack[http]
 typing-extensions
 pyOpenSSL

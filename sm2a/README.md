@@ -178,3 +178,20 @@ The retrieved secrets are then stored in a .env file.
 The [python-dotenv](https://pypi.org/project/python-dotenv/) library is used to access the variables stored in the .env file.
 These variables can now be used within your DAG tasks.
 
+## DAG Launcher Role Overview
+The DAG Launcher role in Airflow is designed to provide users with the necessary permissions to manage and launch DAGs
+in the Airflow UI. This role allows users to perform actions such as reading DAG runs,
+and interacting with various views like Task Instances, Jobs, and XComs.
+
+The permissions granted are tailored to streamline the interaction with the DAG management interface,
+enabling effective monitoring and control over DAG executions.
+
+### Key Permissions Assigned to the DAG Launcher Role:
+- Permission on Dag runs for `veda_discover`, `veda_dataset_pipeline`, `veda_collection_pipeline`
+- Read access to "My Profile", "DAG Runs", "Jobs", "Task Instances", "XComs", "DAG Dependencies", "Task Logs", and "Website".
+- Create, Read, Edit, and Menu Access for DAG runs and DAG-related views (e.g., DAGs, Documentation).
+- Edit access to specific DAGs like veda_discover.
+- Integrating GitHub Users with the Airflow DAG UI
+To grant users access to the Airflow UI, including the ability to manage DAGs and view the Swagger interface, 
+GitHub users must be added to a GitHub [team](https://github.com/orgs/NASA-IMPACT/teams/veda-dag-launcher).
+

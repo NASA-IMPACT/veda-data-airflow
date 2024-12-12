@@ -5,13 +5,14 @@ import pendulum
 from airflow import DAG
 from airflow.operators.dummy_operator import DummyOperator as EmptyOperator
 from airflow.operators.python import PythonOperator
-
+import sys
 
 def log_task(text: str):
     logging.info(text)
 
 
 def discover_from_cmr_task(text):
+    print(f"Python version used {sys.version}")
     log_task(text)
 
 

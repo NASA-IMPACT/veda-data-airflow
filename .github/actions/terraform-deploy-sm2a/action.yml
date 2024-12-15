@@ -54,4 +54,3 @@ runs:
       run: |
         cd ./infrastructure
         terraform output -json Airflow_url > ${HOME}/output_sm2a_workflows_endpoint.json
-

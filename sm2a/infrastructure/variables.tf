@@ -122,26 +122,26 @@ variable "stac_url" {
 }
 
 variable "vector_secret_name" {
-  type = string
+  type    = string
   default = "null"
 }
 
 variable "eis_storage_bucket_name" {
-  type = string
+  type    = string
   default = "null"
 }
 
 variable "eis_s3_invoke_filter_prefix" {
-  type = string
+  type    = string
   default = "null"
 }
 variable "sm2a_secret_manager_name" {
-  type = string
+  type    = string
   default = "null"
 }
 
 variable "target_dag_id" {
-  type = string
+  type    = string
   default = "null"
 }
 
@@ -174,11 +174,14 @@ variable "workers_task_retries" {
 }
 
 variable "assume_role_read_arn" {
-  type = string
+  type    = string
   default = ""
 }
 
 variable "assume_role_write_arn" {
-  type = string
+  type    = string
   default = ""
+}
+variable "gh_dag_launcher_team_id" {
+  default = "VEDA-DAG-Launcher"
 }

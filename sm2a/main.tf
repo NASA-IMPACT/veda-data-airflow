@@ -96,4 +96,3 @@ module "sma-base" {
     SM2A_BASE_URL = module.sma-base.airflow_url
   }
 }
-

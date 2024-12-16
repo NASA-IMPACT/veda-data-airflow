@@ -18,7 +18,6 @@ WORKDIR /opt/airflow
 RUN chown $UNAME:$GID /opt/airflow
 
 RUN apt-get -y update \
-        && apt install -y python3-pip \
         && apt-get install -y --no-install-recommends gcc libc6-dev libcurl4-openssl-dev libssl-dev \
         && apt-get autoremove -yqq --purge \
         && apt-get clean \
@@ -26,7 +25,17 @@ RUN apt-get -y update \
 
 USER airflow
 
-ENV PATH $PATH:/home/airflow/.local/bin
+
+RUN mkdir -p /home/airflow/miniconda3 \
+    && curl -o /home/airflow/miniconda3/miniconda.sh https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh \
+    && bash /home/airflow/miniconda3/miniconda.sh -b -u -p /home/airflow/miniconda3 \
+    && rm /home/airflow/miniconda3/miniconda.sh
+
+# Install python 3.11
+RUN /home/airflow/miniconda3/bin/conda create -n py11 --yes python=3.11
+
+ENV PATH $PATH:/home/airflow/miniconda3/envs/py11/bin
+
 
 COPY --chown=airflow:airflow airflow_worker/requirements.txt "${AIRFLOW_HOME}/requirements.txt"
 

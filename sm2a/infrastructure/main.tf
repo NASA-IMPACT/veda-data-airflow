@@ -81,7 +81,7 @@ module "sma-base" {
   domain_name = var.domain_name
   stage       = var.stage
   subdomain   = var.subdomain
-  worker_cmd  = ["/home/airflow/.local/bin/airflow", "celery", "worker"]
+  worker_cmd  = ["airflow", "celery", "worker"]
 
   airflow_custom_variables = {
     EVENT_BUCKET          = var.state_bucketname
@@ -91,6 +91,7 @@ module "sma-base" {
     VECTOR_SECRET_NAME    = var.vector_secret_name
     ASSUME_ROLE_READ_ARN = var.assume_role_read_arn
     ASSUME_ROLE_WRITE_ARN = var.assume_role_write_arn
+    SM2A_BASE_URL = module.sma-base.airflow_url
   }
 }
 

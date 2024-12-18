@@ -120,12 +120,8 @@ with DAG("veda_dataset_pipeline", params=template_dag_run_conf, **dag_args) as d
     extract_from_payload = extract_discovery_items()
 
     # asset transfer to production bucket
-    transfer_flag = dag.params.get("transfer", False)
-    if transfer_flag:
-        transfer_task = transfer_assets_to_production_bucket.expand(payload=extract_from_payload)
-        discover = discover_from_s3_task.partial(alt_payload=mutate_payload_task).expand(event=transfer_task)
-    else:
-        discover = discover_from_s3_task.partial(alt_payload=mutate_payload_task).expand(event=extract_from_payload)
+    transfer_task = transfer_assets_to_production_bucket.expand(payload=extract_from_payload)
+    discover = discover_from_s3_task.partial(alt_payload=mutate_payload_task).expand(event=transfer_task)
     discover.set_upstream(collection_grp)  # do not discover until collection exists
 
     get_files = get_dataset_files_to_process(payload=discover) # untangle mapped data format to get iterable payloads from discover step

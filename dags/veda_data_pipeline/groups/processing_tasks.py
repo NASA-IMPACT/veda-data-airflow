@@ -1,6 +1,7 @@
 from datetime import timedelta
 import json
 import logging
+from copy import deepcopy
 import smart_open
 from airflow.models.variable import Variable
 from airflow.decorators import task
@@ -12,6 +13,21 @@ group_kwgs = {"group_id": "Process", "tooltip": "Process"}
 def log_task(text: str):
     logging.info(text)
 
+@task()
+def extract_discovery_items_from_payload(ti, **kwargs):
+    discovery_items = ti.dag_run.conf.get("discovery_items")
+    return discovery_items
+
+@task()
+def remove_thumbnail_asset(ti):
+    payload = deepcopy(ti.dag_run.conf)
+    assets = payload.get("assets", {})
+    if assets.get("thumbnail"):
+        assets.pop("thumbnail")
+    # if thumbnail was only asset, delete assets
+    if not assets:
+        payload.pop("assets")
+    return payload
 
 @task(retries=1, retry_delay=timedelta(minutes=1))
 def submit_to_stac_ingestor_task(built_stac: dict):

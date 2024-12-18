@@ -6,13 +6,14 @@ from airflow.models.variable import Variable
 import json
 from veda_data_pipeline.groups.collection_group import collection_task_group
 from veda_data_pipeline.groups.discover_group import discover_from_s3_task, get_dataset_files_to_process
-from veda_data_pipeline.groups.processing_tasks import submit_to_stac_ingestor_task
+from veda_data_pipeline.groups.processing_tasks import submit_to_stac_ingestor_task, build_stac_task, extract_discovery_items_from_payload, remove_thumbnail_asset
 from veda_data_pipeline.groups.transfer_group import transfer_data
 
-
 dag_doc_md = """
-### Dataset Pipeline
-Generates a collection and triggers the file discovery process
+### Promotion Pipeline
+Generates a collection and triggers the file discovery process.
+This DAG uses the same input ad `veda-dataset-pipeline` but adds the ability to transfer assets to the production bucket.
+This will mutate the payload, so that item references will target the new asset locations.
 #### Notes
 - This DAG can run with the following configuration <br>
 ```json
@@ -46,48 +47,6 @@ dag_args = {
     "tags": ["collection", "discovery"],
 }
 
-
-@task
-def extract_discovery_items(**kwargs):
-    ti = kwargs.get("ti")
-    discovery_items = ti.dag_run.conf.get("discovery_items")
-    print(discovery_items)
-    return discovery_items
-
-
-@task(max_active_tis_per_dag=3)
-def build_stac_task(payload):
-    from veda_data_pipeline.utils.build_stac.handler import stac_handler
-    airflow_vars = Variable.get("aws_dags_variables")
-    airflow_vars_json = json.loads(airflow_vars)
-    event_bucket = airflow_vars_json.get("EVENT_BUCKET")
-    return stac_handler(payload_src=payload, bucket_output=event_bucket)
-
-@task()
-def mutate_payload(**kwargs):
-    ti = kwargs.get("ti")
-    payload = ti.dag_run.conf
-    if assets := payload.get("assets"):
-        # remove thumbnail asset if provided in collection config
-        if "thumbnail" in assets.keys():
-            assets.pop("thumbnail")
-        # if thumbnail was only asset, delete assets
-        if not assets:
-            payload.pop("assets")
-        # finally put the mutated assets back in the payload
-        else:
-            payload["assets"] = assets
-    return payload
-
-@task(max_active_tis_per_dag=3)
-def transfer_assets_to_production_bucket(payload):
-    transfer_data(payload)
-    # if transfer complete, update discovery payload to reflect new bucket
-    payload.update({"bucket": "veda-data-store"})
-    payload.update({"prefix": payload.get("collection")+"/"})
-    return payload
-
-
 template_dag_run_conf = {
     "collection": "<collection-id>",
     "data_type": "cog",
@@ -109,27 +68,31 @@ template_dag_run_conf = {
     "transfer": "<true|false> # transfer assets to production bucket if true (false by default)", 
 }
 
-with DAG("veda_dataset_pipeline", params=template_dag_run_conf, **dag_args) as dag:
+@task(max_active_tis_per_dag=3)
+def transfer_assets_to_production_bucket(payload):
+    transfer_data(payload)
+    # if transfer complete, update discovery payload to reflect new bucket
+    payload.update({"bucket": "veda-data-store"})
+    payload.update({"prefix": payload.get("collection")+"/"})
+    return payload
+
+with DAG("veda_promotion_pipeline", params=template_dag_run_conf, **dag_args) as dag:
     # ECS dependency variable
 
     start = EmptyOperator(task_id="start", dag=dag)
     end = EmptyOperator(task_id="end", dag=dag)
 
     collection_grp = collection_task_group()
-    mutate_payload_task = mutate_payload()
-    extract_from_payload = extract_discovery_items()
+    mutate_payload_task = remove_thumbnail_asset()
+    extract_from_payload = extract_discovery_items_from_payload()
 
     # asset transfer to production bucket
     transfer_task = transfer_assets_to_production_bucket.expand(payload=extract_from_payload)
-    discover = discover_from_s3_task.partial(alt_payload=mutate_payload_task).expand(event=transfer_task)
+    discover = discover_from_s3_task.partial(payload=mutate_payload_task).expand(event=transfer_task)
     discover.set_upstream(collection_grp)  # do not discover until collection exists
 
     get_files = get_dataset_files_to_process(payload=discover) # untangle mapped data format to get iterable payloads from discover step
-
-    
     build_stac = build_stac_task.expand(payload=get_files)
-    build_stac.set_upstream(get_files)
-    # .output is needed coming from a non-taskflow operator
     submit_stac = submit_to_stac_ingestor_task.expand(built_stac=build_stac)
 
     collection_grp.set_upstream(start)

@@ -42,7 +42,7 @@ def transfer_data(ti, payload):
         "origin_bucket": payload.get("bucket", ti.dag_run.conf.get("origin_bucket", "veda-data-store")),
         "origin_prefix": payload.get("prefix", ti.dag_run.conf.get("origin_prefix", "s3-prefix/")),
         "target_bucket": payload.get("target_bucket", ti.dag_run.conf.get("target_bucket", "veda-data-store")),
-        "dry_run": payload.get("dry_run", ti.dag_run.conf.get("dry_run", True)),# TODO default false before merge
+        "dry_run": payload.get("dry_run", ti.dag_run.conf.get("dry_run", False)),
     }
     airflow_vars = Variable.get("aws_dags_variables")
     airflow_vars_json = json.loads(airflow_vars)

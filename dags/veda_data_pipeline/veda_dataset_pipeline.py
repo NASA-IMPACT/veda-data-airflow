@@ -1,7 +1,6 @@
 import pendulum
 from airflow import DAG
 from airflow.models.param import Param
-from airflow.decorators import task
 from veda_data_pipeline.groups.discover_group import discover_from_s3_task, get_files_task
 from airflow.operators.dummy_operator import DummyOperator as EmptyOperator
 from veda_data_pipeline.groups.collection_group import collection_task_group
@@ -50,7 +49,7 @@ with DAG("veda_dataset_pipeline", params=template_dag_run_conf, **dag_args) as d
     end = EmptyOperator(task_id="end")
 
     mutated_payloads = start >> collection_task_group() >> remove_thumbnail_asset()
-    discovery_items = extract_discovery_items_from_payload(mutated_payloads)
+    discovery_items = extract_discovery_items_from_payload(payload=mutated_payloads)
     discover = discover_from_s3_task.partial(payload=mutated_payloads).expand(event=discovery_items)
     get_files = get_files_task(payload=discover)
     build_stac = build_stac_task.expand(payload=get_files)

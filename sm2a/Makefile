@@ -10,8 +10,8 @@ info_message = \
 
 count_down = \
 	@echo "Spinning up the system please wait..."; \
-	secs=40; \
-	while [ $secs -gt 0 ]; do \
+	secs=40 ;\
+	while [ $$secs -gt 0 ]; do \
 		printf "%d\033[0K\r" "$$secs"; \
 		sleep 1; \
 		secs=$$((secs - 1)); \
@@ -26,6 +26,9 @@ all: sm2a-local-init sm2a-local-run
 
 refresh: sm2a-local-build sm2a-local-run
 
+count_down_test:
+	$(count_down)
+
 sm2a-local-run: sm2a-local-stop
 	@echo "Running SM2A"
 	docker compose up -d
@@ -36,7 +39,6 @@ sm2a-local-run: sm2a-local-stop
 	@echo "To use local SM2A with AWS update ${SM2A_FOLDER}/sm2a-local-config/.env AWS credentials"
 
 sm2a-local-init:
-	cp sm2a-local-config/env_example sm2a-local-config/.env
 	cp -r ../dags .
 	docker compose run --rm airflow-cli db init
 	docker compose run --rm airflow-cli users create --email airflow@example.com --firstname airflow --lastname airflow --password airflow --username airflow --role Admin

@@ -1,5 +1,3 @@
-from datetime import timedelta
-
 from airflow.models.variable import Variable
 from airflow.operators.python import BranchPythonOperator, PythonOperator
 import json

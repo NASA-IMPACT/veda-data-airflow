@@ -13,12 +13,12 @@ group_kwgs = {"group_id": "Process", "tooltip": "Process"}
 def log_task(text: str):
     logging.info(text)
 
-@task()
-def extract_discovery_items_from_payload(ti, **kwargs):
-    discovery_items = ti.dag_run.conf.get("discovery_items")
+@task
+def extract_discovery_items_from_payload(ti, payload=None, **kwargs):
+    discovery_items = ti.dag_run.conf.get("discovery_items") if not payload else payload.get("discovery_items")
     return discovery_items
 
-@task()
+@task
 def remove_thumbnail_asset(ti):
     payload = deepcopy(ti.dag_run.conf)
     assets = payload.get("assets", {})

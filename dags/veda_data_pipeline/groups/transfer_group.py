@@ -27,11 +27,8 @@ def cogify_copy_task(ti):
     return cogify_transfer_handler(event_src=config, external_role_arn=external_role_arn)
 
 @task
-def transfer_data(ti, payload):
+def transfer_data_task(ti=None, payload={}):
     """Transfer data from one S3 bucket to another; s3 copy, no need for docker"""
-    from veda_data_pipeline.utils.transfer import (
-        data_transfer_handler,
-    )
     # use task-provided payload if provided, otherwise fall back on ti values
     # payload will generally have the same values expected by discovery, so some renames are needed when combining the dicts
     config = {
@@ -42,12 +39,21 @@ def transfer_data(ti, payload):
         "target_bucket": payload.get("target_bucket", ti.dag_run.conf.get("target_bucket", "veda-data-store")),
         "dry_run": payload.get("dry_run", ti.dag_run.conf.get("dry_run", False)),
     }
+    transfer_data(config)
+
+# non-decorated function for use in other tasks
+def transfer_data(payload={}):
+    """Transfer data from one S3 bucket to another; s3 copy, no need for docker"""
+    from veda_data_pipeline.utils.transfer import (
+        data_transfer_handler,
+    )
+    # use task-provided payload if provided, otherwise fall back on ti values
+    # payload will generally have the same values expected by discovery, so some renames are needed when combining the dicts
     airflow_vars = Variable.get("aws_dags_variables")
     airflow_vars_json = json.loads(airflow_vars)
     external_role_arn = airflow_vars_json.get("ASSUME_ROLE_WRITE_ARN")
     # (event, chunk_size=2800, role_arn=None, bucket_output=None):
-    return data_transfer_handler(event=config, role_arn=external_role_arn)
-
+    return data_transfer_handler(event=payload, role_arn=external_role_arn)
 
 # TODO: cogify_transfer handler is missing arg parser so this subdag will not work
 def subdag_transfer():

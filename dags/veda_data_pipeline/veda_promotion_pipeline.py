@@ -69,8 +69,17 @@ template_dag_run_conf = {
 }
 
 @task(max_active_tis_per_dag=3)
-def transfer_assets_to_production_bucket(payload):
-    transfer_data(payload)
+def transfer_assets_to_production_bucket(ti=None, payload={}):
+    # merge collection id into payload, then transfer data
+    payload['collection'] = ti.dag_run.conf.get("collection")
+    config = {
+        **payload,
+        "origin_bucket": payload.get("bucket", ti.dag_run.conf.get("origin_bucket", "veda-data-store")),
+        "origin_prefix": payload.get("prefix", ti.dag_run.conf.get("origin_prefix", "s3-prefix/")),
+        "target_bucket": payload.get("target_bucket", ti.dag_run.conf.get("target_bucket", "veda-data-store")),
+        "dry_run": payload.get("dry_run", ti.dag_run.conf.get("dry_run", False)),
+    }
+    transfer_data(payload=config)
     # if transfer complete, update discovery payload to reflect new bucket
     payload.update({"bucket": "veda-data-store"})
     payload.update({"prefix": payload.get("collection")+"/"})
@@ -97,4 +106,5 @@ with DAG("veda_promotion_pipeline", params=template_dag_run_conf, **dag_args) as
 
     collection_grp.set_upstream(start)
     mutate_payload_task.set_upstream(start)
+    extract_from_payload.set_upstream(start)
     submit_stac.set_downstream(end)

@@ -47,8 +47,6 @@ def transfer_data(payload={}):
     from veda_data_pipeline.utils.transfer import (
         data_transfer_handler,
     )
-    # use task-provided payload if provided, otherwise fall back on ti values
-    # payload will generally have the same values expected by discovery, so some renames are needed when combining the dicts
     airflow_vars = Variable.get("aws_dags_variables")
     airflow_vars_json = json.loads(airflow_vars)
     external_role_arn = airflow_vars_json.get("ASSUME_ROLE_WRITE_ARN")

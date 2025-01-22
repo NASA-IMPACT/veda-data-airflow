@@ -4,6 +4,7 @@ import pystac
 import rasterio
 from pystac.utils import datetime_to_str
 from rasterio.session import AWSSession
+from airflow.models.variable import Variable
 from rio_stac import stac
 from rio_stac.stac import PROJECTION_EXT_VERSION, RASTER_EXT_VERSION
 

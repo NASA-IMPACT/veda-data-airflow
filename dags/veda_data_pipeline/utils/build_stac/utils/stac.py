@@ -1,4 +1,4 @@
-import os
+import json
 
 import pystac
 import rasterio
@@ -12,8 +12,10 @@ from . import events, regex, role
 
 
 def get_sts_session():
-    if role_arn := os.environ.get("EXTERNAL_ROLE_ARN"):
-        creds = role.assume_role(role_arn, "veda-data-pipelines_build-stac")
+    airflow_vars = Variable.get("aws_dags_variables")
+    airflow_vars_json = json.loads(airflow_vars)
+    if external_role_arn := airflow_vars_json.get("ASSUME_ROLE_READ_ARN")
+        creds = role.assume_role(external_role_arn, "veda-data-pipelines_build-stac")
         return AWSSession(
             aws_access_key_id=creds["AccessKeyId"],
             aws_secret_access_key=creds["SecretAccessKey"],

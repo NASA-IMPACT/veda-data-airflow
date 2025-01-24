@@ -15,6 +15,7 @@ affine
 netCDF4
 requests
 rio-cogeo
+rio-stac
 smart-open
 apache-airflow-providers-common-sql
 typing-extensions

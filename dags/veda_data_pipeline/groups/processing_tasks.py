@@ -25,7 +25,7 @@ def remove_thumbnail_asset(ti):
     if assets.get("thumbnail"):
         assets.pop("thumbnail")
     # if thumbnail was only asset, delete assets
-    if not assets:
+    if not assets and (assets is not None):
         payload.pop("assets")
     return payload
 

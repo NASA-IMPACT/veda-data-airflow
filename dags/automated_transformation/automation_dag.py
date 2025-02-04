@@ -77,7 +77,7 @@ with DAG(
         file_name = f'{config.get("collection_name")}_transformation.py'
         try:
             plugin_url = f"{config['plugins_uri'].strip('/')}/{folder_name}/{file_name}"
-            download_python_file(uri=plugin_url, check_exist=True)
+            download_python_file(uri=plugin_url)
             return f"The {file_name} exists in {folder_name} in this URL {plugin_url}."
         except Exception as e:
             raise Exception(f"Error checking file existence: {e}")

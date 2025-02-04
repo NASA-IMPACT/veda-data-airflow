@@ -74,14 +74,11 @@ def download_python_file(uri: str, check_exist=False):
     return download_python_file_from_github(url=uri, check_exist=check_exist)
 
 
-def download_python_file_from_github(url, check_exist=False):
+def download_python_file_from_github(url):
     try:
         # Send a GET request to the URL
         response = requests.get(url)
         response.raise_for_status()  # Raise an error for HTTP errors
-        if check_exist:
-            return True
-
         # Extract the file name from the URL
         file_name = os.path.basename(url)
 
@@ -97,8 +94,7 @@ def download_python_file_from_github(url, check_exist=False):
         return temp_file_path
 
     except requests.exceptions.RequestException as e:
-        print(f"Error downloading the file: {e}")
-        return None
+        raise Exception(f"Error downloading the file: {e}")
 
 
 def load_function_from_file(file_path, function_name):
@@ -122,13 +118,13 @@ def load_function_from_file(file_path, function_name):
 
 
 def transform_cog(
-    name_list,
-    nodata,
-    raw_data_bucket,
-    dest_data_bucket,
-    data_prefix,
-    collection_name,
-    plugin_url,
+        name_list,
+        nodata,
+        raw_data_bucket,
+        dest_data_bucket,
+        data_prefix,
+        collection_name,
+        plugin_url,
 ):
     """This function calls the plugins (dataset specific transformation functions) and
     generalizes the transformation of dataset to COGs.

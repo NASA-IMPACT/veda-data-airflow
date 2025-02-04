@@ -27,21 +27,44 @@ dag_run_config = {
     ),
     "dest_data_bucket": "ghgc-data-store-develop",
     "data_prefix": Param("transformed_cogs", type="string", pattern="^[^/].*[^/]$"),
-    "collection_name": "gpw",
+    "collection_name": Param("gpw", type="string"),
     "nodata": Param(-9999, type="number"),
-    "ext": Param(".tif", type="string", pattern="^\\..*$"),
+    "ext": Param(".nc", type="string", pattern="^\\..*$"),
 }
+dag_doc_md = """
+
+### Automate COG Transformation
+
+This DAG automates the transformation of raw geospatial data into Cloud-Optimized GeoTIFFs (COGs). It fetches transformation plugins, discovers files, processes them, and generates a report.
+
+#### DAG Configuration
+
+```json
+{
+    "data_acquisition_method": "s3",
+    "plugins_uri": "https://raw.githubusercontent.com/US-GHG-Center/ghgc-docs/refs/heads/main/",
+    "raw_data_bucket": "ghgc-data-store-develop",
+    "raw_data_prefix": "delivery/gpw",
+    "dest_data_bucket": "ghgc-data-store-develop",
+    "data_prefix": "transformed_cogs",
+    "collection_name": "gpw",
+    "nodata": -9999,
+    "ext": ".nc"
+}
+"""
 
 with DAG(
-    dag_id=DAG_ID,
-    schedule=None,
-    catchup=False,
-    tags=["Transformation", "Report"],
-    params=dag_run_config,
-    on_failure_callback=slack_fail_alert,
+        dag_id=DAG_ID,
+        schedule=None,
+        catchup=False,
+        tags=["Transformation", "Report"],
+        params=dag_run_config,
+        doc_md=dag_doc_md,
+        on_failure_callback=slack_fail_alert,
 ) as dag:
     start = DummyOperator(task_id="start", dag=dag)
     end = DummyOperator(task_id="end", dag=dag)
+
 
     @task
     def check_function_exists(ti):
@@ -59,6 +82,7 @@ with DAG(
         except Exception as e:
             raise Exception(f"Error checking file existence: {e}")
 
+
     @task
     def discover_files(ti):
         from dags.automated_transformation.transformation_pipeline import (
@@ -72,9 +96,10 @@ with DAG(
         generated_list = get_all_s3_keys(bucket, model_name, ext)
         chunk_size = int(len(generated_list) / 900) + 1
         return [
-            generated_list[i : i + chunk_size]
+            generated_list[i: i + chunk_size]
             for i in range(0, len(generated_list), chunk_size)
         ]
+
 
     @task(max_active_tis_per_dag=1)
     def process_files(file_url, **kwargs):
@@ -104,6 +129,7 @@ with DAG(
         )
         return file_status
 
+
     @task
     def generate_report(reports, **kwargs):
         dag_run = kwargs.get("dag_run")
@@ -122,6 +148,7 @@ with DAG(
             "successes": count,
             "failures": failed_files,
         }
+
 
     urls = start >> check_function_exists() >> discover_files()
     report_data = process_files.expand(file_url=urls)

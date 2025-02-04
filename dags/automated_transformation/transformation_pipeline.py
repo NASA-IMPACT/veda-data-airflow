@@ -10,12 +10,12 @@ import requests
 import s3fs
 
 
-def get_all_s3_keys(bucket, model_name, ext) -> list:
+def get_all_s3_keys(bucket, s3_prefix, ext) -> list:
     """Function fetches all the s3 keys from the given bucket and model name.
 
     Args:
         bucket (str): Name of the bucket from where we want to fetch the data
-        model_name (str): Dataset name/folder name where the data is stored
+        s3_prefix (str): Dataset name/folder name where the data is stored
         ext (str): extension of the file that is to be fetched.
 
     Returns:
@@ -24,23 +24,15 @@ def get_all_s3_keys(bucket, model_name, ext) -> list:
     session = boto3.session.Session()
     s3_client = session.client("s3")
     keys = []
-
-    kwargs = {"Bucket": bucket, "Prefix": f"{model_name}"}
-    try:
-        while True:
-            resp = s3_client.list_objects_v2(**kwargs)
-            print("response is ", resp)
-            for obj in resp["Contents"]:
-                if obj["Key"].endswith(ext) and "historical" not in obj["Key"]:
-                    keys.append(obj["Key"])
-
-            try:
-                kwargs["ContinuationToken"] = resp["NextContinuationToken"]
-            except KeyError:
-                break
-    except Exception as ex:
-        raise Exception(f"Error returned is {ex}")
-
+    kwargs = {"Bucket": bucket, "Prefix": s3_prefix}
+    there_more_files = True
+    while there_more_files:
+        resp = s3_client.list_objects_v2(**kwargs)
+        for obj in resp["Contents"]:
+            if obj["Key"].endswith(ext) and "historical" not in obj["Key"]:
+                keys.append(obj["Key"])
+        kwargs["ContinuationToken"] = resp.get("NextContinuationToken")
+        there_more_files = resp.get("NextContinuationToken") is not None
     print(f"Discovered {len(keys)}")
     return keys
 
@@ -159,15 +151,14 @@ def transform_cog(
     json_dict = {}
     function_name = f'{collection_name.replace("-", "_")}_transformation'
     temp_file_path = download_python_file(plugin_url)
+    transform_func = load_function_from_file(temp_file_path, function_name)
     for name in name_list:
         url = f"s3://{raw_data_bucket}/{name}"
         fs = s3fs.S3FileSystem()
         print("the url is", url)
         with fs.open(url, mode="rb") as file_obj:
             try:
-                transform_func = load_function_from_file(temp_file_path, function_name)
                 var_data_netcdf = transform_func(file_obj, name, nodata)
-
                 for cog_filename, data in var_data_netcdf.items():
                     # generate COG
                     min_value_netcdf = data.min().item()

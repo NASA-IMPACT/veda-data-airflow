@@ -41,7 +41,6 @@ runs:
     - name: Deploy
       working-directory: ${{ inputs.dir }}
       shell: bash
-      working-directory: ${{ inputs.dir }}
       env:
         AWS_DEFAULT_REGION: ${{ inputs.aws-region }}
         AWS_REGION: ${{ inputs.aws-region }}
@@ -55,4 +54,3 @@ runs:
       run: |
         cd ./infrastructure
         terraform output -json Airflow_url > ${HOME}/output_sm2a_workflows_endpoint.json
-

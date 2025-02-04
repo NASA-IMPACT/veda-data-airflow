@@ -91,9 +91,9 @@ with DAG(
 
         config = ti.dag_run.conf.copy()
         bucket = config.get("raw_data_bucket")
-        model_name = config.get("raw_data_prefix")
+        data_prefix = config.get("raw_data_prefix")
         ext = config.get("ext")  # .nc as well
-        generated_list = get_all_s3_keys(bucket, model_name, ext)
+        generated_list = get_all_s3_keys(bucket, data_prefix, ext)
         chunk_size = int(len(generated_list) / 900) + 1
         return [
             generated_list[i: i + chunk_size]

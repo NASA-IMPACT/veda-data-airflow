@@ -68,12 +68,7 @@ module "sma-base" {
     {
       name  = "GH_USER_TEAM_ID"
       value = var.gh_user_team_id
-    },
-    {
-      name  = "AIRFLOW__WEBSERVER__BASE_URL"
-      value = "https://${var.subdomain}/${var.domain_name}"
     }
-
 
   ]
   extra_airflow_configuration = {

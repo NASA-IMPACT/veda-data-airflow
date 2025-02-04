@@ -63,7 +63,7 @@ def download_python_file_from_s3(bucket_name, s3_key):
     return temp_file.name
 
 
-def download_python_file(uri: str, check_exist=False):
+def download_python_file(uri: str):
     if uri.startswith("s3://"):
         # Remove the 's3://' prefix
         s3_path = uri[5:]
@@ -71,7 +71,7 @@ def download_python_file(uri: str, check_exist=False):
         parts = s3_path.split("/", 1)
         bucket_name, key = parts
         return download_python_file_from_s3(bucket_name=bucket_name, s3_key=key)
-    return download_python_file_from_github(url=uri, check_exist=check_exist)
+    return download_python_file_from_github(url=uri)
 
 
 def download_python_file_from_github(url):

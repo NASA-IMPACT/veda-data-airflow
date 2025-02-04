@@ -22,13 +22,20 @@ fsspec
 s3fs
 xarray
 xstac
+h5netcdf
+rioxarray
 pystac
 rasterio
 rio-stac
 GeoAlchemy2
 geopandas==0.14.4
 fiona==1.9.6
+<<<<<<< HEAD
 h5netcdf
 rioxarray
 apache-airflow-providers-slack
 apache-airflow-providers-slack[http]
+=======
+
+
+>>>>>>> 9758f44181ab960c2916c1fd4c96fd890b250153

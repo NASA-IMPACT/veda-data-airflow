@@ -114,7 +114,7 @@ with DAG(
         return filtered_files
 
 
-    @task(max_active_tis_per_dag=1)
+    @task(max_active_tis_per_dag=20)
     def process_files(file_url, **kwargs):
         dag_run = kwargs.get("dag_run")
         from dags.automated_transformation.transformation_pipeline import transform_cog

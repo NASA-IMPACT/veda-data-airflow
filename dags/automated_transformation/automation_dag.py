@@ -26,7 +26,7 @@ dag_run_config = {
         pattern="^[^/].*[^/]$",
     ),
     # Add a regex pattern after the prefix to filter the raw files 
-    "raw_data_filter_regex": ".*.nc$"
+    "raw_data_filter_regex": Param(".*.nc$", type="string"),
     "dest_data_bucket": "ghgc-data-store-develop",
     "data_prefix": Param("transformed_cogs", type="string", pattern="^[^/].*[^/]$"),
     "collection_name": Param("gpw", type="string"),

@@ -25,6 +25,8 @@ dag_run_config = {
         type="string",
         pattern="^[^/].*[^/]$",
     ),
+    # Add a regex pattern after the prefix to filter the raw files 
+    "raw_data_filter_regex": ".*.nc$"
     "dest_data_bucket": "ghgc-data-store-develop",
     "data_prefix": Param("transformed_cogs", type="string", pattern="^[^/].*[^/]$"),
     "collection_name": Param("gpw", type="string"),
@@ -100,6 +102,17 @@ with DAG(
             for i in range(0, len(generated_list), chunk_size)
         ]
 
+    @task
+    def filter_discovered_files(files_chunk, ti):
+        config = ti.dag_run.conf
+        raw_data_regex = config.get("raw_data_filter_regex")
+        raw_data_prefix = config.get("raw_data_prefix")
+        pattern = rf"{raw_data_prefix}{raw_data_regex}"
+        filtered_files = [
+            f for f in files_chunk if re.match(pattern, f)
+        ]
+        return filtered_files
+
 
     @task(max_active_tis_per_dag=1)
     def process_files(file_url, **kwargs):
@@ -150,6 +163,6 @@ with DAG(
         }
 
 
-    urls = start >> check_function_exists() >> discover_files()
-    report_data = process_files.expand(file_url=urls)
+    filtered_urls = start >> check_function_exists() >> discover_files() >> filter_discovered_files()
+    report_data = process_files.expand(file_url=filtered_urls)
     generate_report(reports=report_data) >> end

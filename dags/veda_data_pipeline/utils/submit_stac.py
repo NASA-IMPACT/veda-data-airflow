@@ -102,10 +102,7 @@ def submission_handler(
     endpoint: str = "/ingestions",
     cognito_app_secret=None,
     stac_ingestor_api_url=None,
-    context=None,
 ) -> None | dict:
-    if context is None:
-        context = {}
 
     stac_item = event
 

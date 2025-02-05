@@ -6,6 +6,7 @@ import smart_open
 from airflow.models.variable import Variable
 from airflow.decorators import task
 from veda_data_pipeline.utils.submit_stac import submission_handler
+from veda_data_pipeline.utils.submit_stac_transactions import submit_transactions_handler
 
 group_kwgs = {"group_id": "Process", "tooltip": "Process"}
 
@@ -30,8 +31,17 @@ def remove_thumbnail_asset(ti):
         payload.pop("assets", True)
     return payload
 
+TRANSACTIONS_ENDPOINT_ENABLED = False
+if TRANSACTIONS_ENDPOINT_ENABLED:
+    # assuming default chunk size, this matches the current dynamoDB configuration on the STAC ingestor
+    task_kwargs = {"retries": 3, "retry_delay": 10, "retry_exponential_backoff": True, "max_active_tis_per_dag": 2}
+    submit_handler = submit_transactions_handler
+else:
+    task_kwargs = {"retries": 2, "retry_delay": 60, "retry_exponential_backoff": True, "max_active_tis_per_dag": 5}
+    submit_handler = submission_handler
+
 # with exponential backoff enabled, retry delay is converted to seconds
-@task(retries=2, retry_delay=60, retry_exponential_backoff=True, max_active_tis_per_dag=5)
+@task(**task_kwargs)
 def submit_to_stac_ingestor_task(built_stac: dict):
     """Submit STAC items to the STAC ingestor API."""
     event = built_stac.copy()
@@ -50,7 +60,7 @@ def submit_to_stac_ingestor_task(built_stac: dict):
         stac_items = [event]
 
     for item in stac_items:
-        submission_handler(
+        submit_handler(
             event=item,
             endpoint="/ingestions",
             cognito_app_secret=cognito_app_secret,

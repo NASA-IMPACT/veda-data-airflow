@@ -5,6 +5,9 @@ from airflow.decorators import task
 from airflow.models.param import Param
 from airflow.operators.dummy_operator import DummyOperator
 from slack_notifications import slack_fail_alert
+from airflow.models.variable import Variable
+from dags.veda_data_pipeline.utils.xcom_to_s3 import write_xcom_to_s3,read_xcom_from_s3
+import re
 
 DAG_ID = "automate-cog-transformation"
 
@@ -93,29 +96,42 @@ with DAG(
 
         config = ti.dag_run.conf.copy()
         bucket = config.get("raw_data_bucket")
-        data_prefix = config.get("raw_data_prefix")
-        ext = config.get("ext")  # .nc as well
-        generated_list = get_all_s3_keys(bucket, data_prefix, ext)
-        chunk_size = int(len(generated_list) / 900) + 1
-        return [
-            generated_list[i: i + chunk_size]
-            for i in range(0, len(generated_list), chunk_size)
-        ]
-
-    @task
-    def filter_discovered_files(files_chunk, ti):
-        config = ti.dag_run.conf
-        raw_data_regex = config.get("raw_data_filter_regex")
         raw_data_prefix = config.get("raw_data_prefix")
-        pattern = rf"{raw_data_prefix}{raw_data_regex}"
+        raw_data_regex = config.get("raw_data_filter_regex")
+        ext = config.get("ext")  # .nc as well
+        generated_list = get_all_s3_keys(bucket, raw_data_prefix, ext)
+        collection_name = config.get("collection_name")
+        print(f"[ TOTAL DISCOVERED : {len(generated_list)}]")
+
+        # Filter by raw data regex
+        pattern = rf"{raw_data_prefix}/{raw_data_regex}"
         filtered_files = [
-            f for f in files_chunk if re.match(pattern, f)
+            f for f in generated_list if re.match(pattern, f)
         ]
-        return filtered_files
+        print(f"[ FILTERED BY PATTERN {pattern} : {len(filtered_files)}]")
+
+        # Write this to s3
+        airflow_vars_json = Variable.get("aws_dags_variables", deserialize_json=True)
+        bucket_output = airflow_vars_json.get("EVENT_BUCKET")
+        key = f"s3://{bucket_output}/events/{collection_name}"
+        chunks_xcom = []
+        
+        if len(filtered_files) > 900:
+            # Do chunking only if there are more than 900 files
+            chunk_size = max(int(len(filtered_files) / 900), 1)
+            for i in range(0, len(filtered_files), chunk_size):
+                tmp = filtered_files[i: i + chunk_size]
+                output_key = write_xcom_to_s3(f"{key}/chunk_{i}", tmp)
+                chunks_xcom.append(output_key)
+        else:
+            # put all inside same s3 file if it is less than 900
+            output_key = write_xcom_to_s3(f"{key}/all_files", filtered_files)
+            chunks_xcom.append(output_key) 
+        return chunks_xcom
 
 
     @task(max_active_tis_per_dag=20)
-    def process_files(file_url, **kwargs):
+    def process_files(s3_url, **kwargs):
         dag_run = kwargs.get("dag_run")
         from dags.automated_transformation.transformation_pipeline import transform_cog
 
@@ -125,14 +141,15 @@ with DAG(
         data_prefix = config.get("data_prefix")
         nodata = config.get("nodata")
         collection_name = config.get("collection_name")
-        print(f"The file I am processing is {file_url}")
-        print("len of files", len(file_url))
         folder_name = "data_transformation_plugins"
         file_name = f"{collection_name}_transformation.py"
         plugin_url = f"{config['plugins_uri'].strip('/')}/{folder_name}/{file_name}"
 
+        # Get the files url from the s3 location
+        file_url_list = read_xcom_from_s3(s3_url)
+
         file_status = transform_cog(
-            file_url,
+            file_url_list,
             plugin_url=plugin_url,
             nodata=nodata,
             raw_data_bucket=raw_bucket_name,
@@ -163,6 +180,6 @@ with DAG(
         }
 
 
-    filtered_urls = start >> check_function_exists() >> discover_files() >> filter_discovered_files()
-    report_data = process_files.expand(file_url=filtered_urls)
+    s3_urls = start >> check_function_exists() >> discover_files() 
+    report_data = process_files.expand(s3_url=s3_urls)
     generate_report(reports=report_data) >> end

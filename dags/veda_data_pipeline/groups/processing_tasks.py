@@ -26,7 +26,8 @@ def remove_thumbnail_asset(ti):
         assets.pop("thumbnail")
     # if thumbnail was only asset, delete assets
     if not assets:
-        payload.pop("assets")
+        # Safely return if there are no assets in the payload
+        payload.pop("assets", True)
     return payload
 
 # with exponential backoff enabled, retry delay is converted to seconds

@@ -1,4 +1,3 @@
-from datetime import timedelta
 import json
 import logging
 from copy import deepcopy
@@ -10,6 +9,9 @@ from veda_data_pipeline.utils.submit_stac_transactions import submit_transaction
 
 group_kwgs = {"group_id": "Process", "tooltip": "Process"}
 
+airflow_vars = Variable.get("aws_dags_variables")
+airflow_vars_json = json.loads(airflow_vars)
+TRANSACTIONS_ENDPOINT_ENABLED = airflow_vars_json.get("TRANSACTIONS_ENDPOINT_ENABLED", False)
 
 def log_task(text: str):
     logging.info(text)
@@ -31,13 +33,14 @@ def remove_thumbnail_asset(ti):
         payload.pop("assets", True)
     return payload
 
-TRANSACTIONS_ENDPOINT_ENABLED = False
 if TRANSACTIONS_ENDPOINT_ENABLED:
-    # assuming default chunk size, this matches the current dynamoDB configuration on the STAC ingestor
+    # assuming default chunk size (500), this matches the current dynamoDB configuration on the STAC ingestor
     task_kwargs = {"retries": 3, "retry_delay": 10, "retry_exponential_backoff": True, "max_active_tis_per_dag": 2}
+    submit_kwargs = {}
     submit_handler = submit_transactions_handler
 else:
     task_kwargs = {"retries": 2, "retry_delay": 60, "retry_exponential_backoff": True, "max_active_tis_per_dag": 5}
+    submit_kwargs = {"endpoint": "/ingestions"}
     submit_handler = submission_handler
 
 # with exponential backoff enabled, retry delay is converted to seconds
@@ -62,9 +65,9 @@ def submit_to_stac_ingestor_task(built_stac: dict):
     for item in stac_items:
         submit_handler(
             event=item,
-            endpoint="/ingestions",
             cognito_app_secret=cognito_app_secret,
             stac_ingestor_api_url=stac_ingestor_api_url,
+            **submit_kwargs,
         )
     return event
 

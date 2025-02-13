@@ -6,7 +6,7 @@ from airflow.models.param import Param
 from airflow.operators.dummy_operator import DummyOperator
 from slack_notifications import slack_fail_alert
 from airflow.models.variable import Variable
-from dags.veda_data_pipeline.utils.xcom_to_s3 import write_xcom_to_s3,read_xcom_from_s3
+from veda_data_pipeline.utils.xcom_to_s3 import write_xcom_to_s3,read_xcom_from_s3
 import re
 
 DAG_ID = "automate-cog-transformation"

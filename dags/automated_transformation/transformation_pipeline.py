@@ -8,7 +8,7 @@ import numpy as np
 import rasterio
 import requests
 import s3fs
-
+import shutil
 
 def get_all_s3_keys(bucket, s3_prefix, ext) -> list:
     """Function fetches all the s3 keys from the given bucket and model name.
@@ -37,7 +37,7 @@ def get_all_s3_keys(bucket, s3_prefix, ext) -> list:
     return keys
 
 
-def download_python_file_from_s3(bucket_name, s3_key):
+def download_python_file_from_s3(bucket_name, s3_key, temp_file_path, check_exist=False):
     """
     Downloads a Python file from an S3 bucket and returns a temporary file path.
 
@@ -48,45 +48,47 @@ def download_python_file_from_s3(bucket_name, s3_key):
     Returns:
     - str: Path to the temporary file.
     """
+
+
+    
     s3 = boto3.client("s3")
 
-    # Create a temporary file
-    temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".py")
-    temp_file.close()  # Close the file so it can be written to by boto3
 
     # Download the S3 file to the temporary file location
-    s3.download_file(bucket_name, s3_key, temp_file.name)
+    s3.download_file(bucket_name, s3_key, temp_file_path)
     print(
-        f"Downloaded {s3_key} from bucket {bucket_name} to temporary file {temp_file.name}"
+        f"Downloaded {s3_key} from bucket {bucket_name} to temporary file {temp_file_path}"
     )
 
-    return temp_file.name
+    return temp_file_path
 
 
-def download_python_file(uri: str):
+def download_python_file(uri: str, check_exist=False):
+        # Extract the file name from the URL
+    file_name = os.path.basename(uri)
+
+    # Create a temporary directory and file with the same name
+    temp_dir = tempfile.mkdtemp()
+    temp_file_path = os.path.join(temp_dir, file_name)
+    # Write the content to the temporary file
+
     if uri.startswith("s3://"):
         # Remove the 's3://' prefix
         s3_path = uri[5:]
         # Split into bucket and key
         parts = s3_path.split("/", 1)
         bucket_name, key = parts
-        return download_python_file_from_s3(bucket_name=bucket_name, s3_key=key)
-    return download_python_file_from_github(url=uri)
+        return download_python_file_from_s3(bucket_name=bucket_name, s3_key=key, temp_file_path=temp_file_path, check_exist=check_exist)
+    return download_python_file_from_github(url=uri, temp_file_path=temp_file_path, check_exist=check_exist)
 
 
-def download_python_file_from_github(url):
+def download_python_file_from_github(url, temp_file_path, check_exist=False):
     try:
         # Send a GET request to the URL
         response = requests.get(url)
         response.raise_for_status()  # Raise an error for HTTP errors
-        # Extract the file name from the URL
-        file_name = os.path.basename(url)
-
-        # Create a temporary directory and file with the same name
-        temp_dir = tempfile.gettempdir()
-        temp_file_path = os.path.join(temp_dir, file_name)
-
-        # Write the content to the temporary file
+        if check_exist:
+            return True
         with open(temp_file_path, "wb") as temp_file:
             temp_file.write(response.content)
 
@@ -216,5 +218,6 @@ def transform_cog(
                     "reason": f"Error: {ex}",
                 }
             finally:
-                os.remove(temp_file_path)
+                print(f"Deleting {temp_file_path}")
+                shutil.rmtree(os.path.dirname(temp_file_path))
         return status

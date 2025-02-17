@@ -35,6 +35,7 @@ dag_run_config = {
     "collection_name": Param("gpw", type="string"),
     "nodata": Param(-9999, type="number"),
     "ext": Param(".nc", type="string", pattern="^\\..*$"),
+    "max_parallel_processing": Param(10, type="integer")
 }
 dag_doc_md = """
 
@@ -54,7 +55,8 @@ This DAG automates the transformation of raw geospatial data into Cloud-Optimize
     "data_prefix": "transformed_cogs",
     "collection_name": "gpw",
     "nodata": -9999,
-    "ext": ".nc"
+    "ext": ".nc",
+    "max_parallel_processing": 10
 }
 """
 
@@ -66,6 +68,7 @@ with DAG(
         params=dag_run_config,
         doc_md=dag_doc_md,
         on_failure_callback=slack_fail_alert,
+        max_active_runs = 1 # Ensure only one DAG at a time to avoid memory issues (code -9)
 ) as dag:
     start = DummyOperator(task_id="start", dag=dag)
     end = DummyOperator(task_id="end", dag=dag)
@@ -82,11 +85,23 @@ with DAG(
         file_name = f'{config.get("collection_name")}_transformation.py'
         try:
             plugin_url = f"{config['plugins_uri'].strip('/')}/{folder_name}/{file_name}"
-            download_python_file(uri=plugin_url)
+            download_python_file(uri=plugin_url, check_exist=True)
             return f"The {file_name} exists in {folder_name} in this URL {plugin_url}."
         except Exception as e:
             raise Exception(f"Error checking file existence: {e}")
 
+    @task()
+    def set_max_active_processing(**kwargs):
+        from time import sleep
+        dag_run = kwargs.get("dag_run")
+        config = dag_run.conf.copy()
+        max_parallel_value_stored = Variable.get("max_parallel_processing", default_var=10)
+        max_parallel_value_configured = config.get("max_parallel_processing", 10)
+        if max_parallel_value_stored != max_parallel_value_configured:
+            Variable.set("max_parallel_processing", max_parallel_value_configured)
+            # Give time for the scheduler to catch up
+            sleep(15)
+        return max_parallel_value_configured
 
     @task
     def discover_files(ti):
@@ -115,22 +130,23 @@ with DAG(
         bucket_output = airflow_vars_json.get("EVENT_BUCKET")
         key = f"s3://{bucket_output}/events/{collection_name}"
         chunks_xcom = []
+        chunk_limit = 900 # how many xcams
         
-        if len(filtered_files) > 900:
-            # Do chunking only if there are more than 900 files
-            chunk_size = max(int(len(filtered_files) / 900), 1)
+        if len(filtered_files) > chunk_limit:
+            # Do chunking only if there are more than chunk_limitr files
+            chunk_size = max(int(len(filtered_files) / chunk_limit), 1) # how many lines in xcom
             for i in range(0, len(filtered_files), chunk_size):
                 tmp = filtered_files[i: i + chunk_size]
                 output_key = write_xcom_to_s3(f"{key}/chunk_{i}", tmp)
                 chunks_xcom.append(output_key)
         else:
-            # put all inside same s3 file if it is less than 900
+            # put all inside same s3 file if it is less than chunk_limit
             output_key = write_xcom_to_s3(f"{key}/all_files", filtered_files)
             chunks_xcom.append(output_key) 
         return chunks_xcom
 
 
-    @task(max_active_tis_per_dag=20)
+    @task(max_active_tis_per_dag=int(Variable.get("max_parallel_processing", default_var=10)))
     def process_files(s3_url, **kwargs):
         dag_run = kwargs.get("dag_run")
         from dags.automated_transformation.transformation_pipeline import transform_cog
@@ -180,6 +196,6 @@ with DAG(
         }
 
 
-    s3_urls = start >> check_function_exists() >> discover_files() 
+    s3_urls = start >> check_function_exists() >> set_max_active_processing()>> discover_files() 
     report_data = process_files.expand(s3_url=s3_urls)
     generate_report(reports=report_data) >> end

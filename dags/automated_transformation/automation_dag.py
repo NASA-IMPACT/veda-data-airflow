@@ -5,6 +5,9 @@ from airflow.decorators import task
 from airflow.models.param import Param
 from airflow.operators.dummy_operator import DummyOperator
 from slack_notifications import slack_fail_alert
+from airflow.models.variable import Variable
+from veda_data_pipeline.utils.xcom_to_s3 import write_xcom_to_s3,read_xcom_from_s3
+import re
 
 DAG_ID = "automate-cog-transformation"
 
@@ -25,11 +28,14 @@ dag_run_config = {
         type="string",
         pattern="^[^/].*[^/]$",
     ),
+    # Add a regex pattern after the prefix to filter the raw files 
+    "raw_data_filter_regex": Param(".*.nc$", type="string"),
     "dest_data_bucket": "ghgc-data-store-develop",
     "data_prefix": Param("transformed_cogs", type="string", pattern="^[^/].*[^/]$"),
     "collection_name": Param("gpw", type="string"),
     "nodata": Param(-9999, type="number"),
     "ext": Param(".nc", type="string", pattern="^\\..*$"),
+    "max_parallel_processing": Param(10, type="integer")
 }
 dag_doc_md = """
 
@@ -49,7 +55,8 @@ This DAG automates the transformation of raw geospatial data into Cloud-Optimize
     "data_prefix": "transformed_cogs",
     "collection_name": "gpw",
     "nodata": -9999,
-    "ext": ".nc"
+    "ext": ".nc",
+    "max_parallel_processing": 10
 }
 """
 
@@ -61,6 +68,7 @@ with DAG(
         params=dag_run_config,
         doc_md=dag_doc_md,
         on_failure_callback=slack_fail_alert,
+        max_active_runs = 1 # Ensure only one DAG at a time to avoid memory issues (code -9)
 ) as dag:
     start = DummyOperator(task_id="start", dag=dag)
     end = DummyOperator(task_id="end", dag=dag)
@@ -77,11 +85,23 @@ with DAG(
         file_name = f'{config.get("collection_name")}_transformation.py'
         try:
             plugin_url = f"{config['plugins_uri'].strip('/')}/{folder_name}/{file_name}"
-            download_python_file(uri=plugin_url)
+            download_python_file(uri=plugin_url, check_exist=True)
             return f"The {file_name} exists in {folder_name} in this URL {plugin_url}."
         except Exception as e:
             raise Exception(f"Error checking file existence: {e}")
 
+    @task()
+    def set_max_active_processing(**kwargs):
+        from time import sleep
+        dag_run = kwargs.get("dag_run")
+        config = dag_run.conf.copy()
+        max_parallel_value_stored = Variable.get("max_parallel_processing", default_var=10)
+        max_parallel_value_configured = config.get("max_parallel_processing", 10)
+        if max_parallel_value_stored != max_parallel_value_configured:
+            Variable.set("max_parallel_processing", max_parallel_value_configured)
+            # Give time for the scheduler to catch up
+            sleep(15)
+        return max_parallel_value_configured
 
     @task
     def discover_files(ti):
@@ -91,18 +111,43 @@ with DAG(
 
         config = ti.dag_run.conf.copy()
         bucket = config.get("raw_data_bucket")
-        data_prefix = config.get("raw_data_prefix")
+        raw_data_prefix = config.get("raw_data_prefix")
+        raw_data_regex = config.get("raw_data_filter_regex")
         ext = config.get("ext")  # .nc as well
-        generated_list = get_all_s3_keys(bucket, data_prefix, ext)
-        chunk_size = int(len(generated_list) / 900) + 1
-        return [
-            generated_list[i: i + chunk_size]
-            for i in range(0, len(generated_list), chunk_size)
+        generated_list = get_all_s3_keys(bucket, raw_data_prefix, ext)
+        collection_name = config.get("collection_name")
+        print(f"[ TOTAL DISCOVERED : {len(generated_list)}]")
+
+        # Filter by raw data regex
+        pattern = rf"{raw_data_prefix}/{raw_data_regex}"
+        filtered_files = [
+            f for f in generated_list if re.match(pattern, f)
         ]
+        print(f"[ FILTERED BY PATTERN {pattern} : {len(filtered_files)}]")
+
+        # Write this to s3
+        airflow_vars_json = Variable.get("aws_dags_variables", deserialize_json=True)
+        bucket_output = airflow_vars_json.get("EVENT_BUCKET")
+        key = f"s3://{bucket_output}/events/{collection_name}"
+        chunks_xcom = []
+        chunk_limit = 900 # how many xcams
+        
+        if len(filtered_files) > chunk_limit:
+            # Do chunking only if there are more than chunk_limitr files
+            chunk_size = max(int(len(filtered_files) / chunk_limit), 1) # how many lines in xcom
+            for i in range(0, len(filtered_files), chunk_size):
+                tmp = filtered_files[i: i + chunk_size]
+                output_key = write_xcom_to_s3(f"{key}/chunk_{i}", tmp)
+                chunks_xcom.append(output_key)
+        else:
+            # put all inside same s3 file if it is less than chunk_limit
+            output_key = write_xcom_to_s3(f"{key}/all_files", filtered_files)
+            chunks_xcom.append(output_key) 
+        return chunks_xcom
 
 
-    @task(max_active_tis_per_dag=1)
-    def process_files(file_url, **kwargs):
+    @task(max_active_tis_per_dag=int(Variable.get("max_parallel_processing", default_var=10)))
+    def process_files(s3_url, **kwargs):
         dag_run = kwargs.get("dag_run")
         from dags.automated_transformation.transformation_pipeline import transform_cog
 
@@ -112,14 +157,15 @@ with DAG(
         data_prefix = config.get("data_prefix")
         nodata = config.get("nodata")
         collection_name = config.get("collection_name")
-        print(f"The file I am processing is {file_url}")
-        print("len of files", len(file_url))
         folder_name = "data_transformation_plugins"
         file_name = f"{collection_name}_transformation.py"
         plugin_url = f"{config['plugins_uri'].strip('/')}/{folder_name}/{file_name}"
 
+        # Get the files url from the s3 location
+        file_url_list = read_xcom_from_s3(s3_url)
+
         file_status = transform_cog(
-            file_url,
+            file_url_list,
             plugin_url=plugin_url,
             nodata=nodata,
             raw_data_bucket=raw_bucket_name,
@@ -150,6 +196,6 @@ with DAG(
         }
 
 
-    urls = start >> check_function_exists() >> discover_files()
-    report_data = process_files.expand(file_url=urls)
+    s3_urls = start >> check_function_exists() >> set_max_active_processing()>> discover_files() 
+    report_data = process_files.expand(s3_url=s3_urls)
     generate_report(reports=report_data) >> end

@@ -35,7 +35,8 @@ dag_run_config = {
     "collection_name": Param("gpw", type="string"),
     "nodata": Param(-9999, type="number"),
     "ext": Param(".nc", type="string", pattern="^\\..*$"),
-    "max_parallel_processing": Param(10, type="integer")
+    "max_parallel_processing": Param(10, type="integer"),
+    "chunk_limit": Param(100, type="integer")
 }
 dag_doc_md = """
 
@@ -56,7 +57,8 @@ This DAG automates the transformation of raw geospatial data into Cloud-Optimize
     "collection_name": "gpw",
     "nodata": -9999,
     "ext": ".nc",
-    "max_parallel_processing": 10
+    "max_parallel_processing": 10,
+    "chunk_limit": 100
 }
 """
 
@@ -130,19 +132,12 @@ with DAG(
         bucket_output = airflow_vars_json.get("EVENT_BUCKET")
         key = f"s3://{bucket_output}/events/{collection_name}"
         chunks_xcom = []
-        chunk_limit = 900 # how many xcams
-        
-        if len(filtered_files) > chunk_limit:
-            # Do chunking only if there are more than chunk_limitr files
-            chunk_size = max(int(len(filtered_files) / chunk_limit), 1) # how many lines in xcom
-            for i in range(0, len(filtered_files), chunk_size):
-                tmp = filtered_files[i: i + chunk_size]
-                output_key = write_xcom_to_s3(f"{key}/chunk_{i}", tmp)
-                chunks_xcom.append(output_key)
-        else:
-            # put all inside same s3 file if it is less than chunk_limit
-            output_key = write_xcom_to_s3(f"{key}/all_files", filtered_files)
-            chunks_xcom.append(output_key) 
+        chunk_limit = min(int(config.get("chunk_limit", 100)), 900)
+        chunk_size = int(len(generated_list) / chunk_limit) + 1
+        for indx, i in enumerate(range(0, len(generated_list), chunk_size)):
+            tmp = generated_list[i: i + chunk_size]
+            output_key = write_xcom_to_s3(f"{key}/chunk_{indx}", tmp)
+            chunks_xcom.append(output_key)
         return chunks_xcom
 
 

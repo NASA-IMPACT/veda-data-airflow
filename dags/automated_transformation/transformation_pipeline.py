@@ -10,6 +10,7 @@ import requests
 import s3fs
 import shutil
 
+
 def get_all_s3_keys(bucket, s3_prefix, ext) -> list:
     """Function fetches all the s3 keys from the given bucket and model name.
 
@@ -37,7 +38,7 @@ def get_all_s3_keys(bucket, s3_prefix, ext) -> list:
     return keys
 
 
-def download_python_file_from_s3(bucket_name, s3_key, temp_file_path, check_exist=False):
+def download_python_file_from_s3(bucket_name, s3_key, temp_file_path):
     """
     Downloads a Python file from an S3 bucket and returns a temporary file path.
 
@@ -49,10 +50,7 @@ def download_python_file_from_s3(bucket_name, s3_key, temp_file_path, check_exis
     - str: Path to the temporary file.
     """
 
-
-    
     s3 = boto3.client("s3")
-
 
     # Download the S3 file to the temporary file location
     s3.download_file(bucket_name, s3_key, temp_file_path)
@@ -63,8 +61,8 @@ def download_python_file_from_s3(bucket_name, s3_key, temp_file_path, check_exis
     return temp_file_path
 
 
-def download_python_file(uri: str, check_exist=False):
-        # Extract the file name from the URL
+def download_python_file(uri: str):
+    # Extract the file name from the URL
     file_name = os.path.basename(uri)
 
     # Create a temporary directory and file with the same name
@@ -78,19 +76,33 @@ def download_python_file(uri: str, check_exist=False):
         # Split into bucket and key
         parts = s3_path.split("/", 1)
         bucket_name, key = parts
-        return download_python_file_from_s3(bucket_name=bucket_name, s3_key=key, temp_file_path=temp_file_path, check_exist=check_exist)
-    return download_python_file_from_github(url=uri, temp_file_path=temp_file_path, check_exist=check_exist)
+        return download_python_file_from_s3(bucket_name=bucket_name, s3_key=key, temp_file_path=temp_file_path)
+    return download_python_file_from_github(url=uri, temp_file_path=temp_file_path)
 
 
-def download_python_file_from_github(url, temp_file_path, check_exist=False):
+def check_file_exists(url):
+    """
+    Function to check if link return a success status
+    Args:
+        url: url to the file
+
+    Returns:
+        request response if exist and raise exception if not
+    """
     try:
-        # Send a GET request to the URL
         response = requests.get(url)
         response.raise_for_status()  # Raise an error for HTTP errors
-        if check_exist:
-            return True
+    except requests.exceptions.RequestException as e:
+        raise Exception(f"Error requesting the file: {e}")
+    return response.content
+
+
+def download_python_file_from_github(url, temp_file_path):
+    try:
+        # Send a GET request to the URL
+        content = check_file_exists(url)
         with open(temp_file_path, "wb") as temp_file:
-            temp_file.write(response.content)
+            temp_file.write(content)
 
         print(f"File downloaded to: {temp_file_path}")
         return temp_file_path

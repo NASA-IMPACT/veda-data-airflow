@@ -236,9 +236,6 @@ def load_to_featuresdb(
     target_projection: str,
     extra_flags: list = None
 ):
-    if extra_flags is None:
-        extra_flags = ["-overwrite", "-progress"]
-
     secret_name = vector_secret_name
 
     con_secrets = get_secret(secret_name)
@@ -350,9 +347,9 @@ def handler(payload_src: dict, vector_secret_name: str, assume_role_arn: [str, N
     s3_event = payload_event.pop("payload")
 
     # Extract dag config
-    source_projection = payload_event.get("source_projection")
-    target_projection = payload_event.get("target_projection")
-    extra_flags = payload_event.get("extra_flags")
+    source_projection = payload_event.get("source_projection", 'EPSG:4326')
+    target_projection = payload_event.get("target_projection", 'EPSG:4326')
+    extra_flags = payload_event.get("extra_flags", ["-overwrite", "-progress"])
     collection_not_provided = payload_event["collection"] == ""
 
     with smart_open.open(s3_event, "r") as _file:
@@ -376,7 +373,7 @@ def handler(payload_src: dict, vector_secret_name: str, assume_role_arn: [str, N
             # Use id template with filename when collection is not provided in the conf
             if collection_not_provided:
                 collection = payload_event.get("id_template", "{}").format(filename)
-            coll_status = load_to_featuresdb(downloaded_filepath, collection, vector_secret_name, source_projection, target)
+            coll_status = load_to_featuresdb(downloaded_filepath, collection, vector_secret_name, source_projection, target_projection, extra_flags)
 
         status.append(coll_status)
         # delete file after ingest

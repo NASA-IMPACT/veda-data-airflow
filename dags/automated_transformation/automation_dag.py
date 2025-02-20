@@ -133,9 +133,9 @@ with DAG(
         key = f"s3://{bucket_output}/events/{collection_name}"
         chunks_xcom = []
         chunk_limit = min(int(config.get("chunk_limit", 100)), 900)
-        chunk_size = int(len(generated_list) / chunk_limit) + 1
-        for indx, i in enumerate(range(0, len(generated_list), chunk_size)):
-            tmp = generated_list[i: i + chunk_size]
+        chunk_size = int(len(filtered_files) / chunk_limit) + 1
+        for indx, i in enumerate(range(0, len(filtered_files), chunk_size)):
+            tmp = filtered_files[i: i + chunk_size]
             output_key = write_xcom_to_s3(f"{key}/chunk_{indx}", tmp)
             chunks_xcom.append(output_key)
         return chunks_xcom

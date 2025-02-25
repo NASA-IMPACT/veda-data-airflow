@@ -9,10 +9,10 @@ group_kwgs = {"group_id": "Transfer", "tooltip": "Transfer"}
 
 
 def cogify_choice(ti):
-    """Choos whether to cogify or not; if yes, use a docker container"""
+    """Choose whether to cogify or not; if yes, use a docker container"""
     payload = ti.dag_run.conf
 
-    if payload.get("cogify"):
+    if payload.get("cogify") == "true" or payload.get("cogify") == True:
         return f"{group_kwgs['group_id']}.cogify_and_copy_data"
     else:
         return f"{group_kwgs['group_id']}.copy_data"
@@ -42,7 +42,7 @@ def transfer_data_task(ti=None, payload={}):
     transfer_data(config)
 
 # non-decorated function for use in other tasks
-def transfer_data(payload={}):
+def transfer_data(ti=None, payload={}):
     """Transfer data from one S3 bucket to another; s3 copy, no need for docker"""
     from veda_data_pipeline.utils.transfer import (
         data_transfer_handler,
@@ -51,6 +51,8 @@ def transfer_data(payload={}):
     airflow_vars_json = json.loads(airflow_vars)
     external_role_arn = airflow_vars_json.get("ASSUME_ROLE_WRITE_ARN")
     # (event, chunk_size=2800, role_arn=None, bucket_output=None):
+    if payload == {}:
+        payload = ti.dag_run.conf
     return data_transfer_handler(event=payload, role_arn=external_role_arn)
 
 # TODO: cogify_transfer handler is missing arg parser so this subdag will not work

@@ -224,6 +224,8 @@ def transform_cog(
                         }
 
             except Exception as ex:
+                # We are not raising an Exception because we want
+                # to continue processing if one file error out
                 status = {
                     "transformed_filename": name,
                     "status": "failed",

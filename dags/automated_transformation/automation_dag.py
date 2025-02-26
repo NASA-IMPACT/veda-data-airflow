@@ -189,8 +189,15 @@ with DAG(
             "successes": count,
             "failures": failed_files,
         }
+    
+    @task
+    def report_failure(status):
+        failures = status.get('failures', [])
+        if failures:
+            print(f"Top 10 failed file: {failures[:10]}")
+            raise  Exception(f"Detected {len(failures)} errors")
 
 
     s3_urls = start >> check_function_exists() >> set_max_active_processing()>> discover_files() 
     report_data = process_files.expand(s3_url=s3_urls)
-    generate_report(reports=report_data) >> end
+    generate_report(reports=report_data) >> report_failure() >> end

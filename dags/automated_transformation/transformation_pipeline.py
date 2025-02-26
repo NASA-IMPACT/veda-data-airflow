@@ -162,10 +162,11 @@ def transform_cog(
     function_name = f'{collection_name.replace("-", "_")}_transformation'
     temp_file_path = download_python_file(plugin_url)
     transform_func = load_function_from_file(temp_file_path, function_name)
+    fs = s3fs.S3FileSystem()
+    statuses = list()
     for name in name_list:
         url = f"s3://{raw_data_bucket}/{name}"
-        fs = s3fs.S3FileSystem()
-        print("the url is", url)
+        print("Processing file : ", url) 
         with fs.open(url, mode="rb") as file_obj:
             try:
                 var_data_netcdf = transform_func(file_obj, name, nodata)
@@ -216,22 +217,21 @@ def transform_cog(
                             Key=f"{data_prefix}/{collection_name}/{cog_filename[:-4]}.json",
                             ExtraArgs={"ContentType": "application/json"},
                         )
-                        status = {
+                        statuses += [{
                             "transformed_filename": cog_filename,
                             "statistics_file": f"{cog_filename.split('.')[0]}.json",
                             "s3uri": f"s3://{dest_data_bucket}/{data_prefix}/{collection_name}/{cog_filename}",
                             "status": "success",
-                        }
+                        }]
 
             except Exception as ex:
                 # We are not raising an Exception because we want
                 # to continue processing if one file error out
-                status = {
+                statuses += [{
                     "transformed_filename": name,
                     "status": "failed",
                     "reason": f"Error: {ex}",
-                }
-            finally:
-                print(f"Deleting {temp_file_path}")
-                shutil.rmtree(os.path.dirname(temp_file_path))
-        return status
+                }]
+    print(f"Deleting {temp_file_path}")
+    shutil.rmtree(os.path.dirname(temp_file_path))
+    return statuses

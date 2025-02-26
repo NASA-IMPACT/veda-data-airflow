@@ -200,4 +200,5 @@ with DAG(
 
     s3_urls = start >> check_function_exists() >> set_max_active_processing()>> discover_files() 
     report_data = process_files.expand(s3_url=s3_urls)
-    generate_report(reports=report_data) >> report_failure() >> end
+    status = generate_report(reports=report_data)
+    report_failure(status=status) >> end

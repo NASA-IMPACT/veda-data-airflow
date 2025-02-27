@@ -38,8 +38,8 @@ templat_dag_run_conf = {
     "filename_regex": "<file_regex>",
     "target_bucket": "<target_bucket>",
     "collection": "<collection-id>",
-    "cogify": Param(type="boolean"),
-    "dry_run": "true|false",
+    "cogify": Param(default=False, type="boolean"),
+    "dry_run": Param(type="boolean"),
 }
 
 with DAG("veda_transfer", params=templat_dag_run_conf, **dag_args) as dag:

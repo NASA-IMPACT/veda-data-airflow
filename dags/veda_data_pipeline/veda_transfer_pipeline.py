@@ -1,6 +1,7 @@
 import pendulum
 from airflow import DAG
 from airflow.operators.dummy_operator import DummyOperator
+from airflow.models.param import Param
 from airflow.utils.trigger_rule import TriggerRule
 from veda_data_pipeline.groups.transfer_group import subdag_transfer
 
@@ -19,7 +20,7 @@ This DAG is used to transfer files that are to permanent locations for indexing 
     "collection": "collection-id",
     "cogify": false,
     "dry_run": true
-}	
+}
 ```
 - [Supports linking to external content](https://github.com/NASA-IMPACT/veda-data-pipelines)
 """
@@ -37,8 +38,8 @@ templat_dag_run_conf = {
     "filename_regex": "<file_regex>",
     "target_bucket": "<target_bucket>",
     "collection": "<collection-id>",
-    "cogify": "true|false",
-    "dry_run": "true|false",
+    "cogify": Param(default=False, type="boolean"),
+    "dry_run": Param(default=False, type="boolean"),
 }
 
 with DAG("veda_transfer", params=templat_dag_run_conf, **dag_args) as dag:

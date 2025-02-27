@@ -48,7 +48,7 @@ make sm2a-local-build
 ```shell
 make sm2a-local-init
 ```
-🚨 NOTE: This command is typically required only once at the beginning. 
+🚨 NOTE: This command is typically required only once at the beginning.
 After running it, you generally do not need to run it again unless you run `make clean`,
 which will require you to reinitialize SM2A with `make sm2a-local-init`
 
@@ -98,13 +98,13 @@ $bash ./scripts/deploy.sh .env <<< deploy
 
 ### Fetch environment variables using AWS CLI
 
-To retrieve the variables for a stage that has been previously deployed, the secrets manager can be used to quickly populate an .env file with [`scripts/sync-env-local.sh`](scripts/sync-env-local.sh). 
+To retrieve the variables for a stage that has been previously deployed, the secrets manager can be used to quickly populate an .env file with [`scripts/sync-env-local.sh`](scripts/sync-env-local.sh).
 
 ```
 ./scripts/sync-env-local.sh <app-secret-name>
 ```
 
-> [!IMPORTANT] 
+> [!IMPORTANT]
 > Be careful not to check in `.env` (or whatever you called your env file) when committing work.
 
 Currently, the client id and domain of an existing Cognito user pool programmatic client must be supplied in [configuration](ingest_api/infrastructure/config.py) as `VEDA_CLIENT_ID` and `VEDA_COGNITO_DOMAIN` (the [veda-auth project](https://github.com/NASA-IMPACT/veda-auth) can be used to deploy a Cognito user pool and client). To dispense auth tokens via the workflows API swagger docs, an administrator must add the ingest API lambda URL to the allowed callbacks of the Cognito client.
@@ -136,7 +136,7 @@ This pipeline is designed to handle the ingestion of both vector and raster data
 }
 ```
 
-### Raster Data Ingestion 
+### Raster Data Ingestion
 ```json
 {
     "collection": "",

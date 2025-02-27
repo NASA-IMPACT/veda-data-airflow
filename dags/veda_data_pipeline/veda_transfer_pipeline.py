@@ -39,7 +39,7 @@ templat_dag_run_conf = {
     "target_bucket": "<target_bucket>",
     "collection": "<collection-id>",
     "cogify": Param(default=False, type="boolean"),
-    "dry_run": Param(type="boolean"),
+    "dry_run": Param(default=False, type="boolean"),
 }
 
 with DAG("veda_transfer", params=templat_dag_run_conf, **dag_args) as dag:

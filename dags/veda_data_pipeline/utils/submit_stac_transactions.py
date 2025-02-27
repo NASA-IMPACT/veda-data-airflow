@@ -21,7 +21,7 @@ class AppConfig(TypedDict):
 class TransactionsApi:
 
     @classmethod
-    def from_veda_auth_secret(cls, *, secret_id: str, base_url: str) -> "IngestionApi":
+    def from_veda_auth_secret(cls, *, secret_id: str, base_url: str) -> "TransactionsApi":
         cognito_details = cls._get_cognito_service_details(secret_id)
         credentials = cls._get_app_credentials(**cognito_details)
         return cls(token=credentials["access_token"], base_url=base_url)
@@ -52,16 +52,15 @@ class TransactionsApi:
             response.raise_for_status()
         except Exception as ex:
             print(response.text)
-            raise f"Error, {ex}"
+            raise RuntimeError(f"Error, {ex}")
         return response.json()
 
-    def __init__(self, stac_ingestor_api_url: str, cognito_app_secret: str = None):
+    def __init__(self, stac_ingestor_api_url: str):
         """
         :param stac_endpoint: Base URL of the STAC API (e.g., 'https://example.com/stac').
         :param token: Optional Bearer token for authenticated STAC APIs.
         """
         self.stac_ingestor_api_url = stac_ingestor_api_url.rstrip('/')
-        self.cognito_app_secret = cognito_app_secret
 
     def post_items(self, collection_id: str, items: List[dict]) -> dict:
         """
@@ -91,7 +90,7 @@ class TransactionsApi:
 
 def submit_transactions_handler(
         event, 
-        cognito_app_secret=None,
+        cognito_app_secret=None, # unused, but maintains signature compatibility w/ ingest API
         stac_ingestor_api_url=None,
     ):
     """
@@ -105,7 +104,7 @@ def submit_transactions_handler(
     """
 
     collection_id = event[0].get("collection")
-    api = TransactionsApi(stac_ingestor_api_url, cognito_app_secret)
+    api = TransactionsApi(stac_ingestor_api_url)
     try:
         response = api.post_items(collection_id, event)
         logging.info("STAC Item POST completed successfully.")

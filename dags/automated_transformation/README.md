@@ -29,6 +29,9 @@ The DAG accepts several parameters to configure its execution dynamically.
 | `raw_data_prefix`         | `string` | `delivery/gpw`                                                               | Prefix for locating raw data in the S3 bucket. Must not start or end with a `/`. |
 | `dest_data_bucket`        | `string` | `ghgc-data-store-develop`                                                    | Destination S3 bucket where transformed COGs are stored.                         |
 | `data_prefix`             | `string` | `transformed_cogs`                                                           | Prefix for storing transformed COGs. Must not start or end with a `/`.           |
+| `raw_data_filter_regex`             | `string` | `.*nc`                                                           | Regex to filter what files from the raw data prefix you want to filter for further processing            |
+| `chunk_limit`             | `int` | `100`                                                           | How many groups/chunks of data you want to be created. Each chunk will go to a task during processing.           |
+| `max_parallel_processing`             | `int` | `10`                                                           | Max tasks you want to run in parallel.           |
 | `collection_name`         | `string` | `gpw`                                                                        | The name of the data collection being processed.                                 |
 | `nodata`                  | `number` | `-9999`                                                                      | No-data value used during transformation.                                        |
 | `ext`                     | `string` | `.nc`                                                                        | File extension of input data files. Must start with a dot (`.`).                 |

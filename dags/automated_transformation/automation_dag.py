@@ -177,31 +177,33 @@ with DAG(
         dag_run = kwargs.get("dag_run")
         collection_name = dag_run.conf.get("collection_name")
         count, failed_files = 0, []
-        for report in reports:
-            if "failed" in report.values():
+        flattened_reports = [report for sublist in reports for report in sublist]
+        for report in flattened_reports:
+            if "failed" in report.get("status"):
                 failed_files.append(report)
-            elif "success" in report.values():
+            elif "success" in report.get("status"):
                 count += 1
 
         if failed_files:
-            raise Exception(f"Error generating COG file {failed_files}")
-        return {
+            raise Exception(f"Error generating {len(failed_files)} COG files. Top 5 failed files : {failed_files[:5]}")
+        summary = {
             "collection": collection_name,
             "successes": count,
-            "failures": failed_files,
+            "failures": len(failed_files)
         }
+        print(summary)
     
-    @task
-    def report_failure(statuses: list):
-        all_failures = list()
-        for status in statuses:
-            all_failures += status.get('failures', [])
-        if all_failures:
-            print(f"Top 10 failed file: {all_failures[:10]}")
-            raise  Exception(f"Detected {len(all_failures)} errors")
+    # @task
+    # def report_failure(statuses: list):
+    #     all_failures = list()
+    #     for status in statuses:
+    #         all_failures += status.get('failures', [])
+    #     if all_failures:
+    #         print(f"Top 10 failed file: {all_failures[:10]}")
+    #         raise  Exception(f"Detected {len(all_failures)} errors")
 
 
     s3_urls = start >> check_function_exists() >> set_max_active_processing()>> discover_files() 
     report_data = process_files.expand(s3_url=s3_urls)
     statuses = generate_report(reports=report_data)
-    report_failure(statuses=statuses) >> end
+    #report_failure(statuses=statuses) >> end

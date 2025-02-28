@@ -135,3 +135,19 @@ variable "disable_default_apigw_endpoint" {
   type    = bool
   default = false
 }
+
+variable "permission_boundaries_arn" {
+  default = "null"
+}
+variable "snapshot_bucket_name" {
+  default = ""
+}
+variable "s3_export_role_arn" {
+  default = ""
+}
+variable "glue_role_arn" {
+  default = ""
+}
+variable "s3_export_kms_key_id" {
+  default = ""
+}

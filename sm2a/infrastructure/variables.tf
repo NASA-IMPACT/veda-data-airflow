@@ -211,9 +211,7 @@ variable "assume_role_write_arn" {
   default = ""
 }
 
-variable "permission_boundaries_arn" {
-  default = "null"
-}
+
 variable "snapshot_bucket_name" {
   default = ""
 }

@@ -75,9 +75,6 @@ def generate_collection_task(ti):
     return collection
 
 
-
-group_kwgs = {"group_id": "Collection", "tooltip": "Collection"}
-
 @task_group(group_id="Collection", tooltip="Collection")
 def collection_task_group():
     generate_collection = generate_collection_task()

@@ -97,6 +97,34 @@ variable "custom_worker_policy_statement" {
         "*"
       ]
 
+    },
+        {
+      Sid    = "VEDA-RDS-Disaster-Recovery"
+      Effect = "Allow"
+      Action = [
+        "rds:Describe*",
+        "rds:Start*",
+        "kms:*",
+        "glue:Get*",
+        "glue:CreateCrawler",
+        "glue:StartCrawler",
+        "glue:UpdateCrawler"
+      ]
+      Resource = [
+        "*"
+      ]
+    },
+    {
+      "Effect" : "Allow",
+      "Action" : [
+        "glue:DeleteDatabase"
+      ],
+      "Resource" : [
+        "arn:aws:glue:us-west-2:*:catalog",
+        "arn:aws:glue:us-west-2:*:database/*",
+        "arn:aws:glue:us-west-2:*:table/*",
+        "arn:aws:glue:us-west-2:*:userDefinedFunction/*"
+      ]
     }
 
   ]
@@ -182,3 +210,20 @@ variable "assume_role_write_arn" {
   type = string
   default = ""
 }
+
+variable "permission_boundaries_arn" {
+  default = "null"
+}
+variable "snapshot_bucket_name" {
+  default = ""
+}
+variable "s3_export_role_arn" {
+  default = ""
+}
+variable "glue_role_arn" {
+  default = ""
+}
+variable "s3_export_kms_key_id" {
+  default = ""
+}
+

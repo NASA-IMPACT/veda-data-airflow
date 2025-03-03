@@ -92,6 +92,11 @@ module "sma-base" {
     ASSUME_ROLE_READ_ARN = var.assume_role_read_arn
     ASSUME_ROLE_WRITE_ARN = var.assume_role_write_arn
     SM2A_BASE_URL = module.sma-base.airflow_url
+    GLUE_ROLE_ARN = var.glue_role_arn
+    S3_EXPORT_KMS_KEY_ID  = var.s3_export_kms_key_id,
+    S3_EXPORT_ROLE_ARN  = var.s3_export_role_arn,
+    SNAPSHOT_BUCKET_NAME = var.snapshot_bucket_name
+
   }
 }
 

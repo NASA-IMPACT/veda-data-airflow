@@ -213,9 +213,9 @@ variable "assume_role_write_arn" {
 
 
 variable "snapshot_bucket_name" {
-  default = ""
+  default = "ghg-rds-snapshots-dev"
 }
-variable "s3_export_role_arn" {
+variable "snapshot_export_role" {
   default = ""
 }
 variable "glue_role_arn" {

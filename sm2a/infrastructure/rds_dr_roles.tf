@@ -127,3 +127,8 @@ resource "aws_kms_alias" "s3_export_kms_key_alias" {
   name          = "alias/${var.prefix}-s3-snapshot-export-key"
   target_key_id = aws_kms_key.s3_export_kms_key.id
 }
+
+# create the bucket that holds the snapshots
+resource "aws_s3_bucket" "snapshot_bucket" { 
+    bucket = "${var.snapshot_bucket_name}" 
+    }

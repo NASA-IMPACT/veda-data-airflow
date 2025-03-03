@@ -232,12 +232,10 @@ def load_to_featuresdb(
     filename: str,
     collection: str,
     vector_secret_name: str,
-    extra_flags: list = None,
-    target_projection: str = "EPSG:4326",
+    source_projection: str,
+    target_projection: str,
+    extra_flags: list = None
 ):
-    if extra_flags is None:
-        extra_flags = ["-overwrite", "-progress"]
-
     secret_name = vector_secret_name
 
     con_secrets = get_secret(secret_name)
@@ -249,12 +247,14 @@ def load_to_featuresdb(
         "-f",
         "PostgreSQL",
         connection,
+        filename,
+        "-nln", 
+        collection,
+        "-s_srs",
+        source_projection,
         "-t_srs",
         target_projection,
-        filename,
-        "-nln",
-        collection,
-        *extra_flags,
+        *extra_flags  
     ]
     out = subprocess.run(
         options,
@@ -345,6 +345,13 @@ def handler(payload_src: dict, vector_secret_name: str, assume_role_arn: [str, N
 
     payload_event = payload_src.copy()
     s3_event = payload_event.pop("payload")
+
+    # Extract dag config
+    source_projection = payload_event.get("source_projection", 'EPSG:4326')
+    target_projection = payload_event.get("target_projection", 'EPSG:4326')
+    extra_flags = payload_event.get("extra_flags", ["-overwrite", "-progress"])
+    collection_not_provided = payload_event["collection"] == ""
+
     with smart_open.open(s3_event, "r") as _file:
         s3_event_read = _file.read()
     event_received = json.loads(s3_event_read)
@@ -361,7 +368,12 @@ def handler(payload_src: dict, vector_secret_name: str, assume_role_arn: [str, N
         if s3_object_prefix.startswith("EIS/"):
             coll_status = load_to_featuresdb_eis(downloaded_filepath, collection, vector_secret_name)
         else:
-            coll_status = load_to_featuresdb(downloaded_filepath, collection, vector_secret_name)
+            # Get the filename
+            filename = href.split("/")[-1].split(".")[0]
+            # Use id template with filename when collection is not provided in the conf
+            if collection_not_provided:
+                collection = payload_event.get("id_template", "{}").format(filename)
+            coll_status = load_to_featuresdb(downloaded_filepath, collection, vector_secret_name, source_projection, target_projection, extra_flags)
 
         status.append(coll_status)
         # delete file after ingest

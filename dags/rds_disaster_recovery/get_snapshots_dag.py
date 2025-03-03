@@ -12,7 +12,7 @@ from airflow.operators.empty import EmptyOperator
 from airflow.operators.python import PythonOperator
 from airflow.utils.dates import days_ago
 from airflow_multi_dagrun.operators import TriggerMultiDagRunOperator
-from botocore.exceptions import ClientError
+from botocore.exceptions import BotoCoreError, ClientError
 
 
 def generate_hash(input_string: str) -> str:
@@ -38,7 +38,7 @@ def notify_missing_snapshots_task(ti):
     missing_snapshots = get_rds_snapshots_xcom.get("missing_snapshots")
     if missing_snapshots:
         raise AirflowException(f"Missing Snapshots for RDS: {missing_snapshots}")
-    return
+    return True
 
 
 doc_get_snapshots_dag_md_DAG = """
@@ -78,6 +78,9 @@ dag_params = {
     ),
     "paths_excluded": Param(["**/_SUCCESS"], type="array", items={"type": "string"}),
     "export_only": Param({}, type=["object"]),
+    "catalog_db_name": Param("null", type="string"),
+    "delete_catalog_db": Param(True, type="boolean"),
+    "eager_delete_glue_catalog": Param(False, type="boolean"),
 }
 
 
@@ -226,12 +229,18 @@ def trigger_s3_export_dag_task(**kwargs) -> dict:
         dict: Snapshot configuration with relevant metadata and AWS resource identifiers.
     """
     ti = kwargs["ti"]
+    conf = ti.dag_run.conf
     var_json = Variable.get("aws_dags_variables", deserialize_json=True)
     get_rds_snapshots_xcom = ti.xcom_pull("get_rds_snapshots")
     snapshots = get_rds_snapshots_xcom.get("existing_snapshots", [])
     for snapshot in snapshots:
         yield {
-            "db_id": snapshot["db_id"],
+            "run_id": f"{ti.dag_run.run_id}-{snapshot['db_id']}",
+            "db_id": (
+                conf.get("catalog_db_name")
+                if conf.get("catalog_db_name") != "null"
+                else snapshot["db_id"]
+            ),
             "export_task_identifier": generate_hash(snapshot["db_snapshot_id"]),
             "snapshot_arn": snapshot["snapshot_arn"],
             "export_role_arn": var_json["s3_export_role_arn"],
@@ -241,11 +250,48 @@ def trigger_s3_export_dag_task(**kwargs) -> dict:
             "kms_key_id": var_json["s3_export_kms_key_id"],
             "paths_excluded": snapshot["paths_excluded"],
             "export_only": snapshot["export_only"].get(snapshot["db_id"], []),
+            "delete_glue_database": conf.get("delete_catalog_db"),
         }
 
 
 # Define default arguments
 default_args = {"retries": 0, "start_date": days_ago(1), "catchup": False}
+
+
+def delete_glue_database_task(ti):
+    client = boto3.client("glue")
+    conf = ti.dag_run.conf
+    database_id = conf.get("catalog_db_name")
+    # If the user didn't want to delete Glue database
+    # Default to True
+    if not conf.get("eager_delete_glue_catalog", True):
+        return
+
+    try:
+        response = client.delete_database(Name=database_id)
+        print(f"Successfully deleted Glue database: {database_id}")
+        return response
+
+    except client.exceptions.EntityNotFoundException:
+        # Handle the case where the database does not exist
+        print(f"Glue database {database_id} does not exist; no action needed.")
+        return {"message": f"Database {database_id} not found; skipping deletion"}
+
+    except (ClientError, BotoCoreError) as e:
+        # Handle other boto3-specific exceptions
+        print(f"Failed to delete Glue database {database_id}: {e}")
+        raise AirflowException(f"Error deleting Glue database {database_id}: {e}")
+
+    except KeyError as e:
+        # Handle missing db_id in conf
+        print(f"Database ID not found in DAG run configuration: {e}")
+        raise AirflowException(f"Database ID missing in DAG configuration: {e}")
+
+    except Exception as e:
+        # Catch-all for any other exceptions
+        print(f"An unexpected error occurred: {e}")
+        raise AirflowException(f"Unexpected error: {e}")
+
 
 with DAG(
     dag_id="get_rds_snapshots",
@@ -268,6 +314,13 @@ with DAG(
         trigger_dag_id="rds_s3_export_snapshots",
         python_callable=trigger_s3_export_dag_task,
     )
+
+    # Task to eagerly delete Glue database
+    # Needed for csda-ops-tool client
+    eager_delete_glue_database = PythonOperator(
+        task_id="eager_delete_glue_database", python_callable=delete_glue_database_task
+    )
+
     notify_missing_snapshots = PythonOperator(
         task_id="notify_missing_snapshots",
         python_callable=notify_missing_snapshots_task,
@@ -276,6 +329,7 @@ with DAG(
     (
         start
         >> get_rds_snapshots
+        >> eager_delete_glue_database
         >> rds_snapshots_dag_run
         >> notify_missing_snapshots
         >> end

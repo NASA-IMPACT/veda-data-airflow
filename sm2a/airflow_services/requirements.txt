@@ -10,7 +10,7 @@ airflow_multi_dagrun
 apache-airflow-providers-postgres
 apache-airflow-providers-slack
 apache-airflow-providers-slack[http]
-apache-airflow[github_enterprise]
+#apache-airflow[github_enterprise]
 affine
 netCDF4
 requests

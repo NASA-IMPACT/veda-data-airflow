@@ -28,7 +28,7 @@ dag_args = {
 }
 
 template_dag_run_conf = {
-    "granules": "[List of granules]",
+    "granules": ["https://noaahrrr.blob.core.windows.net/hrrr/hrrr.20240613/conus/hrrr.t11z.wrfsfcf06.grib2"],
     "collection_id": "nrrr-stactools-test",
     "region": "conus",
     "product": "sfc",

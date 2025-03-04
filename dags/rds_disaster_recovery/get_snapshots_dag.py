@@ -317,9 +317,9 @@ with DAG(
 
     # Task to eagerly delete Glue database
     # Needed for csda-ops-tool client
-    eager_delete_glue_database = PythonOperator(
-        task_id="eager_delete_glue_database", python_callable=delete_glue_database_task
-    )
+    # eager_delete_glue_database = PythonOperator(
+    #     task_id="eager_delete_glue_database", python_callable=delete_glue_database_task
+    # )
 
     notify_missing_snapshots = PythonOperator(
         task_id="notify_missing_snapshots",
@@ -329,7 +329,7 @@ with DAG(
     (
         start
         >> get_rds_snapshots
-        >> eager_delete_glue_database
+        # >> eager_delete_glue_database
         >> rds_snapshots_dag_run
         >> notify_missing_snapshots
         >> end

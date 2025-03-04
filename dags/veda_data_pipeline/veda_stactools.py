@@ -1,6 +1,6 @@
-from typing import Any, Dict, List
+from typing import List
 import pendulum
-import json
+from importlib import import_module
 
 from airflow.decorators import task
 
@@ -25,17 +25,16 @@ dag_args = {
 }
 
 template_dag_run_conf = {
-    "stactools_package_name": "sentinel2",
-    "collection_id": "my_veda_sentinel_collection",
+    "stactools_package_name": "cop_dem",
+    "collection_id": "my_veda_cop_dem_collection",
     "collection_params": {
-        "additional_param": "for_collection"
+        "product": "glo-30"
     },
     "item_params": {
-        "additional_param": "for_items"
+        "host": "AWS"
     },
     "granules": [
-        "https://sentinel-cogs.s3.us-west-2.amazonaws.com/sentinel-s2-l2a-cogs/37/S/DA/2020/8/S2A_37SDA_20200829_0_L2A/B04.tif",
-        "https://sentinel-cogs.s3.us-west-2.amazonaws.com/sentinel-s2-l2a-cogs/37/S/DA/2020/8/S2A_37SDA_20200829_0_L2A/B08.tif"
+        "s3://copernicus-dem-30m/Copernicus_DSM_COG_10_S84_00_E062_00_DEM/Copernicus_DSM_COG_10_S84_00_E062_00_DEM.tif"
     ]
 }
 
@@ -45,13 +44,17 @@ def upsert_stactools_collection(ti=None):
         **ti.dag_run.conf,
     }
     stactools_package_name = body.get("stactools_package_name")
-    stactools = __import__(f"stactools.{stactools_package_name}")
+    stactools = import_module(f".{stactools_package_name}.stac", "stactools")
 
     collection_params = body.get("collection_params")
-    params_dict = json.loads(collection_params)
-    collection = stactools.stac.create_collection(
-                **params_dict
-            )
+    try:
+        collection = stactools.create_collection(
+                    **collection_params
+                )
+    except AttributeError:
+        # TODO  we should support a default collection creation process here, following a similar pattern to stactools
+        # ref - sentinel2 doesn't provide create_collection, but landsat and other packages do
+        raise AttributeError(f"Collection creation is not supported for {stactools_package_name}")
     collection.id = body.get("collection_id") # override collection id in case it is not set/supported in collection_params
     coll_dict = collection.to_dict()
     return coll_dict
@@ -64,15 +67,22 @@ def build_items_from_granules(ti=None) -> List[str]:
     use_fsspec()
 
     stactools_package_name = body.get("stactools_package_name")
-    stactools = __import__(f"stactools.{stactools_package_name}")
+    stactools = import_module(f".{stactools_package_name}.stac", "stactools")
 
     output = []
-    granule_list = body['granules']
-    item_params = body['item_params']
-    param_dict = json.loads(item_params)
+    granule_list = body.get('granules')
+    item_params = body.get("item_params")
     for granule in granule_list:
-        stac = stactools.stac.create_item(granule, **param_dict)
+        try:
+            stac = stactools.create_item(granule, **item_params)
+        except AttributeError:
+            # TODO we should support a default item creation process here, following a similar pattern to stactools
+            # this is lower priority to support than collection creation - create_item() is more universal
+            raise AttributeError(f"Item creation is not supported for {stactools_package_name}")
         stac.collection_id = body['collection_id']
+        # convert to dict if not already (pystac `Item` is common)
+        if not isinstance(stac, dict):
+            stac = stac.to_dict()
         output.append(stac)
     return output
 

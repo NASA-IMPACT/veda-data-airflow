@@ -1,0 +1,6 @@
+# installed without constraints
+stactools
+stactools-noaa-hrrr
+stactools-sentinel2
+stactools-landsat
+stactools-cop-dem

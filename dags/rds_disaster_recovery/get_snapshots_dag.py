@@ -329,7 +329,7 @@ with DAG(
     (
         start
         >> get_rds_snapshots
-       # >> eager_delete_glue_database
+        >> eager_delete_glue_database
         >> rds_snapshots_dag_run
         >> notify_missing_snapshots
         >> end

@@ -17,7 +17,6 @@ resource "random_password" "password" {
 }
 
 
-
 module "sma-base" {
   source                         = "https://github.com/NASA-IMPACT/self-managed-apache-airflow/releases/download/v1.1.5/self-managed-apache-airflow.zip"
   project                        = var.project_name
@@ -71,7 +70,6 @@ module "sma-base" {
       value = var.gh_user_team_id
     }
 
-
   ]
   extra_airflow_configuration = {
     gh_app_client_id     = var.gh_app_client_id
@@ -89,9 +87,9 @@ module "sma-base" {
     STAC_INGESTOR_API_URL = var.stac_ingestor_api_url
     STAC_URL              = var.stac_url
     VECTOR_SECRET_NAME    = var.vector_secret_name
-    ASSUME_ROLE_READ_ARN = var.assume_role_read_arn
+    ASSUME_ROLE_READ_ARN  = var.assume_role_read_arn
     ASSUME_ROLE_WRITE_ARN = var.assume_role_write_arn
-    SM2A_BASE_URL = module.sma-base.airflow_url
+    SM2A_BASE_URL         = module.sma-base.airflow_url
   }
 }
 

@@ -12,7 +12,7 @@ from stactools.core import use_fsspec
 from stactools.noaa_hrrr.metadata import parse_href, CloudProvider, Product, Region
 from stactools.noaa_hrrr.stac import create_item, create_collection
 
-from veda_data_pipeline.groups.processing_tasks import submit_to_stac_ingestor_task
+from veda_data_pipeline.groups.processing_tasks import submit_to_stac_ingestor_task_direct
 from veda_data_pipeline.groups.collection_group import ingest_collection_task
 
 
@@ -37,7 +37,7 @@ template_dag_run_conf = {
 
 
 @task
-def build_items_from_granules(ti=None) -> List[str]:
+def build_items_from_granules(ti=None) -> List[dict]:
     body = {
         **ti.dag_run.conf,
     }
@@ -49,8 +49,7 @@ def build_items_from_granules(ti=None) -> List[str]:
         stac = create_item(**parse_href(href))
         stac.collection_id = body['collection_id']
         stac_dict = stac.to_dict()
-        stac_dict['dry_run'] = True # TODO change to remove dry run
-        output.append(json.dumps(stac_dict))
+        output.append(stac_dict)
     return output
 
 @task
@@ -67,7 +66,6 @@ def upsert_stactools_collection(ti=None):
             )
     collection.id = body.get("collection_id")
     coll_dict = collection.to_dict()
-    coll_dict['dry_run'] = True
     return coll_dict
 
 def get_stactools_dag(id, event={}):
@@ -86,10 +84,10 @@ def get_stactools_dag(id, event={}):
         # define DAG using taskflow notation
 
         stactools_collection = upsert_stactools_collection()
-        ingest_collection = ingest_collection_task(stactools_collection)
+        ingest_collection = ingest_collection_task(collection=stactools_collection)
 
         get_items_from_granules = build_items_from_granules()
-        submit_stac = submit_to_stac_ingestor_task.expand(built_stac=get_items_from_granules)
+        submit_stac = submit_to_stac_ingestor_task_direct.expand(stac_items=get_items_from_granules)
         submit_stac.set_upstream(ingest_collection)
 
         get_items_from_granules.set_upstream(start)

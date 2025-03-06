@@ -100,7 +100,7 @@ with DAG(
     # define DAG using taskflow notation
 
     stactools_collection = upsert_stactools_collection()
-    ingest_collection = ingest_collection_task(stactools_collection)
+    ingest_collection = ingest_collection_task(collection=stactools_collection)
 
     get_items_from_granules = build_items_from_granules()
     submit_stac = submit_to_stac_ingestor_task.expand(built_stac=get_items_from_granules)

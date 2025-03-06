@@ -23,7 +23,7 @@ def check_collection_exists(endpoint: str, collection_id: str):
         else "Collection.generate_collection"
     )
 
-@task
+@task()
 def ingest_collection_task(ti=None, collection=None):
     """
     Ingest a collection into the STAC catalog
@@ -33,7 +33,8 @@ def ingest_collection_task(ti=None, collection=None):
         role_arn (str): role arn for Zarr collection generation
     """
     import json
-    collection = ti.xcom_pull(task_ids='Collection.generate_collection')
+    if not collection:
+        collection = ti.xcom_pull(task_ids='Collection.generate_collection')
     airflow_vars = Variable.get("aws_dags_variables")
     airflow_vars_json = json.loads(airflow_vars)
     cognito_app_secret = airflow_vars_json.get("COGNITO_APP_SECRET")
@@ -48,7 +49,7 @@ def ingest_collection_task(ti=None, collection=None):
 
 
 # NOTE unused, but useful for item ingests, since collections are a dependency for items
-def check_collection_exists_task(ti):
+def check_collection_exists_task(ti=None):
     import json
     config = ti.dag_run.conf
     airflow_vars = Variable.get("aws_dags_variables")
@@ -60,8 +61,8 @@ def check_collection_exists_task(ti):
     )
 
 
-@task
-def generate_collection_task(ti):
+@task()
+def generate_collection_task(ti=None):
     import json
     config = ti.dag_run.conf
     airflow_vars = Variable.get("aws_dags_variables")
@@ -73,7 +74,6 @@ def generate_collection_task(ti):
         dataset_config=config, role_arn=role_arn
     )
     return collection
-
 
 @task_group(group_id="Collection", tooltip="Collection")
 def collection_task_group():

@@ -58,6 +58,22 @@ def submit_to_stac_ingestor_task(built_stac: dict):
         )
     return event
 
+@task(retries=2, retry_delay=60, retry_exponential_backoff=True, max_active_tis_per_dag=5)
+def submit_to_stac_ingestor_task_direct(stac_items: dict):
+    # to submit items without a success file
+    airflow_vars = Variable.get("aws_dags_variables")
+    airflow_vars_json = json.loads(airflow_vars)
+    cognito_app_secret = airflow_vars_json.get("COGNITO_APP_SECRET")
+    stac_ingestor_api_url = airflow_vars_json.get("STAC_INGESTOR_API_URL")
+
+    submission_handler(
+        event=stac_items,
+        endpoint="/ingestions",
+        cognito_app_secret=cognito_app_secret,
+        stac_ingestor_api_url=stac_ingestor_api_url,
+    )
+    return
+
 
 @task(max_active_tis_per_dag=5)
 def build_stac_task(payload):

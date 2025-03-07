@@ -41,7 +41,7 @@ See [getting-started-install](https://docs.aws.amazon.com/cli/latest/userguide/g
  
 - ⚠️ You need to copy ./sm2a/sm2a-local-config/env_example to ./sm2a/sm2a-local-config/.env and update the values of AWS secrets.
 - You can define AWS credentials or other custom envs in [.env](./sm2a/sm2a-local-config/.env) file.
-
+- ⚠️  If you update ./sm2a/sm2a-local-config/.env file you should run `make sm2a-local-run` again
 1. Build services
 ```shell
 make sm2a-local-build

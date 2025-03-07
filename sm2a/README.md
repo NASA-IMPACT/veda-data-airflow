@@ -10,9 +10,8 @@ This repo houses function code and deployment code for VEDA projects.
 - [infrastructure](./infrastructure/) contains the Terraform necessary to deploy all resources to AWS
 - [scripts](./scripts/) contains bash script for deploying
 - [sm2a-local-config](./sm2a-local-config) contains airflow configuration to run Airflow locally.
-Also, you can define AWS credentials or other custom envs in the [.env](./sm2a-local-config/) file. You will need
-to copy ./sm2a-local-config/env_example to ./sm2a-local-config/.env and update the values of AWS secrets.
-
+- You can define AWS credentials or other custom envs in [.env](./sm2a-local-config/env_example) file. 
+- ⚠️ You need to copy ./sm2a-local-config/env_example to ./sm2a-local-config/.env and update the values of AWS secrets.
 ### Terraform
 
 See [terraform-getting-started](https://developer.hashicorp.com/terraform/tutorials/aws-get-started/install-cli)
@@ -26,6 +25,9 @@ See [getting-started-install](https://docs.aws.amazon.com/cli/latest/userguide/g
 See [install-docker-and-docker-compose](https://docs.docker.com/compose/install/)
 
 ## Getting started
+- ⚠️ You need to copy ./sm2a/sm2a-local-config/env_example to ./sm2a/sm2a-local-config/.env
+- You can define AWS credentials or other custom envs in [.env](./sm2a/sm2a-local-config/.env) file.
+- ⚠️  If you update ./sm2a/sm2a-local-config/.env file you should run `make sm2a-local-run` again
 
 ### Setup a local development environment
 

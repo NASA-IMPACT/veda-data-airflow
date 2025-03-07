@@ -38,6 +38,10 @@ See [getting-started-install](https://docs.aws.amazon.com/cli/latest/userguide/g
 
 
 ### Setup a local SM2A development environment
+ 
+- ⚠️ You need to copy ./sm2a/sm2a-local-config/env_example to ./sm2a/sm2a-local-config/.env and update the values of AWS secrets.
+- You can define AWS credentials or other custom envs in [.env](./sm2a/sm2a-local-config/.env) file.
+
 1. Build services
 ```shell
 make sm2a-local-build

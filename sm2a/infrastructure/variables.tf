@@ -101,7 +101,7 @@ variable "custom_worker_policy_statement" {
     {
             "Effect": "Allow",
             "Action": ["cloudfront:CreateInvalidation"],
-            "Resource": "arn:aws:cloudfront::*:distribution/*"
+            "Resource": ["arn:aws:cloudfront::*:distribution/*"]
     }
 
   ]

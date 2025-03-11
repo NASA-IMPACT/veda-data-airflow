@@ -7,7 +7,7 @@ from airflow.models.variable import Variable
 from typing import Dict, List, Optional
 
 from veda_data_pipeline.veda_discover_pipeline import get_discover_dag
-from veda_data_pipeline.veda_vector_pipeline import get_vector_ingest_dag
+from veda_data_pipeline.veda_vector_pipeline import get_ingest_vector_dag
 
 def filter_configs_by_dag(
         collection_configs: List[Dict[str, int]], 
@@ -79,13 +79,13 @@ def generate_dags():
             )
 
         # veda_vector_ingest
-        scheduled_vector_configs = filter_configs_by_dag(collection_configs, "veda_vector_ingest")
+        scheduled_vector_configs = filter_configs_by_dag(collection_configs, "veda_ingest_vector")
 
         for idx, vector_config in enumerate(scheduled_vector_configs):
             id = f"vector-{file_name}"
             if idx > 0:
                 id = f"{id}-{idx}"
-            get_vector_ingest_dag(
+            get_ingest_vector_dag(
                 id=id, event=vector_config
             )
 

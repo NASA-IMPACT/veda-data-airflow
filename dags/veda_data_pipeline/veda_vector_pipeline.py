@@ -80,7 +80,7 @@ def ingest_vector_task(payload):
 #     discover.set_upstream(start)
 #     vector_ingest.set_downstream(end)
 
-def get_vector_ingest_dag(id, event={}):
+def get_ingest_vector_dag(id, event={}):
     
     params_dag_run_conf = event or template_dag_run_conf
 
@@ -99,5 +99,5 @@ def get_vector_ingest_dag(id, event={}):
 
         return dag
     
-get_vector_ingest_dag("veda_ingest_vector")
+get_ingest_vector_dag("veda_ingest_vector")
 

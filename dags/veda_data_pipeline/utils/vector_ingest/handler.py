@@ -366,6 +366,10 @@ def handler(payload_src: dict, vector_secret_name: str, assume_role_arn: [str, N
 
         s3_object_prefix = event_received["prefix"]
         if s3_object_prefix.startswith("EIS/"):
+            s3_event_key = s3_object["s3"]["object"]["key"]
+            s3_filename_target = os.path.split(s3_event_key)[-1]
+            s3_filename_no_ext = os.path.splitext(s3_filename_target)[0]
+            collection = s3_filename_no_ext
             coll_status = load_to_featuresdb_eis(downloaded_filepath, collection, vector_secret_name)
         else:
             # Get the filename

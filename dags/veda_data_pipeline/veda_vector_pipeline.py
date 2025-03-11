@@ -71,11 +71,33 @@ def ingest_vector_task(payload):
                    assume_role_arn=read_role_arn)
 
 
-with DAG(dag_id="veda_ingest_vector", params=template_dag_run_conf, **dag_args) as dag:
-    start = DummyOperator(task_id="Start", dag=dag)
-    end = DummyOperator(task_id="End", trigger_rule=TriggerRule.ONE_SUCCESS, dag=dag)
-    discover = discover_from_s3_task()
-    get_files = get_files_to_process(payload=discover)
-    vector_ingest = ingest_vector_task.expand(payload=get_files)
-    discover.set_upstream(start)
-    vector_ingest.set_downstream(end)
+# with DAG(dag_id="veda_ingest_vector", params=template_dag_run_conf, **dag_args) as dag:
+#     start = DummyOperator(task_id="Start", dag=dag)
+#     end = DummyOperator(task_id="End", trigger_rule=TriggerRule.ONE_SUCCESS, dag=dag)
+#     discover = discover_from_s3_task()
+#     get_files = get_files_to_process(payload=discover)
+#     vector_ingest = ingest_vector_task.expand(payload=get_files)
+#     discover.set_upstream(start)
+#     vector_ingest.set_downstream(end)
+
+def get_vector_ingest_dag(id, event={}):
+    
+    params_dag_run_conf = event or template_dag_run_conf
+
+    with DAG(
+            id, 
+            params=params_dag_run_conf, 
+            **dag_args
+        ) as dag:
+        start = DummyOperator(task_id="Start", dag=dag)
+        end = DummyOperator(task_id="End", trigger_rule=TriggerRule.ONE_SUCCESS, dag=dag)
+        discover = discover_from_s3_task()
+        get_files = get_files_to_process(payload=discover)
+        vector_ingest = ingest_vector_task.expand(payload=get_files)
+        discover.set_upstream(start)
+        vector_ingest.set_downstream(end)
+
+        return dag
+    
+get_vector_ingest_dag("veda_ingest_vector")
+

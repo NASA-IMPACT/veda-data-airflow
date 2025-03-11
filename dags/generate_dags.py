@@ -4,9 +4,29 @@ These DAGs are used to discover and ingest items for each collection.
 """
 
 from airflow.models.variable import Variable
+from typing import Dict, List, Optional
 
 from veda_data_pipeline.veda_discover_pipeline import get_discover_dag
+from veda_data_pipeline.veda_vector_pipeline import get_vector_ingest_dag
 
+def filter_configs_by_dag(
+        collection_configs: List[Dict[str, int]], 
+        dag: Optional[str] = "veda_discover"
+    ) -> List[Dict[str, int]]:
+    """
+    Args:
+        collection_configs: The list of configs to filter
+        dag: The DAG name to filter for (default is veda_discover).
+
+    Returns:
+        A new list containing only the collection configs that match the filter criteria.
+    """
+    
+    filtered_configs = []
+    for c in collection_configs:
+        if c.get("schedule", None) and c.get("dag", "veda_discover") == dag:
+            filtered_configs.append(c)
+    return filtered_configs
 
 def generate_dags():
     import boto3
@@ -39,23 +59,45 @@ def generate_dags():
             continue
         file_name = Path(key).stem
         result = client.get_object(Bucket=bucket, Key=key)
-        discovery_configs = result["Body"].read().decode()
-        discovery_configs = json.loads(discovery_configs)
+        collection_configs = result["Body"].read().decode()
+        collection_configs = json.loads(collection_configs)
 
         # Allow the file content to be either one config or a list of configs
-        if type(discovery_configs) is dict:
-            discovery_configs = [discovery_configs]
-        scheduled_discovery_configs = [
-            discovery_config
-                for discovery_config in discovery_configs
-                    if discovery_config.get("schedule")
-            ]
+        if type(collection_configs) is dict:
+            collection_configs = [collection_configs]
+
+        # Filter and handle collection configs by DAG
+
+        # veda_discover
+        scheduled_discovery_configs = filter_configs_by_dag(collection_configs, "veda_discover")
         for idx, discovery_config in enumerate(scheduled_discovery_configs):
             id = f"discover-{file_name}"
             if idx > 0:
                 id = f"{id}-{idx}"
             get_discover_dag(
                 id=id, event=discovery_config
+            )
+
+        # veda_vector_ingest
+        scheduled_vector_configs = filter_configs_by_dag(collection_configs, "veda_vector_ingest")
+
+        for idx, vector_config in enumerate(scheduled_vector_configs):
+            id = f"vector-{file_name}"
+            if idx > 0:
+                id = f"{id}-{idx}"
+            get_vector_ingest_dag(
+                id=id, event=vector_config
+            )
+
+        # veda_transfer
+        scheduled_transfer_configs = filter_configs_by_dag(collection_configs, "veda_transfer")
+
+        for idx, transfer_config in enumerate(scheduled_transfer_configs):
+            id = f"transfer-{file_name}"
+            if idx > 0:
+                id = f"{id}-{idx}"
+            get_transfer_dag(
+                id=id, event=transfer_config
             )
 
 

@@ -75,7 +75,8 @@ def get_ingest_vector_dag(id, event={}):
     params_dag_run_conf = event or template_dag_run_conf
 
     with DAG(
-            id, 
+            id,
+            schedule_interval=event.get("schedule"),
             params=params_dag_run_conf, 
             **dag_args
         ) as dag:

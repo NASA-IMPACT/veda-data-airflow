@@ -53,7 +53,6 @@ template_dag_run_conf = {
 }
 dag_args = {
     "start_date": pendulum.today("UTC").add(days=-1),
-    "schedule_interval": None,
     "catchup": False,
     "doc_md": dag_doc_md,
 }
@@ -76,7 +75,7 @@ def get_ingest_vector_dag(id, event={}):
 
     with DAG(
             id,
-            schedule_interval=event.get("schedule"),
+            schedule_interval=params_dag_run_conf.get("schedule", None),
             params=params_dag_run_conf, 
             **dag_args
         ) as dag:

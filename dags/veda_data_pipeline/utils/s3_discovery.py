@@ -225,7 +225,7 @@ def s3_discovery_handler(event, chunk_size=2800, role_arn=None, bucket_output=No
     )
     # Note that the boto3 ListObjectsV2 response is transformed to use new keys in veda_data_pipelline/utils/s3_discovery.py discover_from_s3
     file_uris = [
-        f"s3://{bucket}/{obj['key']}" 
+        f"s3://{bucket}/{obj['Key']}" 
         for obj in discover_from_s3(
             s3_iterator, filename_regex, last_execution=process_from or last_execution
         )

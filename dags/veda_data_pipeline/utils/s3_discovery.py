@@ -190,7 +190,7 @@ def propagate_forward_datetime_args(event):
 
 
 def s3_discovery_handler(event, chunk_size=2800, role_arn=None, bucket_output=None):
-    bucket = event.get("bucket")
+    bucket = event["bucket"]
     prefix = event.get("prefix", "")
     filename_regex = event.get("filename_regex", None)
     collection = event.get("collection", prefix.rstrip("/"))
@@ -223,8 +223,9 @@ def s3_discovery_handler(event, chunk_size=2800, role_arn=None, bucket_output=No
     s3_iterator = get_s3_resp_iterator(
         bucket_name=bucket, prefix=prefix, s3_client=s3client
     )
+    # Note that the boto3 ListObjectsV2 response is transformed to use new keys in veda_data_pipelline/utils/s3_discovery.py discover_from_s3
     file_uris = [
-        f"s3://{bucket}/{obj['Key']}"
+        f"s3://{bucket}/{obj['key']}" 
         for obj in discover_from_s3(
             s3_iterator, filename_regex, last_execution=process_from or last_execution
         )

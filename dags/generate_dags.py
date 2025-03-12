@@ -89,16 +89,4 @@ def generate_dags():
                 id=id, event=vector_config
             )
 
-        # veda_transfer TODO
-        # scheduled_transfer_configs = filter_configs_by_dag(collection_configs, "veda_transfer")
-
-        # for idx, transfer_config in enumerate(scheduled_transfer_configs):
-        #     id = f"transfer-{file_name}"
-        #     if idx > 0:
-        #         id = f"{id}-{idx}"
-        #     get_transfer_dag(
-        #         id=id, event=transfer_config
-        #     )
-
-
 generate_dags()

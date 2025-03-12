@@ -12,15 +12,28 @@ from rio_stac.stac import PROJECTION_EXT_VERSION, RASTER_EXT_VERSION
 from . import events, regex, role
 
 
-def get_sts_session():
-    airflow_vars = Variable.get("aws_dags_variables")
-    airflow_vars_json = json.loads(airflow_vars)
-    if external_role_arn := airflow_vars_json.get("ASSUME_ROLE_READ_ARN"):
-        creds = role.assume_role(external_role_arn, "veda-data-pipelines_build-stac")
+def get_sts_session(testing: bool = False):
+    if not testing:
+        airflow_vars = Variable.get("aws_dags_variables")
+        airflow_vars_json = json.loads(airflow_vars)
+        if external_role_arn := airflow_vars_json.get("ASSUME_ROLE_READ_ARN"):
+            creds = role.assume_role(external_role_arn, "veda-data-pipelines_build-stac")
+            return AWSSession(
+                aws_access_key_id=creds["AccessKeyId"],
+                aws_secret_access_key=creds["SecretAccessKey"],
+                aws_session_token=creds["SessionToken"],
+            )
+    else:
+        import boto3
+        session = boto3.Session()
+
+        # Get the credentials from the session
+        deferred_creds = session.get_credentials()
+        creds = deferred_creds.get_frozen_credentials()
         return AWSSession(
-            aws_access_key_id=creds["AccessKeyId"],
-            aws_secret_access_key=creds["SecretAccessKey"],
-            aws_session_token=creds["SessionToken"],
+            aws_access_key_id=creds.access_key,
+            aws_secret_access_key=creds.secret_key,
+            aws_session_token=creds.token,
         )
     return
 
@@ -65,7 +78,7 @@ def create_item(
     return item
 
 
-def generate_stac(event: events.RegexEvent) -> pystac.Item:
+def generate_stac(event: events.RegexEvent, testing: bool = False) -> pystac.Item:
     """
     Generate STAC item from user provided datetime range or regex & filename
     """
@@ -100,7 +113,7 @@ def generate_stac(event: events.RegexEvent) -> pystac.Item:
     assets = {}
 
     rasterio_kwargs = {}
-    rasterio_kwargs["session"] = get_sts_session()
+    rasterio_kwargs["session"] = get_sts_session(testing=testing)
     with rasterio.Env(
         session=rasterio_kwargs.get("session"),
         options={**rasterio_kwargs},
@@ -123,8 +136,8 @@ def generate_stac(event: events.RegexEvent) -> pystac.Item:
             if asset_name == "default":
                 asset_name = "cog_default"
             assets[asset_name] = pystac.Asset(
-                title=asset_definition["title"],
-                description=asset_definition["description"],
+                title=asset_definition.get("title", None),
+                description=asset_definition.get("description", None),
                 href=asset_definition["href"],
                 media_type=media_type,
                 roles=["data", "layer"],

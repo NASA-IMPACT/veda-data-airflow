@@ -224,7 +224,7 @@ def s3_discovery_handler(event, chunk_size=2800, role_arn=None, bucket_output=No
         bucket_name=bucket, prefix=prefix, s3_client=s3client
     )
     file_uris = [
-        f"s3://{bucket}/{obj['Key']}" 
+        f"s3://{bucket}/{obj['Key']}"
         for obj in discover_from_s3(
             s3_iterator, filename_regex, last_execution=process_from or last_execution
         )

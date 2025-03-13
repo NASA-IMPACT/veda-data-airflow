@@ -367,8 +367,7 @@ def handler(payload_src: dict, vector_secret_name: str, assume_role_arn: [str, N
         # The transformed keys are preprocessed for STAC Item COG asset metadata but href can also be used for vector ingest
         s3_object_prefix = event_received["prefix"]
         if s3_object_prefix.startswith("EIS/"):
-            s3_filename_no_ext = Path(href).stem
-            collection = s3_filename_no_ext
+            collection = Path(href).stem
             print(f"Load new EIS fire features from {href=} using {collection=} {downloaded_filepath=}")
             coll_status = load_to_featuresdb_eis(downloaded_filepath, collection, vector_secret_name)
         else:

@@ -69,7 +69,7 @@ def ingest_vector_task(payload):
     return handler(payload_src=payload, vector_secret_name=vector_secret_name,
                    assume_role_arn=read_role_arn)
 
-def get_ingest_vector_dag(*, id: str, event: dict):
+def get_ingest_vector_dag(id: str, event: dict):
 
     with DAG(
             id,

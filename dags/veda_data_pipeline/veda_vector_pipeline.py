@@ -4,7 +4,7 @@ from airflow import DAG
 from airflow.operators.dummy_operator import DummyOperator
 from airflow.utils.trigger_rule import TriggerRule
 from airflow.models.variable import Variable
-from veda_data_pipeline.groups.discover_group import discover_from_s3_task, get_files_to_process
+from veda_data_pipeline.groups.discover_group import discover_from_s3_task, get_files_task
 import json
 
 dag_doc_md = """
@@ -80,7 +80,7 @@ def get_ingest_vector_dag(id: str, event: dict):
         start = DummyOperator(task_id="Start", dag=dag)
         end = DummyOperator(task_id="End", trigger_rule=TriggerRule.ONE_SUCCESS, dag=dag)
         discover = discover_from_s3_task(event)
-        get_files = get_files_to_process(payload=discover)
+        get_files = get_files_task(payload=discover)
         vector_ingest = ingest_vector_task.expand(payload=get_files)
         discover.set_upstream(start)
         vector_ingest.set_downstream(end)

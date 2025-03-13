@@ -69,7 +69,7 @@ template_dag_run_conf = {
     },
 }
 
-def get_discover_dag(*, id: str, event: dict):
+def get_discover_dag(id: str, event: dict):
 
     with DAG(
             id,

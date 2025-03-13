@@ -69,19 +69,17 @@ def ingest_vector_task(payload):
     return handler(payload_src=payload, vector_secret_name=vector_secret_name,
                    assume_role_arn=read_role_arn)
 
-def get_ingest_vector_dag(id, event={}):
-    
-    params_dag_run_conf = event or template_dag_run_conf
+def get_ingest_vector_dag(*, id: str, event: dict):
 
     with DAG(
             id,
-            schedule_interval=params_dag_run_conf.get("schedule", None),
-            params=params_dag_run_conf, 
+            schedule_interval=event.get("schedule", None),
+            params=event, 
             **dag_args
         ) as dag:
         start = DummyOperator(task_id="Start", dag=dag)
         end = DummyOperator(task_id="End", trigger_rule=TriggerRule.ONE_SUCCESS, dag=dag)
-        discover = discover_from_s3_task()
+        discover = discover_from_s3_task(event)
         get_files = get_files_to_process(payload=discover)
         vector_ingest = ingest_vector_task.expand(payload=get_files)
         discover.set_upstream(start)
@@ -89,5 +87,5 @@ def get_ingest_vector_dag(id, event={}):
 
         return dag
     
-get_ingest_vector_dag("veda_ingest_vector")
+get_ingest_vector_dag(id="veda_ingest_vector", event=template_dag_run_conf)
 

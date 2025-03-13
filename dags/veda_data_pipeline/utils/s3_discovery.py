@@ -191,7 +191,7 @@ def propagate_forward_datetime_args(event):
 
 def s3_discovery_handler(event, chunk_size=2800, role_arn=None, bucket_output=None):
     bucket = event["bucket"]
-    prefix = event.get("prefix", "")
+    prefix = event["prefix"]
     filename_regex = event.get("filename_regex", None)
     collection = event.get("collection", prefix.rstrip("/"))
     properties = event.get("properties", {})

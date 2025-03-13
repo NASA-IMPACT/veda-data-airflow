@@ -1,5 +1,5 @@
 FROM --platform=linux/amd64 osgeo/gdal:ubuntu-small-3.6.3
-ARG AIRFLOW_VERSION=2.8.4
+ARG AIRFLOW_VERSION=2.10.5
 
 ARG UNAME=airflow
 

@@ -1,5 +1,6 @@
 import base64
 from argparse import ArgumentParser
+from pathlib import Path
 import boto3
 import os
 import subprocess
@@ -361,18 +362,13 @@ def handler(payload_src: dict, vector_secret_name: str, assume_role_arn: [str, N
         href = s3_object["assets"]["default"]["href"]
         collection = s3_object["collection"]
         downloaded_filepath = download_file(href, assume_role_arn)
-        print(f"[ DOWNLOAD FILEPATH ]: {downloaded_filepath}")
-        print(f"[ COLLECTION ]: {collection}")
 
         # Note that the boto3 ListObjectsV2 response is transformed to use new keys in veda_data_pipelline/utils/s3_discovery.py discover_from_s3
+        # The transformed keys are preprocessed for STAC Item COG asset metadata but href can also be used for vector ingest
         s3_object_prefix = event_received["prefix"]
         if s3_object_prefix.startswith("EIS/"):
-            s3_event_key = s3_object["s3"]["object"]["key"]
-            last_modified = s3_object["s3"]["object"]["last_modified"]
-            s3_filename_target = os.path.split(s3_event_key)[-1]
-            s3_filename_no_ext = os.path.splitext(s3_filename_target)[0]
-            collection = s3_filename_no_ext
-            print(f"Load new features for eis_fire_{collection} from {s3_event_key=} {last_modified=}")
+            collection = Path(href).stem
+            print(f"Load new EIS fire features from {href=} using {collection=} {downloaded_filepath=}")
             coll_status = load_to_featuresdb_eis(downloaded_filepath, collection, vector_secret_name)
         else:
             # Get the filename

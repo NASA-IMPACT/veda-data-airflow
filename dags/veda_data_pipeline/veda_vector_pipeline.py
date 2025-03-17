@@ -4,7 +4,7 @@ from airflow import DAG
 from airflow.operators.dummy_operator import DummyOperator
 from airflow.utils.trigger_rule import TriggerRule
 from airflow.models.variable import Variable
-from veda_data_pipeline.groups.discover_group import discover_from_s3_task, get_files_to_process
+from veda_data_pipeline.groups.discover_group import discover_from_s3_task, get_files_task
 import json
 
 dag_doc_md = """
@@ -16,16 +16,21 @@ This DAG is supposed to be triggered by `veda_discover`. But you still can trigg
 - This DAG can run with the following configuration <br>
 ```json
 {
-    "collection": "geoglam",
-    "prefix": "geoglam/",
-    "bucket": "veda-data-store-staging",
-    "filename_regex": "^(.*).tif$",
+    "collection": "",
+    "prefix": "transformed_csv/",
+    "bucket": "ghgc-data-store-develop",
+    "filename_regex": ".*.csv$",
     "discovery": "s3",
     "datetime_range": "month",
-    "upload": false,
-    "cogify": false,
+    "id_regex": "",
+    "id_template": "NIST_Urban_Testbed_test-{}",
+    "datetime_range": "",
+    "vector": true,
+    "source_projection": "EPSG:4326",
+    "target_projection": "EPSG:4326",
+    "extra_flags": ["-overwrite", "-lco", "OVERWRITE=YES", "-oo", "X_POSSIBLE_NAMES=latitude", "-oo", "Y_POSSIBLE_NAMES=lomgitude"]
     "discovered": 33,
-    "payload": "s3://veda-uah-sit-mwaa-853558080719/events/geoglam/s3_discover_output_6c46b57a-7474-41fe-977a-19d164531cdc.json"
+    "payload": "s3://data-pipeline-ghgc-dev-mwaa-597746869805/events/test_layer_name2/s3_discover_output_f88257e8-ee50-4a14-ace4-5612ae6ebf38.jsonn"
 }	
 ```
 - [Supports linking to external content](https://github.com/NASA-IMPACT/veda-data-pipelines)
@@ -36,14 +41,18 @@ template_dag_run_conf = {
     "prefix": "<prefix>/",
     "bucket": "<bucket>",
     "filename_regex": "<filename_regex>",
-    "discovery": "<s3>|cmr",
+    "id_template": "<id_template_prefix>-{}",
     "datetime_range": "<month>|<day>",
-    "upload": "<false> | true",
-    "cogify": "false | true"
+    "vector": "false | true",
+    "x_possible": "<x_column_name>",
+    "y_possible": "<y_column_name>",
+    "source_projection": "<crs>",
+    "target_projection": "<crs>",
+    "extra_flags": "<args>",
+    "payload": "<s3_uri_event_payload>",
 }
 dag_args = {
     "start_date": pendulum.today("UTC").add(days=-1),
-    "schedule_interval": None,
     "catchup": False,
     "doc_md": dag_doc_md,
 }
@@ -60,12 +69,23 @@ def ingest_vector_task(payload):
     return handler(payload_src=payload, vector_secret_name=vector_secret_name,
                    assume_role_arn=read_role_arn)
 
+def get_ingest_vector_dag(id: str, event: dict):
 
-with DAG(dag_id="veda_ingest_vector", params=template_dag_run_conf, **dag_args) as dag:
-    start = DummyOperator(task_id="Start", dag=dag)
-    end = DummyOperator(task_id="End", trigger_rule=TriggerRule.ONE_SUCCESS, dag=dag)
-    discover = discover_from_s3_task()
-    get_files = get_files_to_process(payload=discover)
-    vector_ingest = ingest_vector_task.expand(payload=get_files)
-    discover.set_upstream(start)
-    vector_ingest.set_downstream(end)
+    with DAG(
+            id,
+            schedule_interval=event.get("schedule", None),
+            params=event, 
+            **dag_args
+        ) as dag:
+        start = DummyOperator(task_id="Start", dag=dag)
+        end = DummyOperator(task_id="End", trigger_rule=TriggerRule.ONE_SUCCESS, dag=dag)
+        discover = discover_from_s3_task(event)
+        get_files = get_files_task(payload=discover)
+        vector_ingest = ingest_vector_task.expand(payload=get_files)
+        discover.set_upstream(start)
+        vector_ingest.set_downstream(end)
+
+        return dag
+    
+get_ingest_vector_dag(id="veda_ingest_vector", event=template_dag_run_conf)
+

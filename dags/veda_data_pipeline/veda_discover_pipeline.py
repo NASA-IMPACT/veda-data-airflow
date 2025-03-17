@@ -69,18 +69,12 @@ template_dag_run_conf = {
     },
 }
 
+def get_discover_dag(id: str, event: dict):
 
-
-
-
-def get_discover_dag(id, event=None):
-    if not event:
-        event = {}
-    params_dag_run_conf = event or template_dag_run_conf
     with DAG(
             id,
             schedule_interval=event.get("schedule"),
-            params=params_dag_run_conf,
+            params=event,
             **dag_args
     ) as dag:
         start = DummyOperator(task_id="Start", dag=dag)
@@ -101,4 +95,4 @@ def get_discover_dag(id, event=None):
         return dag
 
 
-get_discover_dag("veda_discover")
+get_discover_dag(id="veda_discover", event=template_dag_run_conf)

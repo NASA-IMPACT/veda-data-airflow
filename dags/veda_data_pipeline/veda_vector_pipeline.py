@@ -40,7 +40,7 @@ This DAG is supposed to be triggered by `veda_discover`. But you still can trigg
 """
 
 template_dag_run_conf = {
-    "collection":  Param("collection_name", type="string"),
+    "collection": Param("collection_name", type="string"),
     "prefix": Param("<prefix>/", type="string", help="Must have a trailing slash"),
     "bucket": "<bucket>",
     "filename_regex": "<filename_regex>",
@@ -81,7 +81,6 @@ def invalidate_cloudfront(ti):
         logging.info("Skipping cloudfront invalidation")
         return
 
-
     try:
         airflow_vars_json = Variable.get("aws_dags_variables", deserialize_json=True)
         cloudfront_to_invalidate_id = airflow_vars_json.get("CLOUDFRONT_TO_INVALIDATE")
@@ -111,6 +110,4 @@ def invalidate_cloudfront(ti):
 with DAG(dag_id="veda_ingest_vector", params=template_dag_run_conf, **dag_args) as dag:
     start = DummyOperator(task_id="Start", dag=dag)
     end = DummyOperator(task_id="End", trigger_rule=TriggerRule.ONE_SUCCESS, dag=dag)
-    discover = start >> discover_from_s3_task()
-    get_files = get_files_to_process(payload=discover)
-    vector_ingest = ingest_vector_task.expand(payload=get_files) >> invalidate_cloudfront() >> end
+    discover = start >> invalidate_cloudfront() >> end

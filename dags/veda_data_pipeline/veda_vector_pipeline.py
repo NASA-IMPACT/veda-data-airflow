@@ -110,4 +110,6 @@ def invalidate_cloudfront(ti):
 with DAG(dag_id="veda_ingest_vector", params=template_dag_run_conf, **dag_args) as dag:
     start = DummyOperator(task_id="Start", dag=dag)
     end = DummyOperator(task_id="End", trigger_rule=TriggerRule.ONE_SUCCESS, dag=dag)
-    discover = start >> invalidate_cloudfront() >> end
+    discover = start >> discover_from_s3_task()
+    get_files = get_files_to_process(payload=discover)
+    vector_ingest = ingest_vector_task.expand(payload=get_files) >> invalidate_cloudfront() >> end

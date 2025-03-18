@@ -125,6 +125,10 @@ variable "custom_worker_policy_statement" {
         "arn:aws:glue:us-west-2:*:table/*",
         "arn:aws:glue:us-west-2:*:userDefinedFunction/*"
       ]
+    {
+            "Effect": "Allow",
+            "Action": ["cloudfront:CreateInvalidation"],
+            "Resource": ["arn:aws:cloudfront::*:distribution/*"]
     }
 
   ]
@@ -212,6 +216,7 @@ variable "assume_role_write_arn" {
 }
 
 
+
 variable "snapshot_bucket_name" {
   default = "ghg-rds-snapshots-dev"
 }
@@ -223,4 +228,11 @@ variable "glue_role_arn" {
 }
 variable "s3_export_kms_key_id" {
   default = ""
+  
+variable "cloudfront_to_invalidate" {
+  default = null
+}
+variable "cloudfront_path_to_invalidate" {
+  default = null
+
 }

@@ -17,6 +17,7 @@ resource "random_password" "password" {
 }
 
 
+
 module "sma-base" {
   source                         = "https://github.com/NASA-IMPACT/self-managed-apache-airflow/releases/download/v1.1.5/self-managed-apache-airflow.zip"
   project                        = var.project_name
@@ -94,6 +95,8 @@ module "sma-base" {
     S3_EXPORT_KMS_KEY_ID = aws_kms_key.s3_export_kms_key.id,
     S3_EXPORT_ROLE_ARN = aws_iam_role.snapshot_export_role.arn,
     SNAPSHOT_BUCKET_NAME = aws_s3_bucket.snapshot_bucket.bucket
+    CLOUDFRONT_TO_INVALIDATE = var.cloudfront_to_invalidate
+    CLOUDFRONT_PATH_TO_INVALIDATE = var.cloudfront_path_to_invalidate
   }
 }
 

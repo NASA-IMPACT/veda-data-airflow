@@ -17,6 +17,7 @@ resource "random_password" "password" {
 }
 
 
+
 module "sma-base" {
   source                         = "https://github.com/NASA-IMPACT/self-managed-apache-airflow/releases/download/v1.1.5/self-managed-apache-airflow.zip"
   project                        = var.project_name
@@ -90,6 +91,8 @@ module "sma-base" {
     ASSUME_ROLE_READ_ARN  = var.assume_role_read_arn
     ASSUME_ROLE_WRITE_ARN = var.assume_role_write_arn
     SM2A_BASE_URL         = module.sma-base.airflow_url
+    CLOUDFRONT_TO_INVALIDATE = var.cloudfront_to_invalidate
+    CLOUDFRONT_PATH_TO_INVALIDATE = var.cloudfront_path_to_invalidate
   }
 }
 

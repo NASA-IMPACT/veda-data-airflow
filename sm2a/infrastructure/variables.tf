@@ -97,6 +97,11 @@ variable "custom_worker_policy_statement" {
         "*"
       ]
 
+    },
+    {
+            "Effect": "Allow",
+            "Action": ["cloudfront:CreateInvalidation"],
+            "Resource": ["arn:aws:cloudfront::*:distribution/*"]
     }
 
   ]
@@ -181,4 +186,11 @@ variable "assume_role_read_arn" {
 variable "assume_role_write_arn" {
   type = string
   default = ""
+}
+
+variable "cloudfront_to_invalidate" {
+  default = null
+}
+variable "cloudfront_path_to_invalidate" {
+  default = null
 }

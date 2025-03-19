@@ -125,20 +125,25 @@ This pipeline is designed to handle the ingestion of both vector and raster data
 ### Vector Data Ingestion
 ```json
 {
+  "bucket": "ghgc-data-store-develop",
   "collection": "",
-  "bucket": "",
-  "prefix": "",
-  "filename_regex": ".*.csv$",
-  "id_template": "-{}",
-  "datetime_range": "",
-  "vector": true,
-  "x_possible": "longitude",
-  "y_possible": "latitude",
+  "extra_flags": [
+    "-overwrite",
+    "-oo",
+    "X_POSSIBLE_NAMES=longitude",
+    "-oo",
+    "Y_POSSIBLE_NAMES=latitude"
+  ],
+  "filename_regex": ".*metadata.*csv",
+  "id_template": "any_prefix_{}",
+  "prefix": "transformed_csv/NOAA/",
   "source_projection": "EPSG:4326",
   "target_projection": "EPSG:4326",
-  "extra_flags": ["-overwrite", "-lco", "OVERWRITE=YES"]
+  "vector": true,
+  "invalidate_cloudfront": true
 }
 ```
+[Details on Vector Ingest](./dags/veda_data_pipeline/utils/vector_ingest/README.md)
 
 ### Raster Data Ingestion
 ```json

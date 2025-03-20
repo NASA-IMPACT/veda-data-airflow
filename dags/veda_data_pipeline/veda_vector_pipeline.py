@@ -74,9 +74,9 @@ def ingest_vector_task(payload):
 
 
 @task
-def invalidate_cloudfront(ti):
+def invalidate_cloudfront(event: dict={}):
     import boto3
-    if not ti.dag_run.conf['invalidate_cloudfront']:
+    if not event.get("invalidate_cloudfront"):
         logging.info("Skipping cloudfront invalidation")
         return
 
@@ -117,7 +117,7 @@ def get_ingest_vector_dag(id: str, event: dict):
         end = DummyOperator(task_id="End", trigger_rule=TriggerRule.ONE_SUCCESS, dag=dag)
         discover = start >> discover_from_s3_task(event=event)
         get_files = get_files_task(payload=discover)
-        ingest_vector_task.expand(payload=get_files) >> invalidate_cloudfront() >> end
+        ingest_vector_task.expand(payload=get_files) >> invalidate_cloudfront(event=event) >> end
 
         return dag
 

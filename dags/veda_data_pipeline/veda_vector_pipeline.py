@@ -76,7 +76,7 @@ def ingest_vector_task(payload):
 @task
 def invalidate_cloudfront(event: dict={}):
     import boto3
-    if not event.get("invalidate_cloudfront", False):
+    if not event.get("invalidate_cloudfront"):
         logging.info("Skipping cloudfront invalidation")
         return
 

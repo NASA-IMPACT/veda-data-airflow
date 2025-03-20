@@ -115,7 +115,7 @@ def get_ingest_vector_dag(id: str, event: dict):
     ) as dag:
         start = DummyOperator(task_id="Start", dag=dag)
         end = DummyOperator(task_id="End", trigger_rule=TriggerRule.ONE_SUCCESS, dag=dag)
-        discover = start >> discover_from_s3_task()
+        discover = start >> discover_from_s3_task(event=event)
         get_files = get_files_task(payload=discover)
         ingest_vector_task.expand(payload=get_files) >> invalidate_cloudfront() >> end
 

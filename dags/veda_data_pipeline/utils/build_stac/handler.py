@@ -115,11 +115,13 @@ def stac_handler(payload_src: dict, bucket_output):
         key=key, payload_success=payload_success, payload_failures=payload_failures
     )
 
-    # Silent dead letters are nice, but we want the Airflow UI to quickly alert us if something went wrong.
     if len(payload_failures) != 0:
-        raise ValueError(
+        print(ValueError(
             f"Some items failed to be processed. Failures logged here: {dead_letter_key}"
-        )
+        ))
+
+        print(f"Failures encounterd for STAC item ids {[failure.get('item_id', None) for failure in payload_failures]}")
+        print(f"Unique errors reported in failures {set([failure.get('error', None) for failure in payload_failures])}")
 
     return {
         "payload": {

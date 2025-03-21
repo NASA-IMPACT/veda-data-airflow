@@ -228,6 +228,7 @@ variable "glue_role_arn" {
 }
 variable "s3_export_kms_key_id" {
   default = ""
+}
   
 variable "cloudfront_to_invalidate" {
   default = null

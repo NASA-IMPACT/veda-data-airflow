@@ -94,7 +94,7 @@ module "sma-base" {
     GLUE_ROLE_ARN = aws_iam_role.glue_crawler_role.arn,
     S3_EXPORT_KMS_KEY_ID = aws_kms_key.s3_export_kms_key.id,
     S3_EXPORT_ROLE_ARN = aws_iam_role.snapshot_export_role.arn,
-    SNAPSHOT_BUCKET_NAME = aws_s3_bucket.snapshot_bucket.bucket
+    SNAPSHOT_BUCKET_NAME = var.snapshot_bucket_name,
     CLOUDFRONT_TO_INVALIDATE = var.cloudfront_to_invalidate
     CLOUDFRONT_PATH_TO_INVALIDATE = var.cloudfront_path_to_invalidate
   }

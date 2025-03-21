@@ -1,6 +1,7 @@
 import pendulum
 from airflow import DAG
 from airflow.operators.dummy_operator import DummyOperator
+from airflow.models.param import Param, ParamsDict
 from veda_data_pipeline.groups.discover_group import discover_from_s3_task, get_files_task
 
 from veda_data_pipeline.groups.processing_tasks import submit_to_stac_ingestor_task, build_stac_task
@@ -54,7 +55,7 @@ template_dag_run_conf = {
     "filename_regex": "<file_regex>",
     "id_regex": "<id_regex>",
     "id_template": "<id_template_string>",
-    "datetime_range": "<year>|<month>|<day>",
+    "datetime_range": Param("year", type="string", enum=["year","month", "day"], description="<year|month|day>", default=""),
     "assets": {
         "<asset1_name>": {
             "title": "<asset_title>",
@@ -96,4 +97,4 @@ def get_discover_dag(id: str, event: dict):
 
 # Sending empty event because we rely on task instance (ti) for manula runs
 # and payload for scheduled runs
-get_discover_dag(id="veda_discover", event={})
+get_discover_dag(id="veda_discover", event=ParamsDict(template_dag_run_conf))

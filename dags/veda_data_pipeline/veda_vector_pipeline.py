@@ -1,6 +1,6 @@
 import logging
 import pendulum
-from airflow.models.param import Param
+from airflow.models.param import Param, ParamsDict
 from airflow.decorators import task
 from airflow import DAG
 from airflow.operators.dummy_operator import DummyOperator
@@ -125,4 +125,4 @@ def get_ingest_vector_dag(id: str, event: dict):
 
 # Sending empty event because we rely on task instance (ti) for manual runs
 # and payload for scheduled runs
-get_ingest_vector_dag(id="veda_ingest_vector", event={})
+get_ingest_vector_dag(id="veda_ingest_vector", event=ParamsDict(template_dag_run_conf))

@@ -94,5 +94,6 @@ def get_discover_dag(id: str, event: dict):
 
         return dag
 
-
-get_discover_dag(id="veda_discover", event=template_dag_run_conf)
+# Sending empty event because we rely on task instance (ti) for manula runs
+# and payload for scheduled runs
+get_discover_dag(id="veda_discover", event={})

@@ -1,4 +1,3 @@
-from datetime import timedelta
 import json
 import logging
 from copy import deepcopy
@@ -59,4 +58,13 @@ def build_stac_task(payload):
     from veda_data_pipeline.utils.build_stac.handler import stac_handler
     airflow_vars_json = Variable.get("aws_dags_variables", deserialize_json=True)
     event_bucket = airflow_vars_json.get("EVENT_BUCKET")
+
+    """ returns: "payload": {
+            "success_event_key": success_key,
+            "failed_event_key": dead_letter_key,
+            "status": {
+                "successes": len(payload_success),
+                "failures": len(payload_failures),
+            },
+        }"""
     return stac_handler(payload_src=payload, bucket_output=event_bucket)

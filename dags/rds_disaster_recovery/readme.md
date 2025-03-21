@@ -120,3 +120,5 @@ This DAG is designed to export RDS snapshots to S3 and initiate Glue crawling to
 4. **Delete Glue Database**: Deletes the existing Glue database.
 5. **Run Glue Crawler**: Runs a Glue Crawler on the exported data in S3.
 6. **End**: Marks the end of the DAG.
+
+Note: Make sure create a bucket where you want the snapshots to be and add that bucket name as TF_VAR_snapshot_bucket_name in the AWS secrets

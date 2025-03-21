@@ -125,6 +125,7 @@ variable "custom_worker_policy_statement" {
         "arn:aws:glue:us-west-2:*:table/*",
         "arn:aws:glue:us-west-2:*:userDefinedFunction/*"
       ]
+    },
     {
             "Effect": "Allow",
             "Action": ["cloudfront:CreateInvalidation"],
@@ -218,7 +219,6 @@ variable "assume_role_write_arn" {
 
 
 variable "snapshot_bucket_name" {
-  default = "ghg-rds-snapshots-dev"
 }
 variable "snapshot_export_role" {
   default = ""

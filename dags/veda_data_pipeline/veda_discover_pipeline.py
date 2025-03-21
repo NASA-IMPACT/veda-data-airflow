@@ -75,7 +75,7 @@ def get_discover_dag(id: str, event: dict):
     with DAG(
             id,
             schedule_interval=event.get("schedule"),
-            params=event,
+            params=ParamsDict(event),
             **dag_args
     ) as dag:
         start = DummyOperator(task_id="Start", dag=dag)
@@ -97,4 +97,4 @@ def get_discover_dag(id: str, event: dict):
 
 # Sending empty event because we rely on task instance (ti) for manula runs
 # and payload for scheduled runs
-get_discover_dag(id="veda_discover", event=ParamsDict(template_dag_run_conf))
+get_discover_dag(id="veda_discover", event=template_dag_run_conf)

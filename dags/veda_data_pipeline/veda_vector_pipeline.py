@@ -111,7 +111,7 @@ def get_ingest_vector_dag(id: str, event: dict):
     with DAG(
             id,
             schedule_interval=event.get("schedule", None),
-            params=event,
+            params=ParamsDict(event),
             **dag_args
     ) as dag:
         start = DummyOperator(task_id="Start", dag=dag)
@@ -125,4 +125,4 @@ def get_ingest_vector_dag(id: str, event: dict):
 
 # Sending empty event because we rely on task instance (ti) for manual runs
 # and payload for scheduled runs
-get_ingest_vector_dag(id="veda_ingest_vector", event=ParamsDict(template_dag_run_conf))
+get_ingest_vector_dag(id="veda_ingest_vector", event=template_dag_run_conf)

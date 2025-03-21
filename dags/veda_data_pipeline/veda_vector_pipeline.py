@@ -74,12 +74,13 @@ def ingest_vector_task(payload):
 
 
 @task
-def invalidate_cloudfront(event: dict={}):
-    import boto3
-    if not event.get("invalidate_cloudfront"):
+def invalidate_cloudfront(ti):
+    
+    if not ti.dag_run.conf.get('invalidate_cloudfront'):
         logging.info("Skipping cloudfront invalidation")
         return
-
+    
+    import boto3
     try:
         airflow_vars_json = Variable.get("aws_dags_variables", deserialize_json=True)
         cloudfront_to_invalidate_id = airflow_vars_json.get("CLOUDFRONT_TO_INVALIDATE")
@@ -117,9 +118,11 @@ def get_ingest_vector_dag(id: str, event: dict):
         end = DummyOperator(task_id="End", trigger_rule=TriggerRule.ONE_SUCCESS, dag=dag)
         discover = start >> discover_from_s3_task(event=event)
         get_files = get_files_task(payload=discover)
-        ingest_vector_task.expand(payload=get_files) >> invalidate_cloudfront(event=event) >> end
+        ingest_vector_task.expand(payload=get_files) >> invalidate_cloudfront() >> end
 
         return dag
 
 
-get_ingest_vector_dag(id="veda_ingest_vector", event=template_dag_run_conf)
+# Sending empty event because we rely on task instance (ti) for manual runs
+# and payload for scheduled runs
+get_ingest_vector_dag(id="veda_ingest_vector", event={})

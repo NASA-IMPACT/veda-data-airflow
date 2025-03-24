@@ -134,4 +134,3 @@ resource "aws_kms_alias" "s3_export_kms_key_alias" {
   name          = "alias/${var.prefix}-s3-snapshot-export-key"
   target_key_id = aws_kms_key.s3_export_kms_key.id
 }
-

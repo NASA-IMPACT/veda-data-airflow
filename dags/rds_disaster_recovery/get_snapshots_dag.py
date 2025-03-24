@@ -299,7 +299,7 @@ with DAG(
     doc_md=doc_get_snapshots_dag_md_DAG,
     params=dag_params,
     default_args=default_args,
-    tags=["RDS", "CSDAP", "Disaster Recovery", "Trigger Export", "Long Term"],
+    tags=["RDS", "Operations", "Disaster Recovery", "Trigger Export", "Long Term"],
 ) as dag:
     start = EmptyOperator(task_id="start")
     end = EmptyOperator(task_id="end")

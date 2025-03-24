@@ -55,7 +55,7 @@ template_dag_run_conf = {
     "filename_regex": "<file_regex>",
     "id_regex": "<id_regex>",
     "id_template": "<id_template_string>",
-    "datetime_range": Param(type="string", enum=["year","month", "day"], description="<year|month|day>", default=""),
+    "datetime_range": Param(type="string", enum=["year","month", "day", ""], description="<year|month|day>", default=""),
     "assets": {
         "<asset1_name>": {
             "title": "<asset_title>",

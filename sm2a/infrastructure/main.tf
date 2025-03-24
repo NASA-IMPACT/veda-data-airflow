@@ -16,6 +16,13 @@ resource "random_password" "password" {
   override_special = "_%@"
 }
 
+module "rds_backups" {
+  source = "./rds_backups"
+  count = var.snapshot_bucket_name != "" ? 1 : 0
+  prefix = var.prefix
+  permission_boundaries_arn = var.permission_boundaries_arn
+  snapshot_bucket_name = var.snapshot_bucket_name
+}
 
 
 module "sma-base" {
@@ -82,21 +89,23 @@ module "sma-base" {
   subdomain   = var.subdomain
   worker_cmd  = ["airflow", "celery", "worker"]
 
-  airflow_custom_variables = {
-    EVENT_BUCKET          = var.state_bucketname
-    COGNITO_APP_SECRET    = var.workflows_client_secret
-    STAC_INGESTOR_API_URL = var.stac_ingestor_api_url
-    STAC_URL              = var.stac_url
-    VECTOR_SECRET_NAME    = var.vector_secret_name
-    ASSUME_ROLE_READ_ARN  = var.assume_role_read_arn
-    ASSUME_ROLE_WRITE_ARN = var.assume_role_write_arn
-    SM2A_BASE_URL         = module.sma-base.airflow_url
-    GLUE_ROLE_ARN = aws_iam_role.glue_crawler_role.arn,
-    S3_EXPORT_KMS_KEY_ID = aws_kms_key.s3_export_kms_key.id,
-    S3_EXPORT_ROLE_ARN = aws_iam_role.snapshot_export_role.arn,
-    SNAPSHOT_BUCKET_NAME = var.snapshot_bucket_name,
+  # add custom env, with conditional rds backup env vars
+  airflow_custom_variables = merge({
+    EVENT_BUCKET          = var.state_bucketname,
+    COGNITO_APP_SECRET    = var.workflows_client_secret,
+    STAC_INGESTOR_API_URL = var.stac_ingestor_api_url,
+    STAC_URL              = var.stac_url,
+    VECTOR_SECRET_NAME    = var.vector_secret_name,
+    ASSUME_ROLE_READ_ARN  = var.assume_role_read_arn,
+    ASSUME_ROLE_WRITE_ARN = var.assume_role_write_arn,
+    SM2A_BASE_URL         = module.sma-base.airflow_url,
     CLOUDFRONT_TO_INVALIDATE = var.cloudfront_to_invalidate
     CLOUDFRONT_PATH_TO_INVALIDATE = var.cloudfront_path_to_invalidate
-  }
+  }, var.snapshot_bucket_name != "" ? {
+    GLUE_ROLE_ARN = module.rds_backups[0].glue_crawler_role_arn,
+    S3_EXPORT_KMS_KEY_ID = module.rds_backups[0].s3_export_kms_key_id,
+    S3_EXPORT_ROLE_ARN = module.rds_backups[0].snapshot_export_role_arn,
+    SNAPSHOT_BUCKET_NAME = module.rds_backups[0].snapshot_bucket_name,
+  } : {}
+  )
 }
-

@@ -93,7 +93,7 @@ def get_export_only_list_task(ti):
 with DAG(
     dag_id="rds_s3_export_snapshots",
     default_args=default_args,
-    tags=["RDS", "CSDAP", "Disaster Recovery", "Long Term"],
+    tags=["RDS", "Operations", "Disaster Recovery", "Long Term"],
     schedule_interval=None,
     start_date=days_ago(1),
     max_active_runs=4,  # Only 5 parallel exports are allowed

@@ -66,7 +66,7 @@ The tasks within this DAG are executed in the following order:
 - **catchup**: False
 
 ## Tags
-The DAG is tagged with `RDS`, `CSDAP`, `Disaster Recovery`, `Trigger Export`, and `Long Term`, aiding in categorizing the workflow for monitoring and maintenance.
+The DAG is tagged with `RDS`, `Operations`, `Disaster Recovery`, `Trigger Export`, and `Long Term`, aiding in categorizing the workflow for monitoring and maintenance.
 
 ## Additional Notes
 This DAG forms part of a disaster recovery strategy by regularly exporting RDS snapshots to an S3 bucket, thus enabling long-term storage and retrieval for key RDS databases. The export task configuration leverages AWS IAM roles, S3 bucket permissions, and KMS keys, configured within Airflow Variables.

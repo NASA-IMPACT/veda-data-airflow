@@ -219,6 +219,7 @@ variable "assume_role_write_arn" {
 
 
 variable "snapshot_bucket_name" {
+  default = ""
 }
 variable "snapshot_export_role" {
   default = ""

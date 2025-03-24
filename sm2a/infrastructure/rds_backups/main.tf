@@ -1,3 +1,10 @@
+resource "aws_s3_bucket" "rds_backup_bucket" {
+  bucket = var.snapshot_bucket_name
+  lifecycle {
+    prevent_destroy = true
+  }
+}
+
 
 resource "aws_iam_role" "snapshot_export_role" {
   name                 = "${var.prefix}-s3-export-role"

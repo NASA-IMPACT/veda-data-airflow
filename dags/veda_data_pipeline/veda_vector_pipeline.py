@@ -45,7 +45,7 @@ template_dag_run_conf = {
     "bucket": "<bucket>",
     "filename_regex": "<filename_regex>",
     "id_template": "<id_template_prefix>-{}",
-    "datetime_range": Param(type="string", enum=["month", "day", None], description="<month|day>", default=None),
+    "datetime_range": Param(type="string", enum=["month", "day", ""], description="<month|day>", default=""),
     "vector": Param(True, type="boolean"),
     "x_possible": "<x_column_name>",
     "y_possible": "<y_column_name>",

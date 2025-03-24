@@ -101,11 +101,6 @@ module "sma-base" {
     SM2A_BASE_URL         = module.sma-base.airflow_url,
     CLOUDFRONT_TO_INVALIDATE = var.cloudfront_to_invalidate
     CLOUDFRONT_PATH_TO_INVALIDATE = var.cloudfront_path_to_invalidate
-  }, var.snapshot_bucket_name != "" ? {
-    GLUE_ROLE_ARN = module.rds_backups[0].glue_crawler_role_arn,
-    S3_EXPORT_KMS_KEY_ID = module.rds_backups[0].s3_export_kms_key_id,
-    S3_EXPORT_ROLE_ARN = module.rds_backups[0].snapshot_export_role_arn,
-    SNAPSHOT_BUCKET_NAME = module.rds_backups[0].snapshot_bucket_name,
-  } : {}
+  }, var.snapshot_bucket_name != "" ? module.rds_backups[0].rds_backup_environment : {}
   )
 }

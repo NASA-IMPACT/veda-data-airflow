@@ -42,7 +42,7 @@ def get_matching_files(s3_client, bucket, prefix, regex_pattern):
 
 
 def transfer_files_within_s3(
-    s3_client, origin_bucket, matching_files, destination_bucket, collection, transfer=True
+    s3_client, origin_bucket, matching_files, destination_bucket, collection, transfer
 ):
     if not transfer:
         print(f"Transfer is disabled. Would have copied {len(matching_files)} files from {origin_bucket} to {destination_bucket}")

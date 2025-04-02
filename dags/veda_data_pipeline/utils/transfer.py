@@ -42,12 +42,15 @@ def get_matching_files(s3_client, bucket, prefix, regex_pattern):
 
 
 def transfer_files_within_s3(
-    s3_client, origin_bucket, matching_files, destination_bucket, collection
+    s3_client, origin_bucket, matching_files, destination_bucket, collection, transfer=True
 ):
+    if not transfer:
+        print(f"Transfer is disabled. Would have copied {len(matching_files)} files from {origin_bucket} to {destination_bucket}")
+        return
+
     transfer_exceptions = False
     for file_key in matching_files:
         filename = file_key.split("/")[-1]
-        # print(f"Transferring file: {filename}")
         target_key = f"{collection}/{filename}"
         copy_source = {"Bucket": origin_bucket, "Key": file_key}
 
@@ -91,6 +94,7 @@ def data_transfer_handler(event, role_arn=None):
     filename_regex = event.get("filename_regex")
     target_bucket = event.get("target_bucket")
     collection = event.get("collection")
+    transfer = event.get("transfer")
 
     kwargs = assume_role(role_arn=role_arn) if role_arn else {}
     s3client = boto3.client("s3", **kwargs)
@@ -111,6 +115,7 @@ def data_transfer_handler(event, role_arn=None):
             matching_files=matching_files,
             destination_bucket=target_bucket,
             collection=collection,
+            transfer=transfer
         )
     else:
         print(

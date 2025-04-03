@@ -9,7 +9,7 @@ from airflow.operators.dummy_operator import DummyOperator
 from airflow.utils.trigger_rule import TriggerRule
 from stactools.core import use_fsspec
 
-from veda_data_pipeline.groups.processing_tasks import submit_to_stac_ingestor_task
+from veda_data_pipeline.groups.processing_tasks import submit_to_stac_ingestor_task_direct
 from veda_data_pipeline.groups.collection_group import ingest_collection_task
 
 
@@ -103,7 +103,7 @@ with DAG(
     ingest_collection = ingest_collection_task(collection=stactools_collection)
 
     get_items_from_granules = build_items_from_granules()
-    submit_stac = submit_to_stac_ingestor_task.expand(built_stac=get_items_from_granules)
+    submit_stac = submit_to_stac_ingestor_task_direct.expand(stac_items=get_items_from_granules)
     submit_stac.set_upstream(ingest_collection)
 
     get_items_from_granules.set_upstream(start)

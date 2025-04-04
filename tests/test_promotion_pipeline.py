@@ -57,7 +57,7 @@ def test_transfer_assets_to_production_bucket_transfer_true(mock_task_instance):
         assert result["prefix"] == "test-collection/"
 
 def test_transfer_assets_to_production_bucket_transfer_default(mock_task_instance):
-    """Test that when transfer is not specified, it defaults to False"""
+    """Test that when transfer is not specified, it defaults to True"""
 
     with patch("dags.veda_data_pipeline.groups.transfer_group.transfer_data") as mock_transfer:
         payload = {
@@ -67,7 +67,13 @@ def test_transfer_assets_to_production_bucket_transfer_default(mock_task_instanc
 
         result = transfer_assets_to_production_bucket(ti=mock_task_instance, payload=payload)
 
-        mock_transfer.assert_not_called()
+        mock_transfer.assert_called_once()
+        call_args = mock_transfer.call_args[1]["payload"]
+        assert call_args["transfer"] is True
+        assert call_args["origin_bucket"] == "staging-bucket"
+        assert call_args["origin_prefix"] == "staging-prefix/"
+        assert call_args["target_bucket"] == "test-target-bucket"
+        assert call_args["collection"] == "test-collection"
 
         assert result["bucket"] == "veda-data-store"
         assert result["prefix"] == "test-collection/"

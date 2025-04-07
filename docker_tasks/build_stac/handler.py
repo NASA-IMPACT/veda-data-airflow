@@ -125,6 +125,9 @@ def stac_handler(payload_event):
         print(f"Failures encounterd for STAC item ids {[failure.get('item_id', None) for failure in payload_failures]}")
         print(f"Unique errors reported in failures {set([failure.get('error', None) for failure in payload_failures])}")
 
+    if not len(payload_success):
+        raise ValueError(f"All items failed to be processed. Failures logged here: {dead_letter_key}")
+
     return {
         "payload": {
             "success_event_key": success_key,

@@ -1,6 +1,7 @@
 import pendulum
 from airflow import DAG
 from airflow.models.param import Param
+from airflow.utils.trigger_rule import TriggerRule
 from veda_data_pipeline.groups.discover_group import discover_from_s3_task, get_files_task
 from airflow.operators.dummy_operator import DummyOperator as EmptyOperator
 from veda_data_pipeline.groups.collection_group import collection_task_group
@@ -53,4 +54,4 @@ with DAG("veda_dataset_pipeline", params=template_dag_run_conf, **dag_args) as d
     discover = discover_from_s3_task.partial(payload=mutated_payloads).expand(event=discovery_items)
     get_files = get_files_task(payload=discover)
     build_stac = build_stac_task.expand(payload=get_files)
-    submit_stac = submit_to_stac_ingestor_task.expand(built_stac=build_stac) >> end
+    submit_stac = submit_to_stac_ingestor_task.expand(built_stac=build_stac, trigger_rule=TriggerRule.ALL_DONE) >> end

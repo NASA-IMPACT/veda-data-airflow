@@ -82,6 +82,7 @@ def transfer_assets_to_production_bucket(ti=None, payload={}):
         "dry_run": payload.get("dry_run", ti.dag_run.conf.get("dry_run", False)),
         "transfer": payload.get("transfer", ti.dag_run.conf.get("transfer", True)),
     }
+
     transfer_data(payload=config)
     # if transfer complete, update discovery payload to reflect new bucket
     payload.update({"bucket": "veda-data-store"})
@@ -95,8 +96,8 @@ with DAG("veda_promotion_pipeline", params=template_dag_run_conf, **dag_args) as
     end = EmptyOperator(task_id="end", dag=dag)
 
     collection_grp = collection_task_group()
-    mutate_payload_task = remove_thumbnail_asset()
-    extract_from_payload = extract_discovery_items_from_payload()
+    mutate_payload_task = remove_thumbnail_asset(ti=None)
+    extract_from_payload = extract_discovery_items_from_payload(ti=None)
 
     # asset transfer to production bucket
     transfer_task = transfer_assets_to_production_bucket.expand(payload=extract_from_payload)

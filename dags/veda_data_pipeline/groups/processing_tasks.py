@@ -5,6 +5,7 @@ from copy import deepcopy
 import smart_open
 from airflow.models.variable import Variable
 from airflow.decorators import task
+from airflow.utils.trigger_rule import TriggerRule
 from veda_data_pipeline.utils.submit_stac import submission_handler
 
 group_kwgs = {"group_id": "Process", "tooltip": "Process"}
@@ -31,7 +32,7 @@ def remove_thumbnail_asset(ti):
     return payload
 
 # with exponential backoff enabled, retry delay is converted to seconds
-@task(retries=2, retry_delay=60, retry_exponential_backoff=True, max_active_tis_per_dag=5)
+@task(retries=2, retry_delay=60, retry_exponential_backoff=True, max_active_tis_per_dag=5, trigger_rule=TriggerRule.ALL_DONE)
 def submit_to_stac_ingestor_task(built_stac: dict):
     """Submit STAC items to the STAC ingestor API."""
     event = built_stac.copy()

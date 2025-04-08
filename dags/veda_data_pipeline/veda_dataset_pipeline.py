@@ -47,11 +47,11 @@ dag_args = {
 
 with DAG("veda_dataset_pipeline", params=template_dag_run_conf, **dag_args) as dag:
     start = EmptyOperator(task_id="start")
-    end = EmptyOperator(task_id="end")
+    end = EmptyOperator(task_id="end", trigger_rule=TriggerRule.NONE_FAILED_MIN_ONE_SUCCESS)
 
     mutated_payloads = start >> collection_task_group() >> remove_thumbnail_asset()
     discovery_items = extract_discovery_items_from_payload(payload=mutated_payloads)
     discover = discover_from_s3_task.partial(payload=mutated_payloads).expand(event=discovery_items)
     get_files = get_files_task(payload=discover)
     build_stac = build_stac_task.expand(payload=get_files)
-    submit_stac = submit_to_stac_ingestor_task.expand(built_stac=build_stac, trigger_rule=TriggerRule.ALL_DONE) >> end
+    submit_stac = submit_to_stac_ingestor_task.expand(built_stac=build_stac) >> end

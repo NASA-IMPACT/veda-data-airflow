@@ -46,7 +46,7 @@ def mock_s3_client():
         ]
     }
 
-    # Mock head_object to return a 404 error
+    # Mock head_object to return a 404 error by default
     def head_object_side_effect(**kwargs):
         error_response = {'Error': {'Code': '404', 'Message': 'Not Found'}}
         raise ClientError(error_response, 'HeadObject')
@@ -146,5 +146,42 @@ def test_transfer_assets_to_production_bucket_transfer_default(mock_task_instanc
         assert call_args["target_bucket"] == "test-target-bucket"
         assert call_args["collection"] == "test-collection"
 
+        assert result["bucket"] == "veda-data-store"
+        assert result["prefix"] == "test-collection/"
+
+def test_transfer_assets_to_production_bucket_412_error(mock_task_instance, mock_aws_vars, mock_sts_client, mock_s3_client):
+    """Test that when a file already exists with the same ETag (412 error), no error is raised"""
+    mock_task_instance.dag_run.conf["transfer"] = True
+
+    def head_object_side_effect_412(**kwargs):
+        return {'ETag': '"test-etag"'}
+
+    mock_s3_client.head_object.side_effect = head_object_side_effect_412
+
+    def copy_object_side_effect(**kwargs):
+        error_response = {'Error': {'Code': 'PreconditionFailed', 'Message': 'Precondition Failed'}}
+        raise ClientError(error_response, 'CopyObject')
+
+    mock_s3_client.copy_object.side_effect = copy_object_side_effect
+
+    with patch("dags.veda_data_pipeline.veda_promotion_pipeline.transfer_data") as mock_transfer, \
+         patch("airflow.models.variable.Variable.get", return_value=json.dumps(mock_aws_vars)), \
+         patch("boto3.client") as mock_boto3_client:
+        mock_boto3_client.side_effect = lambda service, **kwargs: {
+            'sts': mock_sts_client,
+            's3': mock_s3_client
+        }[service]
+
+        payload = {
+            "bucket": "staging-bucket",
+            "prefix": "staging-prefix/",
+            "filename_regex": r"^.*\.tif$",
+            "transfer": True
+        }
+
+        task_func = transfer_assets_to_production_bucket.function
+        result = task_func(ti=mock_task_instance, payload=payload)
+
+        mock_transfer.assert_called_once()
         assert result["bucket"] == "veda-data-store"
         assert result["prefix"] == "test-collection/"

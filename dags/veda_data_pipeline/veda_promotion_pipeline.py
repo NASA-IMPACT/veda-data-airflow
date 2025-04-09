@@ -1,7 +1,7 @@
 import pendulum
 from airflow import DAG
 from airflow.decorators import task
-from airflow.operators.dummy_operator import DummyOperator as EmptyOperator
+from airflow.operators.empty import EmptyOperator
 from airflow.models.variable import Variable
 from airflow.models.param import Param
 
@@ -44,7 +44,7 @@ This will mutate the payload, so that item references will target the new asset 
 
 dag_args = {
     "start_date": pendulum.today("UTC").add(days=-1),
-    "schedule_interval": None,
+    "schedule": None,
     "catchup": False,
     "doc_md": dag_doc_md,
     "tags": ["collection", "discovery"],
@@ -96,8 +96,8 @@ with DAG("veda_promotion_pipeline", params=template_dag_run_conf, **dag_args) as
     end = EmptyOperator(task_id="end", dag=dag)
 
     collection_grp = collection_task_group()
-    mutate_payload_task = remove_thumbnail_asset(ti=None)
-    extract_from_payload = extract_discovery_items_from_payload(ti=None)
+    mutate_payload_task = remove_thumbnail_asset()
+    extract_from_payload = extract_discovery_items_from_payload()
 
     # asset transfer to production bucket
     transfer_task = transfer_assets_to_production_bucket.expand(payload=extract_from_payload)

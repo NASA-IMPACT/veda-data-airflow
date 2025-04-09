@@ -74,20 +74,26 @@ template_dag_run_conf = {
 def transfer_assets_to_production_bucket(ti=None, payload={}):
     # merge collection id into payload, then transfer data
     payload["collection"] = ti.dag_run.conf.get("collection")
+    transfer = payload.get("transfer", ti.dag_run.conf.get("transfer", True))
+
     config = {
         **payload,
         "origin_bucket": payload.get("bucket", ti.dag_run.conf.get("origin_bucket", "veda-data-store")),
         "origin_prefix": payload.get("prefix", ti.dag_run.conf.get("origin_prefix", "s3-prefix/")),
         "target_bucket": payload.get("target_bucket", ti.dag_run.conf.get("target_bucket", "veda-data-store")),
         "dry_run": payload.get("dry_run", ti.dag_run.conf.get("dry_run", False)),
-        "transfer": payload.get("transfer", ti.dag_run.conf.get("transfer", True)),
     }
 
-    transfer_data(payload=config)
-    # if transfer complete, update discovery payload to reflect new bucket
-    payload.update({"bucket": "veda-data-store"})
-    payload.update({"prefix": payload.get("collection")+"/"})
-    return payload
+    if not transfer:
+      print(f"Transfer is disabled. Skipping transfer.")
+      return payload
+    else:
+        transfer_data(payload=config)
+
+        # if transfer complete, update discovery payload to reflect new bucket
+        payload.update({"bucket": "veda-data-store"})
+        payload.update({"prefix": payload.get("collection")+"/"})
+        return payload
 
 with DAG("veda_promotion_pipeline", params=template_dag_run_conf, **dag_args) as dag:
     # ECS dependency variable

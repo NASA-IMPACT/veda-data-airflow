@@ -71,8 +71,8 @@ def test_transfer_assets_to_production_bucket_transfer_false(mock_task_instance,
 
         response = s3.list_objects_v2(Bucket="test-target-bucket")
         assert "Contents" not in response
-        assert result["bucket"] == "veda-data-store"
-        assert result["prefix"] == "test-collection/"
+        assert result["bucket"] == "test-origin-bucket"
+        assert result["prefix"] == "test-prefix/"
 
 def test_transfer_assets_to_production_bucket_transfer_true(mock_task_instance, mock_aws_vars, s3):
     """Test that when transfer is True, payload is updated and transfer occurs"""

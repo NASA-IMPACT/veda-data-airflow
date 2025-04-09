@@ -41,10 +41,10 @@ def test_s3_discovery_dry_run(aws_credentials, capsys):
   captured = capsys.readouterr()
   assert "Running discovery in dry run mode" in captured.out
   assert "-DRYRUN- Example item" in captured.out
-  
+
   assert isinstance(res, dict)
   assert res["discovered"] == 2
-  
+
 @mock_s3
 def test_s3_discovery(aws_credentials, capsys):
   s3 = boto3.resource('s3')
@@ -68,6 +68,6 @@ def test_s3_discovery(aws_credentials, capsys):
 
   captured = capsys.readouterr()
   assert "Running discovery in dry run mode" not in captured.out
-  
+
   assert isinstance(res, dict)
   assert res["discovered"] == 2

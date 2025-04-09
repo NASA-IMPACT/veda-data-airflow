@@ -2,7 +2,7 @@ import pendulum
 from airflow import DAG
 from airflow.models.param import Param
 from veda_data_pipeline.groups.discover_group import discover_from_s3_task, get_files_task
-from airflow.operators.dummy_operator import DummyOperator as EmptyOperator
+from airflow.operators.empty import EmptyOperator
 from veda_data_pipeline.groups.collection_group import collection_task_group
 from veda_data_pipeline.groups.processing_tasks import submit_to_stac_ingestor_task, build_stac_task, extract_discovery_items_from_payload, remove_thumbnail_asset
 
@@ -38,7 +38,7 @@ Generates a collection and triggers the file discovery process
 
 dag_args = {
     "start_date": pendulum.today("UTC").add(days=-1),
-    "schedule_interval": None,
+    "schedule": None,
     "catchup": False,
     "doc_md": dag_doc_md,
     "tags": ["collection", "discovery"],

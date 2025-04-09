@@ -1,7 +1,7 @@
 import pendulum
 from airflow import DAG
 from airflow.decorators import task
-from airflow.operators.dummy_operator import DummyOperator as EmptyOperator
+from airflow.operators.empty import EmptyOperator
 from airflow.models.variable import Variable
 import json
 from veda_data_pipeline.groups.collection_group import collection_task_group
@@ -18,22 +18,22 @@ This will mutate the payload, so that item references will target the new asset 
 - This DAG can run with the following configuration <br>
 ```json
 {
-    "collection": "collection-id", 
-    "data_type": "cog", 
-    "description": "collection description", 
-    "discovery_items": 
+    "collection": "collection-id",
+    "data_type": "cog",
+    "description": "collection description",
+    "discovery_items":
         [
             {
-                "bucket": "veda-data-store-staging", 
-                "datetime_range": "year", 
-                "discovery": "s3", 
-                "filename_regex": "^(.*).tif$", 
+                "bucket": "veda-data-store-staging",
+                "datetime_range": "year",
+                "discovery": "s3",
+                "filename_regex": "^(.*).tif$",
                 "prefix": "example-prefix/"
             }
-        ], 
-    "is_periodic": true, 
-    "license": "collection-LICENSE", 
-    "time_density": "year", 
+        ],
+    "is_periodic": true,
+    "license": "collection-LICENSE",
+    "time_density": "year",
     "title": "collection-title"
 }
 ```
@@ -41,7 +41,7 @@ This will mutate the payload, so that item references will target the new asset 
 
 dag_args = {
     "start_date": pendulum.today("UTC").add(days=-1),
-    "schedule_interval": None,
+    "schedule": None,
     "catchup": False,
     "doc_md": dag_doc_md,
     "tags": ["collection", "discovery"],
@@ -65,7 +65,7 @@ template_dag_run_conf = {
     "license": "<collection-LICENSE>",
     "time_density": "<time-density>",
     "title": "<collection-title>",
-    "transfer": "<true|false> # transfer assets to production bucket if true (false by default)", 
+    "transfer": "<true|false> # transfer assets to production bucket if true (false by default)",
 }
 
 @task(max_active_tis_per_dag=3)

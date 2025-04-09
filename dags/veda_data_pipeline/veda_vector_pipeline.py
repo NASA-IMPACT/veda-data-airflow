@@ -3,7 +3,7 @@ import pendulum
 from airflow.models.param import Param
 from airflow.decorators import task
 from airflow import DAG
-from airflow.operators.dummy_operator import DummyOperator
+from airflow.operators.empty import EmptyOperator
 from airflow.utils.trigger_rule import TriggerRule
 from airflow.models.variable import Variable
 from veda_data_pipeline.groups.discover_group import discover_from_s3_task, get_files_task
@@ -11,7 +11,7 @@ from veda_data_pipeline.groups.discover_group import discover_from_s3_task, get_
 dag_doc_md = """
 ### Build and submit stac
 #### Purpose
-This DAG is supposed to be triggered by `veda_discover`. But you still can trigger this DAG manually or through an API 
+This DAG is supposed to be triggered by `veda_discover`. But you still can trigger this DAG manually or through an API
 
 #### Notes
 - This DAG can run with the following configuration <br>
@@ -34,7 +34,7 @@ This DAG is supposed to be triggered by `veda_discover`. But you still can trigg
     "payload": "s3://data-pipeline-ghgc-dev-mwaa-597746869805/events/test_layer_name2/s3_discover_output_f88257e8-ee50-4a14-ace4-5612ae6ebf38.jsonn"
     "invalidate_cloudfront": true
 
-}	
+}
 ```
 - [Supports linking to external content](https://github.com/NASA-IMPACT/veda-data-pipelines)
 """
@@ -75,11 +75,11 @@ def ingest_vector_task(payload):
 
 @task
 def invalidate_cloudfront(ti):
-    
+
     if not ti.dag_run.conf.get('invalidate_cloudfront'):
         logging.info("Skipping cloudfront invalidation")
         return
-    
+
     import boto3
     try:
         airflow_vars_json = Variable.get("aws_dags_variables", deserialize_json=True)
@@ -110,12 +110,12 @@ def invalidate_cloudfront(ti):
 def get_ingest_vector_dag(id: str, event: dict):
     with DAG(
             id,
-            schedule_interval=event.get("schedule", None),
+            schedule=event.get("schedule", None),
             params=template_dag_run_conf,
             **dag_args
     ) as dag:
-        start = DummyOperator(task_id="Start", dag=dag)
-        end = DummyOperator(task_id="End", trigger_rule=TriggerRule.ONE_SUCCESS, dag=dag)
+        start = EmptyOperator(task_id="Start", dag=dag)
+        end = EmptyOperator(task_id="End", trigger_rule=TriggerRule.ONE_SUCCESS, dag=dag)
         discover = start >> discover_from_s3_task(event=event)
         get_files = get_files_task(payload=discover)
         ingest_vector_task.expand(payload=get_files) >> invalidate_cloudfront() >> end

@@ -9,7 +9,7 @@ import smart_open
 from urllib.parse import urlparse
 import psycopg2
 import geopandas as gpd
-from shapely import wkb
+from shapely.wkb import loads as wkb_loads
 from geoalchemy2 import Geometry
 import sqlalchemy
 from sqlalchemy import create_engine, MetaData, Table, Column, inspect
@@ -166,7 +166,7 @@ def upsert_to_postgis(
     # convert the `t` column to something suitable for sql insertion otherwise we get 'Timestamp(<value>)'
     gdf["t"] = gdf["t"].dt.strftime("%Y-%m-%d %H:%M:%S")
     # convert to WKB
-    gdf["geometry"] = gdf["geometry"].apply(lambda geom: wkb.dumps(geom, hex=True))
+    gdf["geometry"] = gdf["geometry"].apply(lambda geom: wkb_loads(geom, hex=True))
 
     def upsert_batch(batch):
         with engine.connect() as conn:
@@ -249,13 +249,13 @@ def load_to_featuresdb(
         "PostgreSQL",
         connection,
         filename,
-        "-nln", 
+        "-nln",
         collection,
         "-s_srs",
         source_projection,
         "-t_srs",
         target_projection,
-        *extra_flags  
+        *extra_flags
     ]
     out = subprocess.run(
         options,

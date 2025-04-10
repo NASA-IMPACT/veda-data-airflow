@@ -1,0 +1,122 @@
+import boto3
+import json
+import os
+import pytest
+
+from moto import mock_s3, mock_sts
+from unittest.mock import Mock, patch
+from dags.veda_data_pipeline.veda_promotion_pipeline import transfer_assets_to_production_bucket
+
+@pytest.fixture
+def mock_task_instance():
+    ti = Mock()
+    ti.dag_run.conf = {
+        "collection": "test-collection",
+        "origin_bucket": "test-origin-bucket",
+        "origin_prefix": "test-prefix/",
+        "target_bucket": "test-target-bucket",
+        "dry_run": False,
+        "filename_regex": r"^.*\.tif$"
+    }
+    return ti
+
+@pytest.fixture
+def mock_aws_vars():
+    return {
+        "ASSUME_ROLE_WRITE_ARN": "arn:aws:iam::123456789012:role/test-role"
+    }
+
+@pytest.fixture
+def aws_credentials():
+    """Mocked AWS Credentials for moto."""
+    os.environ["AWS_ACCESS_KEY_ID"] = "testing"
+    os.environ["AWS_SECRET_ACCESS_KEY"] = "testing"
+    os.environ["AWS_SECURITY_TOKEN"] = "testing"
+    os.environ["AWS_SESSION_TOKEN"] = "testing"
+
+@pytest.fixture
+def s3():
+    with mock_s3(), mock_sts():
+        s3 = boto3.client("s3", region_name="us-east-1")
+        # Create test buckets
+        s3.create_bucket(Bucket="test-origin-bucket")
+        s3.create_bucket(Bucket="test-target-bucket")
+
+        s3.put_object(
+            Bucket="test-origin-bucket",
+            Key="test-prefix/file1.tif",
+            Body="test content"
+        )
+        s3.put_object(
+            Bucket="test-origin-bucket",
+            Key="test-prefix/file2.tif",
+            Body="test content"
+        )
+        yield s3
+
+def test_transfer_assets_to_production_bucket_transfer_false(mock_task_instance, mock_aws_vars, s3):
+    """Test that when transfer is False, payload is updated but no transfer occurs"""
+    mock_task_instance.dag_run.conf["transfer"] = False
+
+    with patch("airflow.models.variable.Variable.get", return_value=json.dumps(mock_aws_vars)):
+        payload = {
+            "bucket": "test-origin-bucket",
+            "prefix": "test-prefix/",
+            "filename_regex": r"^.*\.tif$",
+            "transfer": False
+        }
+
+        task_func = transfer_assets_to_production_bucket.function
+        result = task_func(ti=mock_task_instance, payload=payload)
+
+        response = s3.list_objects_v2(Bucket="test-target-bucket")
+        assert "Contents" not in response
+        assert result["bucket"] == "test-origin-bucket"
+        assert result["prefix"] == "test-prefix/"
+
+def test_transfer_assets_to_production_bucket_transfer_true(mock_task_instance, mock_aws_vars, s3):
+    """Test that when transfer is True, payload is updated and transfer occurs"""
+    mock_task_instance.dag_run.conf["transfer"] = True
+
+    with patch("airflow.models.variable.Variable.get", return_value=json.dumps(mock_aws_vars)):
+        payload = {
+            "bucket": "test-origin-bucket",
+            "prefix": "test-prefix/",
+            "filename_regex": r"^.*\.tif$",
+            "transfer": True
+        }
+
+        task_func = transfer_assets_to_production_bucket.function
+        result = task_func(ti=mock_task_instance, payload=payload)
+
+        response = s3.list_objects_v2(Bucket="test-target-bucket")
+        assert len(response["Contents"]) == 2
+        assert all(obj["Key"].startswith("test-collection/") for obj in response["Contents"])
+        assert result["bucket"] == "veda-data-store"
+        assert result["prefix"] == "test-collection/"
+
+def test_transfer_assets_to_production_bucket_412_error(mock_task_instance, mock_aws_vars, s3):
+    """Test that when a file already exists with the same ETag (412 error), no error is raised"""
+    mock_task_instance.dag_run.conf["transfer"] = True
+
+    s3.copy_object(
+        CopySource={"Bucket": "test-origin-bucket", "Key": "test-prefix/file1.tif"},
+        Bucket="test-target-bucket",
+        Key="test-collection/file1.tif"
+    )
+
+    with patch("airflow.models.variable.Variable.get", return_value=json.dumps(mock_aws_vars)):
+        payload = {
+            "bucket": "test-origin-bucket",
+            "prefix": "test-prefix/",
+            "filename_regex": r"^.*\.tif$",
+            "transfer": True
+        }
+
+        task_func = transfer_assets_to_production_bucket.function
+        result = task_func(ti=mock_task_instance, payload=payload)
+
+        assert result["bucket"] == "veda-data-store"
+        assert result["prefix"] == "test-collection/"
+        response = s3.list_objects_v2(Bucket="test-target-bucket")
+        assert len(response["Contents"]) == 2

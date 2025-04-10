@@ -1,8 +1,10 @@
 import pendulum
 from airflow import DAG
 from airflow.decorators import task
-from airflow.operators.dummy_operator import DummyOperator as EmptyOperator
+from airflow.operators.empty import EmptyOperator
 from airflow.models.variable import Variable
+from airflow.models.param import Param
+
 import json
 from veda_data_pipeline.groups.collection_group import collection_task_group
 from veda_data_pipeline.groups.discover_group import discover_from_s3_task, get_dataset_files_to_process
@@ -18,30 +20,31 @@ This will mutate the payload, so that item references will target the new asset 
 - This DAG can run with the following configuration <br>
 ```json
 {
-    "collection": "collection-id", 
-    "data_type": "cog", 
-    "description": "collection description", 
-    "discovery_items": 
+    "collection": "collection-id",
+    "data_type": "cog",
+    "description": "collection description",
+    "discovery_items":
         [
             {
-                "bucket": "veda-data-store-staging", 
-                "datetime_range": "year", 
-                "discovery": "s3", 
-                "filename_regex": "^(.*).tif$", 
+                "bucket": "veda-data-store-staging",
+                "datetime_range": "year",
+                "discovery": "s3",
+                "filename_regex": "^(.*).tif$",
                 "prefix": "example-prefix/"
             }
-        ], 
-    "is_periodic": true, 
-    "license": "collection-LICENSE", 
-    "time_density": "year", 
-    "title": "collection-title"
+        ],
+    "is_periodic": true,
+    "license": "collection-LICENSE",
+    "time_density": "year",
+    "title": "collection-title",
+    "transfer": "false"
 }
 ```
 """
 
 dag_args = {
     "start_date": pendulum.today("UTC").add(days=-1),
-    "schedule_interval": None,
+    "schedule": None,
     "catchup": False,
     "doc_md": dag_doc_md,
     "tags": ["collection", "discovery"],
@@ -51,27 +54,28 @@ template_dag_run_conf = {
     "collection": "<collection-id>",
     "data_type": "cog",
     "description": "<collection-description>",
-    "discovery_items":
-        [
-            {
-                "bucket": "<bucket-name>",
-                "datetime_range": "<range>",
-                "discovery": "s3",
-                "filename_regex": "<regex>",
-                "prefix": "<example-prefix/>"
-            }
-        ],
+    "discovery_items": [
+        {
+            "bucket": "<bucket-name>",
+            "datetime_range": "<range>",
+            "discovery": "s3",
+            "filename_regex": "<regex>",
+            "prefix": "<example-prefix/>"
+        }
+    ],
     "is_periodic": "<true|false>",
     "license": "<collection-LICENSE>",
     "time_density": "<time-density>",
     "title": "<collection-title>",
-    "transfer": "<true|false> # transfer assets to production bucket if true (false by default)", 
+    "transfer": Param(True, type="boolean", description="Transfer assets to production bucket if true (true by default)"),
 }
 
 @task(max_active_tis_per_dag=3)
 def transfer_assets_to_production_bucket(ti=None, payload={}):
     # merge collection id into payload, then transfer data
-    payload['collection'] = ti.dag_run.conf.get("collection")
+    payload["collection"] = ti.dag_run.conf.get("collection")
+    transfer = payload.get("transfer", ti.dag_run.conf.get("transfer", True))
+
     config = {
         **payload,
         "origin_bucket": payload.get("bucket", ti.dag_run.conf.get("origin_bucket", "veda-data-store")),
@@ -79,11 +83,17 @@ def transfer_assets_to_production_bucket(ti=None, payload={}):
         "target_bucket": payload.get("target_bucket", ti.dag_run.conf.get("target_bucket", "veda-data-store")),
         "dry_run": payload.get("dry_run", ti.dag_run.conf.get("dry_run", False)),
     }
-    transfer_data(payload=config)
-    # if transfer complete, update discovery payload to reflect new bucket
-    payload.update({"bucket": "veda-data-store"})
-    payload.update({"prefix": payload.get("collection")+"/"})
-    return payload
+
+    if not transfer:
+      print(f"Transfer is disabled. Skipping transfer.")
+      return payload
+    else:
+        transfer_data(payload=config)
+
+        # if transfer complete, update discovery payload to reflect new bucket
+        payload.update({"bucket": "veda-data-store"})
+        payload.update({"prefix": payload.get("collection")+"/"})
+        return payload
 
 with DAG("veda_promotion_pipeline", params=template_dag_run_conf, **dag_args) as dag:
     # ECS dependency variable

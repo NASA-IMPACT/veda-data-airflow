@@ -47,12 +47,12 @@ def transfer_files_within_s3(
     transfer_exceptions = False
     for file_key in matching_files:
         filename = file_key.split("/")[-1]
-        # print(f"Transferring file: {filename}")
         target_key = f"{collection}/{filename}"
         copy_source = {"Bucket": origin_bucket, "Key": file_key}
 
         # We can use the etag to check if the file has already been copied and avoid duplication of effort
         # by using the CopySourceIfNoneMatch parameter below.
+        target_etag = None
         try:
             target_metadata = s3_client.head_object(
                 Bucket=destination_bucket, Key=target_key
@@ -73,6 +73,11 @@ def transfer_files_within_s3(
                     Bucket=destination_bucket,
                     Key=target_key
                 )
+            elif err.response["Error"]["Code"] == "PreconditionFailed":  # 412 error
+                # File is already up to date, skip copying
+                print(f"File {filename} is already up to date, skipping")
+                print(f"CopySourceIfNoneMatch: {target_etag}. Skip copy: object is unchanged (ETag matches).")
+                continue
             else:
                 msg = f"ClientError copying {filename=} {err=}"
                 print(msg)

@@ -90,9 +90,9 @@ def get_discover_dag(id: str, event: dict):
         # .output is needed coming from a non-taskflow operator
         submit_stac = submit_to_stac_ingestor_task.expand(built_stac=build_stac)
 
-        discover.set_upstream(start)
-        submit_stac.set_downstream(end)
-
+        start >> discover
+        submit_stac >> end
+        
         return dag
 
 # Sending empty event because we rely on task instance (ti) for manula runs

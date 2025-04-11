@@ -98,13 +98,11 @@ with DAG("veda_promotion_pipeline", params=template_dag_run_conf, **dag_args) as
     # asset transfer to production bucket
     transfer_task = transfer_assets_to_production_bucket.expand(payload=extract_from_payload)
     discover = discover_from_s3_task.partial(payload=mutate_payload_task).expand(event=transfer_task)
-    discover.set_upstream(collection_grp)  # do not discover until collection exists
+    collection_grp >> discover  # do not discover until collection exists
 
     get_files = get_dataset_files_to_process(payload=discover) # untangle mapped data format to get iterable payloads from discover step
     build_stac = build_stac_task.expand(payload=get_files)
     submit_stac = submit_to_stac_ingestor_task.expand(built_stac=build_stac)
 
-    collection_grp.set_upstream(start)
-    mutate_payload_task.set_upstream(start)
-    extract_from_payload.set_upstream(start)
-    submit_stac.set_downstream(end)
+    start >> [collection_grp, mutate_payload_task, extract_from_payload]
+    submit_stac >> end

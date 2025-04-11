@@ -20,7 +20,7 @@ USER airflow
 
 RUN pip install --upgrade pip \
   && pip install --no-cache-dir -r requirements.txt -c "https://raw.githubusercontent.com/apache/airflow/constraints-${AIRFLOW_VERSION}/constraints-3.11.txt"\
-  && pip install --no-cache-dir -r requirements-in.txt
+  && pip install --no-cache-dir -r requirements-in.txt -c apache-airflow==${AIRFLOW_VERSION}
 
 COPY --chown=airflow:airflow dags "${AIRFLOW_HOME}/dags"
 COPY --chown=airflow:airflow plugins "${AIRFLOW_HOME}/plugins"

@@ -88,11 +88,10 @@ def get_stactools_dag(id, event={}):
 
         get_items_from_granules = build_items_from_granules()
         submit_stac = submit_to_stac_ingestor_task_direct.expand(stac_items=get_items_from_granules)
-        submit_stac.set_upstream(ingest_collection)
+        ingest_collection >> submit_stac
 
-        get_items_from_granules.set_upstream(start)
-        stactools_collection.set_upstream(start)
-        submit_stac.set_downstream(end)
+        start >> [get_items_from_granules, stactools_collection]
+        submit_stac >> end
 
         return dag
 

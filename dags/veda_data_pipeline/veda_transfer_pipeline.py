@@ -1,6 +1,6 @@
 import pendulum
 from airflow import DAG
-from airflow.operators.dummy_operator import DummyOperator
+from airflow.operators.empty import EmptyOperator
 from airflow.models.param import Param
 from airflow.utils.trigger_rule import TriggerRule
 from veda_data_pipeline.groups.transfer_group import subdag_transfer
@@ -27,7 +27,7 @@ This DAG is used to transfer files that are to permanent locations for indexing 
 
 dag_args = {
     "start_date": pendulum.today("UTC").add(days=-1),
-    "schedule_interval": None,
+    "schedule": None,
     "catchup": False,
     "doc_md": dag_doc_md,
 }
@@ -43,8 +43,8 @@ templat_dag_run_conf = {
 }
 
 with DAG("veda_transfer", params=templat_dag_run_conf, **dag_args) as dag:
-    start = DummyOperator(task_id="Start", dag=dag)
-    end = DummyOperator(task_id="End", trigger_rule=TriggerRule.ONE_SUCCESS, dag=dag)
+    start = EmptyOperator(task_id="Start", dag=dag)
+    end = EmptyOperator(task_id="End", trigger_rule=TriggerRule.ONE_SUCCESS, dag=dag)
 
     transfer_grp = subdag_transfer()
 

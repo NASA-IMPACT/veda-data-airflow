@@ -8,8 +8,7 @@ from airflow.models.variable import Variable
 from rio_stac import stac
 from rio_stac.stac import PROJECTION_EXT_VERSION, RASTER_EXT_VERSION
 
-
-from . import events, regex, role
+from veda_data_pipeline.utils.build_stac.utils import events, regex, role
 
 
 def get_sts_session():

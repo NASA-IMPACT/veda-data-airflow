@@ -29,7 +29,7 @@ def create_secret(aws):
 @requests_mock.Mocker(kw="mock")
 def test_submission_handler_dry_run(create_secret, capsys, **kwargs):
   token_endpoint = kwargs["mock"].post("http://test.com/oauth2/token", json={"token_type": "bearer", "access_token": "token"})
-  ingestions_endpoint = kwargs["mock"].post("http://www.test.com/ingestions", json={"token_type": "bearer", "access_token": "token"})
+  ingestions_endpoint = kwargs["mock"].post("http://www.test.com/ingestions", json={"id": "123", "status": "success", "message": "STAC item ingested successfully"})
   fake_event = {
     "dry_run": "dry run",
     "stac_file_url": "http://www.test.com",
@@ -45,9 +45,9 @@ def test_submission_handler_dry_run(create_secret, capsys, **kwargs):
   assert ingestions_endpoint.call_count == 0
 
 @requests_mock.Mocker(kw="mock")
-def test_submission_handler( create_secret, capsys, **kwargs):
+def test_submission_handler(create_secret, capsys, **kwargs):
   token_endpoint = kwargs["mock"].post("http://test.com/oauth2/token", json={"token_type": "bearer", "access_token": "token"})
-  ingestions_endpoint = kwargs["mock"].post("http://www.test.com/ingestions", json={"token_type": "bearer", "access_token": "token"})
+  ingestions_endpoint = kwargs["mock"].post("http://www.test.com/ingestions", json={"id": "123", "status": "success", "message": "STAC item ingested successfully"})
   fake_event = {
     "stac_file_url": "http://www.test.com",
     "stac_item": 123
@@ -55,7 +55,7 @@ def test_submission_handler( create_secret, capsys, **kwargs):
 
   res = submit_stac.submission_handler(fake_event)
 
-  assert res == None
+  assert res == {"id": "123", "status": "success", "message": "STAC item ingested successfully"}
   captured = capsys.readouterr()
   assert "Dry run, not inserting" not in captured.out
   assert token_endpoint.call_count == 1

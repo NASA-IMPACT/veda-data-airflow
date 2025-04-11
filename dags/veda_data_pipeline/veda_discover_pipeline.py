@@ -1,6 +1,7 @@
+from queue import Empty
 import pendulum
 from airflow import DAG
-from airflow.operators.dummy_operator import DummyOperator
+from airflow.operators.empty import EmptyOperator
 from airflow.models.param import Param
 from veda_data_pipeline.groups.discover_group import discover_from_s3_task, get_files_task
 
@@ -9,7 +10,7 @@ from veda_data_pipeline.groups.processing_tasks import submit_to_stac_ingestor_t
 dag_doc_md = """
 ### Discover files from S3
 #### Purpose
-This DAG discovers files from either S3 and/or CMR then runs a DAG id `veda_ingest`. 
+This DAG discovers files from either S3 and/or CMR then runs a DAG id `veda_ingest`.
 The DAG `veda_ingest` will run in parallel processing (2800 files per each DAG)
 #### Notes
 - This DAG can run with the following configuration <br>
@@ -36,7 +37,7 @@ The DAG `veda_ingest` will run in parallel processing (2800 files per each DAG)
             "regex": ".*asset2.*",
         },
     }
-}	
+}
 ```
 - [Supports linking to external content](https://github.com/NASA-IMPACT/veda-data-pipelines)
 """
@@ -74,12 +75,12 @@ def get_discover_dag(id: str, event: dict):
 
     with DAG(
             id,
-            schedule_interval=event.get("schedule"),
+            schedule=event.get("schedule"),
             params=template_dag_run_conf,
             **dag_args
     ) as dag:
-        start = DummyOperator(task_id="Start", dag=dag)
-        end = DummyOperator(
+        start = EmptyOperator(task_id="Start", dag=dag)
+        end = EmptyOperator(
             task_id="End", dag=dag
         )
         # define DAG using taskflow notation

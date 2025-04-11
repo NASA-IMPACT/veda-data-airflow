@@ -3,7 +3,7 @@ import time
 
 import pendulum
 from airflow import DAG
-from airflow.operators.dummy_operator import DummyOperator as EmptyOperator
+from airflow.operators.empty import EmptyOperator
 from airflow.operators.python import PythonOperator
 import sys
 
@@ -41,7 +41,7 @@ def push_to_cmr_task(text):
 with DAG(
     dag_id="example_etl_flow_test",
     start_date=pendulum.today("UTC").add(days=-1),
-    schedule_interval=None,
+    schedule=None,
     tags=["example"],
 ) as dag:
 

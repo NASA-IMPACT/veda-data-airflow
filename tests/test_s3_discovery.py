@@ -31,6 +31,7 @@ def test_s3_discovery_dry_run(aws_credentials, capsys):
   fake_event = {
     "dry_run": "dry run",
     "bucket": "test",
+    "prefix": "",
     "filename_regex": r"[\s\S]*"
   }
 
@@ -41,7 +42,8 @@ def test_s3_discovery_dry_run(aws_credentials, capsys):
   assert "-DRYRUN- Example item" in captured.out
 
   assert isinstance(res, dict)
-  assert res["discovered"] == 2
+  assert res["discovered"] == [2]
+
 
 @mock_s3
 def test_s3_discovery(aws_credentials, capsys):
@@ -59,6 +61,7 @@ def test_s3_discovery(aws_credentials, capsys):
   client.put_object(Bucket="test", Key="file2.txt", Body="stuff")
   fake_event = {
     "bucket": "test",
+    "prefix": "",
     "filename_regex": r"^.*\.(cog|tif)$"
   }
 
@@ -68,4 +71,4 @@ def test_s3_discovery(aws_credentials, capsys):
   assert "Running discovery in dry run mode" not in captured.out
 
   assert isinstance(res, dict)
-  assert res["discovered"] == 2
+  assert res["discovered"] == [2]

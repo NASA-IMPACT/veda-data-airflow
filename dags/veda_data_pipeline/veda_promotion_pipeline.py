@@ -40,7 +40,6 @@ This will mutate the payload, so that item references will target the new asset 
     "transfer": "false"
 }
 ```
-"""
 
 dag_args = {
     "start_date": pendulum.today("UTC").add(days=-1),

@@ -3,7 +3,7 @@ from __future__ import annotations
 from airflow import DAG
 from airflow.decorators import task
 from airflow.models.param import Param
-from airflow.operators.dummy_operator import DummyOperator
+from airflow.operators.empty import EmptyOperator
 from slack_notifications import slack_fail_alert
 from airflow.models.variable import Variable
 from veda_data_pipeline.utils.xcom_to_s3 import write_xcom_to_s3,read_xcom_from_s3
@@ -28,7 +28,7 @@ dag_run_config = {
         type="string",
         pattern="^[^/].*[^/]$",
     ),
-    # Add a regex pattern after the prefix to filter the raw files 
+    # Add a regex pattern after the prefix to filter the raw files
     "raw_data_filter_regex": Param(".*.nc$", type="string"),
     "dest_data_bucket": "ghgc-data-store-develop",
     "data_prefix": Param("transformed_cogs", type="string", pattern="^[^/].*[^/]$"),
@@ -72,8 +72,8 @@ with DAG(
         on_failure_callback=slack_fail_alert,
         max_active_runs = 1 # Ensure only one DAG at a time to avoid memory issues (code -9)
 ) as dag:
-    start = DummyOperator(task_id="start", dag=dag)
-    end = DummyOperator(task_id="end", dag=dag)
+    start = EmptyOperator(task_id="start", dag=dag)
+    end = EmptyOperator(task_id="end", dag=dag)
 
 
     @task
@@ -192,7 +192,7 @@ with DAG(
             "failures": len(failed_files)
         }
         print(summary)
-    
+
     # @task
     # def report_failure(statuses: list):
     #     all_failures = list()
@@ -203,7 +203,7 @@ with DAG(
     #         raise  Exception(f"Detected {len(all_failures)} errors")
 
 
-    s3_urls = start >> check_function_exists() >> set_max_active_processing()>> discover_files() 
+    s3_urls = start >> check_function_exists() >> set_max_active_processing()>> discover_files()
     report_data = process_files.expand(s3_url=s3_urls)
     statuses = generate_report(reports=report_data)
     #report_failure(statuses=statuses) >> end

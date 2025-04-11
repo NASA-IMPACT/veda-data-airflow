@@ -94,7 +94,7 @@ with DAG(
     dag_id="rds_s3_export_snapshots",
     default_args=default_args,
     tags=["RDS", "Operations", "Disaster Recovery", "Long Term"],
-    schedule_interval=None,
+    schedule=None,
     start_date=days_ago(1),
     max_active_runs=4,  # Only 5 parallel exports are allowed
     catchup=False,
@@ -102,20 +102,20 @@ with DAG(
     render_template_as_native_obj=True,
     doc_md=f"""
         ### RDS to S3 Snapshot Export and S3 Data Crawling
-        This DAG exports an RDS snapshot to S3 and uses AWS Glue to crawl the exported data, 
+        This DAG exports an RDS snapshot to S3 and uses AWS Glue to crawl the exported data,
         making it accessible for querying. The process involves:
-        
+
         ## Workflow
         1. **Export RDS Snapshot**: Initiates an export of the snapshot from RDS to S3 using `RdsStartExportTaskOperator`.
         2. **Monitor Export Completion**: Uses `RdsExportTaskExistenceSensor` to monitor export completion.
         3. **Delete Glue Database**: Deletes any existing Glue database before recreating it.
         4. **Run Glue Crawler**: Initiates a Glue Crawler on the exported S3 data for indexing.
-        
+
         **Parameters**:
         ```json
-        
+
         {default_params}
-        
+
         ```
         """,
 ) as dag:

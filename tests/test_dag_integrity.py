@@ -20,7 +20,7 @@ def dag_bag():
 
     return DagBag(dag_folder="dags/veda_data_pipeline", include_examples=False)
 
-def test_import_dags(dag_bag, ):
+def test_import_dags(dag_bag):
     """
     Test all the libraries can be imported
     """

@@ -1,7 +1,7 @@
 # veda-data-airflow
 
 This repo houses function code and deployment code for producing cloud-optimized
-data products and STAC metadata for interfaces such as https://github.com/NASA-IMPACT/delta-ui.
+data products and STAC metadata for interfaces such as https://github.com/NASA-IMPACT/veda-ui.
 
 ## Project layout
 
@@ -12,14 +12,6 @@ data products and STAC metadata for interfaces such as https://github.com/NASA-I
 - [infrastructure](./infrastructure/): Contains the terraform modules necessary to deploy all resources to AWS
 - [custom policies](./infrastructure/custom_policies/): Contains custom policies for the mwaa environment execution role
 - [scripts](./scripts/): Contains bash and python scripts useful for deploying and for running ingests
-
-### Fetching Submodules
-
-First time setting up the repo:
-`git submodule update --init --recursive`
-
-Afterwards:
-`git submodule update --recursive --remote`
 
 ## Requirements
 
@@ -35,6 +27,10 @@ See [terraform-getting-started](https://developer.hashicorp.com/terraform/tutori
 
 See [getting-started-install](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)
 
+### Python
+
+- Install [uv](https://docs.astral.sh/uv/getting-started/installation/).
+- Run `uv sync` to install the required python packages. By default, all optional dependencies are included. To avoid this, use `uv sync --no-default-groups`.
 
 
 ### Setup a local SM2A development environment

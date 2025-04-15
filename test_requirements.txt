@@ -1,4 +1,0 @@
-pytest
-apache-airflow
-coverage
-moto>=4.2.13

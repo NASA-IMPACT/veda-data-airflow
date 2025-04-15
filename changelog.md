@@ -14,3 +14,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Insert collections via ingestor API rather than directly with pgstac ([#13](https://github.com/NASA-IMPACT/veda-data-airflow/pull/13))
 - The `vector` and `cogify` fields are now optional in the payload
+- Add lambda to trigger a DAG. Please refer to the [doc](./sm2a/infrastructure/functions/trigger_sm2a_dag/README.md) for more info

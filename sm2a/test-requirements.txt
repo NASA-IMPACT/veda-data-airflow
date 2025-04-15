@@ -1,5 +1,0 @@
-apache-airflow
-pytest
-pytest-mock
-moto
-requests_mock

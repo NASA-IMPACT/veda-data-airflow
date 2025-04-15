@@ -1,0 +1,89 @@
+[project]
+name = "veda-data-airflow"
+version = "0.1.0"
+description = "Function and deployment code for producing cloud-optimized data products and STAC metadata for interfaces such as https://github.com/NASA-IMPACT/veda-ui."
+readme = "README.md"
+requires-python = ">=3.11.5"
+dependencies = [
+    "apache-airflow==2.8.4"
+]
+
+[dependency-groups]
+dev = [
+    "pytest",
+    "ruff",
+    "isort"
+]
+deploy = [
+    "boto3==1.26.62",
+    "requests==2.28.2"
+]
+test = [
+    "coverage",
+    "moto>=4.2.13",
+    "boto3>=1.26.62",
+]
+airflow-worker = [
+    "apache-airflow-providers-amazon",
+    "botocore",
+    "cryptography",
+    "pycurl",
+    "psycopg2-binary",
+    "apache-airflow-providers-celery",
+    "affine",
+    "netCDF4",
+    "requests",
+    "rio-cogeo",
+    "smart-open",
+    "airflow_multi_dagrun",
+    "apache-airflow-providers-postgres",
+    "apache-airflow-providers-common-sql",
+    "apache-airflow-providers-http",
+    "typing-extensions",
+    "pyOpenSSL",
+    "stac-pydantic",
+    "fsspec",
+    "s3fs",
+    "xarray",
+    "xstac",
+    "pystac",
+    "rasterio",
+    "rio-stac",
+    "GeoAlchemy2",
+    "geopandas==0.14.4",
+    "fiona==1.9.6",
+    "h5netcdf",
+    "rioxarray",
+    "apache-airflow-providers-slack",
+    "apache-airflow-providers-slack[http]"
+]
+airflow-service = [
+    "apache-airflow-providers-amazon",
+    "botocore",
+    "cryptography",
+    "pycurl",
+    "psycopg2-binary",
+    "apache-airflow-providers-celery",
+    "airflow_multi_dagrun",
+    "apache-airflow-providers-postgres",
+    "apache-airflow-providers-slack",
+    "apache-airflow-providers-slack[http]",
+    "apache-airflow[github_enterprise]",
+    "affine",
+    "netCDF4",
+    "requests",
+    "rio-cogeo",
+    "smart-open",
+    "apache-airflow-providers-common-sql",
+    "typing-extensions",
+    "pyOpenSSL",
+    "stac-pydantic",
+    "fsspec",
+    "s3fs",
+    "xarray",
+    "xstac"
+]
+
+[tool.uv]
+default-groups = ["dev", "deploy", "test"]
+

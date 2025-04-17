@@ -3,7 +3,7 @@ import json
 import os
 import pytest
 
-from moto import mock_s3, mock_sts
+from moto import mock_aws
 from unittest.mock import Mock, patch
 from dags.veda_data_pipeline.veda_promotion_pipeline import transfer_assets_to_production_bucket
 
@@ -36,7 +36,7 @@ def aws_credentials():
 
 @pytest.fixture
 def s3():
-    with mock_s3(), mock_sts():
+    with mock_aws():
         s3 = boto3.client("s3", region_name="us-east-1")
         # Create test buckets
         s3.create_bucket(Bucket="test-origin-bucket")

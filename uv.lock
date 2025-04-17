@@ -167,6 +167,19 @@ wheels = [
 ]
 
 [[package]]
+name = "antimeridian"
+version = "0.4.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "numpy" },
+    { name = "shapely" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/de/4f/b83d7ea4ee0ff64fa36906f82d6f2c227aa36828481f60eafbf320dea6c1/antimeridian-0.4.1.tar.gz", hash = "sha256:4efe7aa15ef1bc66169392870d54b945c31ef9574e08bc930650f0b7beefc354", size = 12570569 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/10/7a/12dcb24f69cb8fb8b65b810d9590038b06c528f5b57c6db9bfaecc7121e0/antimeridian-0.4.1-py3-none-any.whl", hash = "sha256:45c31d5fc834863175a1d20b522c1da941edb906dfd84a05fae5007985efe405", size = 14946 },
+]
+
+[[package]]
 name = "anyio"
 version = "4.9.0"
 source = { registry = "https://pypi.org/simple" }
@@ -2945,6 +2958,11 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/08/94/6f93e55886cae4076dfe1c5c0a768963f6faca34d7cd27a2ee6800e29387/pystac-1.12.2-py3-none-any.whl", hash = "sha256:7ab6d3d191013727d789f803869789a26e546543a27da3bf2b8abf96b8264d3f", size = 194207 },
 ]
 
+[package.optional-dependencies]
+validation = [
+    { name = "jsonschema" },
+]
+
 [[package]]
 name = "pytest"
 version = "8.3.5"
@@ -3136,6 +3154,18 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/9d/ee/391076f5937f0a8cdf5e53b701ffc91753e87b07d66bae4a09aa671897bf/requests-2.28.2.tar.gz", hash = "sha256:98b1b2782e3c6c4904938b84c0eb932721069dfdb9134313beff7c83c2df24bf", size = 108206 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/d2/f4/274d1dbe96b41cf4e0efb70cbced278ffd61b5c7bb70338b62af94ccb25b/requests-2.28.2-py3-none-any.whl", hash = "sha256:64299f4909223da747622c030b781c0d7811e359c37124b4bd368fb8c6518baa", size = 62822 },
+]
+
+[[package]]
+name = "requests-mock"
+version = "1.12.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "requests" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/92/32/587625f91f9a0a3d84688bf9cfc4b2480a7e8ec327cefd0ff2ac891fd2cf/requests-mock-1.12.1.tar.gz", hash = "sha256:e9e12e333b525156e82a3c852f22016b9158220d2f47454de9cae8a77d371401", size = 60901 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/97/ec/889fbc557727da0c34a33850950310240f2040f3b1955175fdb2b36a8910/requests_mock-1.12.1-py2.py3-none-any.whl", hash = "sha256:b1e37054004cdd5e56c84454cc7df12b25f90f382159087f4b6915aaeef39563", size = 27695 },
 ]
 
 [[package]]
@@ -3626,6 +3656,26 @@ wheels = [
 ]
 
 [[package]]
+name = "stactools"
+version = "0.5.3"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "antimeridian" },
+    { name = "click" },
+    { name = "fsspec", extra = ["http"] },
+    { name = "lxml" },
+    { name = "numpy" },
+    { name = "pyproj" },
+    { name = "pystac", extra = ["validation"] },
+    { name = "rasterio" },
+    { name = "shapely" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/e6/e6/316e794974cce6458caaeea63a145dcd62effa232a908ac3e63f19069273/stactools-0.5.3.tar.gz", hash = "sha256:ccf321a33604a9edd571eb80ddaef427b928db36d528ac72d918f90a3212a883", size = 46556 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/43/89/6c8b32e5d82fce88478db31d517c7f52fc79c6a6a53c7a006b01838d7b01/stactools-0.5.3-py3-none-any.whl", hash = "sha256:4ceffac7d2c1315fe811b3f6ae3d320772e44b5375ea6c3fa3cc0da8b849dabb", size = 57281 },
+]
+
+[[package]]
 name = "tabulate"
 version = "0.9.0"
 source = { registry = "https://pypi.org/simple" }
@@ -3813,6 +3863,7 @@ version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
     { name = "apache-airflow" },
+    { name = "pytest" },
 ]
 
 [package.dev-dependencies]
@@ -3874,6 +3925,7 @@ airflow-worker = [
     { name = "s3fs", version = "0.6.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.13'" },
     { name = "smart-open" },
     { name = "stac-pydantic" },
+    { name = "stactools" },
     { name = "typing-extensions" },
     { name = "xarray" },
     { name = "xstac" },
@@ -3891,10 +3943,21 @@ test = [
     { name = "boto3" },
     { name = "coverage" },
     { name = "moto" },
+    { name = "mypy-boto3-s3" },
+    { name = "rasterio" },
+    { name = "requests-mock" },
+    { name = "rio-stac" },
+    { name = "smart-open" },
+    { name = "stac-pydantic" },
+    { name = "xarray" },
+    { name = "xstac" },
 ]
 
 [package.metadata]
-requires-dist = [{ name = "apache-airflow", specifier = "==2.8.4" }]
+requires-dist = [
+    { name = "apache-airflow", specifier = "==2.8.4" },
+    { name = "pytest", specifier = ">=8.3.5" },
+]
 
 [package.metadata.requires-dev]
 airflow-service = [
@@ -3953,6 +4016,7 @@ airflow-worker = [
     { name = "s3fs" },
     { name = "smart-open" },
     { name = "stac-pydantic" },
+    { name = "stactools" },
     { name = "typing-extensions" },
     { name = "xarray" },
     { name = "xstac" },
@@ -3970,6 +4034,14 @@ test = [
     { name = "boto3", specifier = ">=1.26.62" },
     { name = "coverage" },
     { name = "moto", specifier = ">=4.2.13" },
+    { name = "mypy-boto3-s3" },
+    { name = "rasterio" },
+    { name = "requests-mock" },
+    { name = "rio-stac" },
+    { name = "smart-open", specifier = ">=7.1.0" },
+    { name = "stac-pydantic" },
+    { name = "xarray" },
+    { name = "xstac" },
 ]
 
 [[package]]

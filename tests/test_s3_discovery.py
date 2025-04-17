@@ -3,7 +3,7 @@ from dags.veda_data_pipeline.utils import s3_discovery
 import pytest
 import os
 import boto3
-from moto import mock_s3
+from moto import mock_aws
 
 @pytest.fixture(scope='function')
 def aws_credentials():
@@ -14,7 +14,7 @@ def aws_credentials():
     os.environ['AWS_SESSION_TOKEN'] = 'testing'
     os.environ['EVENT_BUCKET'] = 'test'
 
-@mock_s3
+@mock_aws
 def test_s3_discovery_dry_run(aws_credentials, capsys):
   s3 = boto3.resource('s3')
   bucket = s3.Bucket("test")
@@ -45,7 +45,7 @@ def test_s3_discovery_dry_run(aws_credentials, capsys):
   assert res["discovered"] == [2]
 
 
-@mock_s3
+@mock_aws
 def test_s3_discovery(aws_credentials, capsys):
   s3 = boto3.resource('s3')
   bucket = s3.Bucket("test")

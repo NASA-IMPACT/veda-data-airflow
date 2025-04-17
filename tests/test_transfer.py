@@ -3,7 +3,7 @@ from dags.veda_data_pipeline.utils import transfer
 import pytest
 import os
 import boto3
-from moto import mock_s3
+from moto import mock_aws
 
 from unittest.mock import patch
 
@@ -16,7 +16,7 @@ def aws_credentials():
     os.environ['AWS_SESSION_TOKEN'] = 'testing'
     os.environ['EVENT_BUCKET'] = 'test'
 
-@mock_s3
+@mock_aws
 def test_transfer_dry_run(aws_credentials, capsys):
   s3 = boto3.resource('s3')
   bucket_source = s3.Bucket("test_source")
@@ -49,7 +49,7 @@ def test_transfer_dry_run(aws_credentials, capsys):
   assert "Would have copied 3 files" in captured.out
 
 
-@mock_s3
+@mock_aws
 def test_transfer(aws_credentials, capsys):
   s3 = boto3.resource('s3')
   bucket_source = s3.Bucket("test_source")

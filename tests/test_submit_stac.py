@@ -3,7 +3,7 @@ from dags.veda_data_pipeline.utils import submit_stac
 import os
 import boto3
 import pytest
-from moto import mock_secretsmanager
+from moto import mock_aws
 import requests_mock
 
 @pytest.fixture(scope="function")
@@ -19,7 +19,7 @@ def aws_credentials():
 
 @pytest.fixture(scope="function")
 def aws(aws_credentials):
-    with mock_secretsmanager():
+    with mock_aws():
         yield boto3.client("secretsmanager", region_name="us-west-2")
 
 @pytest.fixture

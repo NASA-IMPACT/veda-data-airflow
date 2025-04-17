@@ -1,7 +1,7 @@
 import requests
 from airflow.models.variable import Variable
-from airflow.operators.python import PythonOperator
-from airflow.utils.task_group import TaskGroup
+from airflow.decorators import task, task_group
+
 from veda_data_pipeline.utils.collection_generation import GenerateCollection
 from veda_data_pipeline.utils.submit_stac import submission_handler
 
@@ -23,8 +23,8 @@ def check_collection_exists(endpoint: str, collection_id: str):
         else "Collection.generate_collection"
     )
 
-
-def ingest_collection_task(ti):
+@task()
+def ingest_collection_task(ti=None, collection=None):
     """
     Ingest a collection into the STAC catalog
 
@@ -33,7 +33,8 @@ def ingest_collection_task(ti):
         role_arn (str): role arn for Zarr collection generation
     """
     import json
-    collection = ti.xcom_pull(task_ids='Collection.generate_collection')
+    if not collection:
+        collection = ti.xcom_pull(task_ids='Collection.generate_collection')
     airflow_vars = Variable.get("aws_dags_variables")
     airflow_vars_json = json.loads(airflow_vars)
     cognito_app_secret = airflow_vars_json.get("COGNITO_APP_SECRET")
@@ -48,7 +49,7 @@ def ingest_collection_task(ti):
 
 
 # NOTE unused, but useful for item ingests, since collections are a dependency for items
-def check_collection_exists_task(ti):
+def check_collection_exists_task(ti=None):
     import json
     config = ti.dag_run.conf
     airflow_vars = Variable.get("aws_dags_variables")
@@ -60,7 +61,8 @@ def check_collection_exists_task(ti):
     )
 
 
-def generate_collection_task(ti):
+@task()
+def generate_collection_task(ti=None):
     import json
     config = ti.dag_run.conf
     airflow_vars = Variable.get("aws_dags_variables")
@@ -73,19 +75,8 @@ def generate_collection_task(ti):
     )
     return collection
 
-
-
-group_kwgs = {"group_id": "Collection", "tooltip": "Collection"}
-
-
+@task_group(group_id="Collection", tooltip="Collection")
 def collection_task_group():
-    with TaskGroup(**group_kwgs) as collection_task_grp:
-        generate_collection = PythonOperator(
-            task_id="generate_collection", python_callable=generate_collection_task
-        )
-        ingest_collection = PythonOperator(
-            task_id="ingest_collection", python_callable=ingest_collection_task
-        )
-        generate_collection >> ingest_collection
+    generate_collection = generate_collection_task()
+    ingest_collection = ingest_collection_task(collection=generate_collection)
 
-        return collection_task_grp

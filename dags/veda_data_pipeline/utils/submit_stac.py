@@ -94,7 +94,7 @@ class IngestionApi:
         except Exception as e:
             print(response.text)
             raise e
-        return response.json()
+        return
 
 
 def submission_handler(

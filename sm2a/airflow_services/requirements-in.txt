@@ -1,0 +1,4 @@
+# installed without constraints
+stactools
+stactools-noaa-hrrr
+

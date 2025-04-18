@@ -238,3 +238,6 @@ variable "cloudfront_path_to_invalidate" {
   default = null
 
 }
+variable "lambda_dag_trigger_function_name" {
+  default = "trigger-sm2a-dag"
+}

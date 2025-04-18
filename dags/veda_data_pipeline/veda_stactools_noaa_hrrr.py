@@ -5,7 +5,7 @@ import json
 from airflow.decorators import task
 
 from airflow import DAG
-from airflow.operators.dummy_operator import DummyOperator
+from airflow.operators.empty import EmptyOperator
 from airflow.utils.trigger_rule import TriggerRule
 from airflow.models.variable import Variable
 from stactools.core import use_fsspec
@@ -72,13 +72,13 @@ def get_stactools_dag(id, event={}):
     params_dag_run_conf = event or template_dag_run_conf
     with DAG(
         id,
-        schedule_interval=event.get("schedule"),
+        schedule=event.get("schedule"),
         params=params_dag_run_conf,
         **dag_args
     ) as dag:
         # ECS dependency variable
-        start = DummyOperator(task_id="Start", dag=dag)
-        end = DummyOperator(
+        start = EmptyOperator(task_id="Start", dag=dag)
+        end = EmptyOperator(
             task_id="End", trigger_rule=TriggerRule.ONE_SUCCESS, dag=dag
         )
         # define DAG using taskflow notation

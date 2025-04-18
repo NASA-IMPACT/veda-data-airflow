@@ -5,7 +5,7 @@ from importlib import import_module
 from airflow.decorators import task
 
 from airflow import DAG
-from airflow.operators.dummy_operator import DummyOperator
+from airflow.operators.empty import EmptyOperator
 from airflow.utils.trigger_rule import TriggerRule
 from stactools.core import use_fsspec
 
@@ -93,8 +93,8 @@ with DAG(
     **dag_args
 ) as dag:
     # ECS dependency variable
-    start = DummyOperator(task_id="Start", dag=dag)
-    end = DummyOperator(
+    start = EmptyOperator(task_id="Start", dag=dag)
+    end = EmptyOperator(
         task_id="End", trigger_rule=TriggerRule.ONE_SUCCESS, dag=dag
     )
     # define DAG using taskflow notation

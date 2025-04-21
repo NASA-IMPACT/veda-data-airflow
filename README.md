@@ -1,7 +1,7 @@
 # veda-data-airflow
 
 This repo houses function code and deployment code for producing cloud-optimized
-data products and STAC metadata for interfaces such as https://github.com/NASA-IMPACT/delta-ui.
+data products and STAC metadata for interfaces such as https://github.com/NASA-IMPACT/veda-ui.
 
 ## Project layout
 
@@ -12,14 +12,6 @@ data products and STAC metadata for interfaces such as https://github.com/NASA-I
 - [infrastructure](./infrastructure/): Contains the terraform modules necessary to deploy all resources to AWS
 - [custom policies](./infrastructure/custom_policies/): Contains custom policies for the mwaa environment execution role
 - [scripts](./scripts/): Contains bash and python scripts useful for deploying and for running ingests
-
-### Fetching Submodules
-
-First time setting up the repo:
-`git submodule update --init --recursive`
-
-Afterwards:
-`git submodule update --recursive --remote`
 
 ## Requirements
 
@@ -35,9 +27,17 @@ See [terraform-getting-started](https://developer.hashicorp.com/terraform/tutori
 
 See [getting-started-install](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)
 
+### Python
+
+- Install [uv](https://docs.astral.sh/uv/getting-started/installation/).
+- Run `uv sync` to install the required python packages. By default, all optional dependencies are included. To avoid this, use `uv sync --no-default-groups`.
 
 
 ### Setup a local SM2A development environment
+ 
+- ⚠️ You need to copy ./sm2a/sm2a-local-config/env_example to ./sm2a/sm2a-local-config/.env and update the values of AWS secrets.
+- You can define AWS credentials or other custom envs in [.env](./sm2a/sm2a-local-config/.env) file.
+- ⚠️  If you update ./sm2a/sm2a-local-config/.env file you should run `make sm2a-local-run` again
 1. Build services
 ```shell
 make sm2a-local-build
@@ -48,7 +48,7 @@ make sm2a-local-build
 ```shell
 make sm2a-local-init
 ```
-🚨 NOTE: This command is typically required only once at the beginning. 
+🚨 NOTE: This command is typically required only once at the beginning.
 After running it, you generally do not need to run it again unless you run `make clean`,
 which will require you to reinitialize SM2A with `make sm2a-local-init`
 
@@ -98,13 +98,13 @@ $bash ./scripts/deploy.sh .env <<< deploy
 
 ### Fetch environment variables using AWS CLI
 
-To retrieve the variables for a stage that has been previously deployed, the secrets manager can be used to quickly populate an .env file with [`scripts/sync-env-local.sh`](scripts/sync-env-local.sh). 
+To retrieve the variables for a stage that has been previously deployed, the secrets manager can be used to quickly populate an .env file with [`scripts/sync-env-local.sh`](scripts/sync-env-local.sh).
 
 ```
 ./scripts/sync-env-local.sh <app-secret-name>
 ```
 
-> [!IMPORTANT] 
+> [!IMPORTANT]
 > Be careful not to check in `.env` (or whatever you called your env file) when committing work.
 
 Currently, the client id and domain of an existing Cognito user pool programmatic client must be supplied in [configuration](ingest_api/infrastructure/config.py) as `VEDA_CLIENT_ID` and `VEDA_COGNITO_DOMAIN` (the [veda-auth project](https://github.com/NASA-IMPACT/veda-auth) can be used to deploy a Cognito user pool and client). To dispense auth tokens via the workflows API swagger docs, an administrator must add the ingest API lambda URL to the allowed callbacks of the Cognito client.
@@ -121,22 +121,27 @@ This pipeline is designed to handle the ingestion of both vector and raster data
 ### Vector Data Ingestion
 ```json
 {
+  "bucket": "ghgc-data-store-develop",
   "collection": "",
-  "bucket": "",
-  "prefix": "",
-  "filename_regex": ".*.csv$",
-  "id_template": "-{}",
-  "datetime_range": "",
-  "vector": true,
-  "x_possible": "longitude",
-  "y_possible": "latitude",
+  "extra_flags": [
+    "-overwrite",
+    "-oo",
+    "X_POSSIBLE_NAMES=longitude",
+    "-oo",
+    "Y_POSSIBLE_NAMES=latitude"
+  ],
+  "filename_regex": ".*metadata.*csv",
+  "id_template": "any_prefix_{}",
+  "prefix": "transformed_csv/NOAA/",
   "source_projection": "EPSG:4326",
   "target_projection": "EPSG:4326",
-  "extra_flags": ["-overwrite", "-lco", "OVERWRITE=YES"]
+  "vector": true,
+  "invalidate_cloudfront": true
 }
 ```
+[Details on Vector Ingest](./dags/veda_data_pipeline/utils/vector_ingest/README.md)
 
-### Raster Data Ingestion 
+### Raster Data Ingestion
 ```json
 {
     "collection": "",

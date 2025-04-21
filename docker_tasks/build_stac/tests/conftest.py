@@ -3,7 +3,7 @@ from unittest import mock
 
 import boto3
 import pytest
-from moto import mock_s3
+from moto import mock_aws
 from mypy_boto3_s3.service_resource import Bucket, S3ServiceResource
 
 
@@ -25,13 +25,13 @@ def aws_credentials():
 
 @pytest.fixture
 def s3_client(aws_credentials):
-    with mock_s3():
+    with mock_aws():
         yield boto3.client("s3", region_name="us-east-1")
 
 
 @pytest.fixture
 def s3_resource(aws_credentials) -> S3ServiceResource:
-    with mock_s3():
+    with mock_aws():
         yield boto3.resource("s3", region_name="us-east-1")
 
 

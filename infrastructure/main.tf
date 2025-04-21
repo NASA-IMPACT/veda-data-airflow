@@ -11,7 +11,7 @@ module "mwaa" {
   provision_s3_access_block        = var.provision_s3_access_block
   stage                            = var.stage
   airflow_version                  = "2.5.1"
-  airflow_configuration_options    = { "webserver.instance_name" = "${var.prefix} DAGs" }
+  airflow_configuration_options    = { "webserver.instance_name" = "${var.prefix} DAGs", "webserver.expose_config" = true }
   environment_class                = var.mwaa_environment_class
   min_workers                      = var.min_workers
   ecs_containers = [
@@ -180,7 +180,7 @@ resource "aws_iam_policy" "s3_bucket_access" {
         Action = [
           "s3:*",
         ]
-        Effect   = "Allow"
+        Effect = "Allow"
         Resource = [
           "arn:aws:s3:::*",
           "arn:aws:s3:::*/*"
@@ -201,7 +201,7 @@ resource "aws_iam_role_policy_attachment" "lambda_basic_execution" {
 }
 
 resource "aws_iam_role_policy_attachment" "lambda_s3_access" {
-  role = aws_iam_role.lambda_execution_role.name
+  role       = aws_iam_role.lambda_execution_role.name
   policy_arn = aws_iam_policy.s3_bucket_access.arn
 }
 

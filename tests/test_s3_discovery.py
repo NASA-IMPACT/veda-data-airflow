@@ -3,9 +3,7 @@ from dags.veda_data_pipeline.utils import s3_discovery
 import pytest
 import os
 import boto3
-from moto import mock_s3
-
-from unittest.mock import patch
+from moto import mock_aws
 
 @pytest.fixture(scope='function')
 def aws_credentials():
@@ -16,7 +14,7 @@ def aws_credentials():
     os.environ['AWS_SESSION_TOKEN'] = 'testing'
     os.environ['EVENT_BUCKET'] = 'test'
 
-@mock_s3
+@mock_aws
 def test_s3_discovery_dry_run(aws_credentials, capsys):
   s3 = boto3.resource('s3')
   bucket = s3.Bucket("test")
@@ -33,6 +31,7 @@ def test_s3_discovery_dry_run(aws_credentials, capsys):
   fake_event = {
     "dry_run": "dry run",
     "bucket": "test",
+    "prefix": "",
     "filename_regex": r"[\s\S]*"
   }
 
@@ -41,11 +40,12 @@ def test_s3_discovery_dry_run(aws_credentials, capsys):
   captured = capsys.readouterr()
   assert "Running discovery in dry run mode" in captured.out
   assert "-DRYRUN- Example item" in captured.out
-  
+
   assert isinstance(res, dict)
-  assert res["discovered"] == 2
-  
-@mock_s3
+  assert res["discovered"] == [2]
+
+
+@mock_aws
 def test_s3_discovery(aws_credentials, capsys):
   s3 = boto3.resource('s3')
   bucket = s3.Bucket("test")
@@ -61,6 +61,7 @@ def test_s3_discovery(aws_credentials, capsys):
   client.put_object(Bucket="test", Key="file2.txt", Body="stuff")
   fake_event = {
     "bucket": "test",
+    "prefix": "",
     "filename_regex": r"^.*\.(cog|tif)$"
   }
 
@@ -68,6 +69,6 @@ def test_s3_discovery(aws_credentials, capsys):
 
   captured = capsys.readouterr()
   assert "Running discovery in dry run mode" not in captured.out
-  
+
   assert isinstance(res, dict)
-  assert res["discovered"] == 2
+  assert res["discovered"] == [2]

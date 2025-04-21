@@ -97,6 +97,39 @@ variable "custom_worker_policy_statement" {
         "*"
       ]
 
+    },
+        {
+      Sid    = "VEDA-RDS-Disaster-Recovery"
+      Effect = "Allow"
+      Action = [
+        "rds:Describe*",
+        "rds:Start*",
+        "kms:*",
+        "glue:Get*",
+        "glue:CreateCrawler",
+        "glue:StartCrawler",
+        "glue:UpdateCrawler"
+      ]
+      Resource = [
+        "*"
+      ]
+    },
+    {
+      "Effect" : "Allow",
+      "Action" : [
+        "glue:DeleteDatabase"
+      ],
+      "Resource" : [
+        "arn:aws:glue:us-west-2:*:catalog",
+        "arn:aws:glue:us-west-2:*:database/*",
+        "arn:aws:glue:us-west-2:*:table/*",
+        "arn:aws:glue:us-west-2:*:userDefinedFunction/*"
+      ]
+    },
+    {
+            "Effect": "Allow",
+            "Action": ["cloudfront:CreateInvalidation"],
+            "Resource": ["arn:aws:cloudfront::*:distribution/*"]
     }
 
   ]
@@ -182,6 +215,31 @@ variable "assume_role_write_arn" {
   type    = string
   default = ""
 }
+
 variable "gh_dag_launcher_team_id" {
   default = "VEDA-DAG-Launcher"
+}
+
+variable "snapshot_bucket_name" {
+  default = ""
+}
+variable "snapshot_export_role" {
+  default = ""
+}
+variable "glue_role_arn" {
+  default = ""
+}
+variable "s3_export_kms_key_id" {
+  default = ""
+}
+  
+variable "cloudfront_to_invalidate" {
+  default = null
+}
+variable "cloudfront_path_to_invalidate" {
+  default = null
+
+}
+variable "lambda_dag_trigger_function_name" {
+  default = "trigger-sm2a-dag"
 }

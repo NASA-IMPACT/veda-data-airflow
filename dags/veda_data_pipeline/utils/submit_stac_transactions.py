@@ -19,6 +19,8 @@ class AppConfig(TypedDict):
     scope: str
 
 class TransactionsApi:
+    base_url: str
+    token: str
 
     @classmethod
     def from_veda_auth_secret(cls, *, secret_id: str, base_url: str) -> "TransactionsApi":
@@ -55,14 +57,8 @@ class TransactionsApi:
             raise RuntimeError(f"Error, {ex}")
         return response.json()
 
-    def __init__(self, stac_ingestor_api_url: str):
-        """
-        :param stac_endpoint: Base URL of the STAC API (e.g., 'https://example.com/stac').
-        :param token: Optional Bearer token for authenticated STAC APIs.
-        """
-        self.stac_ingestor_api_url = stac_ingestor_api_url.rstrip('/')
 
-    def post_items(self, collection_id: str, items: List[dict]) -> dict:
+    def post_items(self, collection_id: str, items: List[dict], endpoint: str) -> dict:
         """
         Perform a PUT request to update or create a STAC Item in the given collection.
 
@@ -72,14 +68,16 @@ class TransactionsApi:
         :return: The JSON response (as a dict) from the STAC API.
         :raises RuntimeError: If the response is not 200/201.
         """
-        url = f"{self.base_url.rstrip('/')}{self.stac_ingestor_api_url}/collections/{collection_id}/bulk_items"
-        headers = {"Content-Type": "application/json"}
+        headers = {
+            "Authorization": f"Bearer {self.token}",
+            "Content-Type": "application/json",
+        }
 
-        if self.token:
-            headers["Authorization"] = f"Bearer {self.token}"
-
-        logging.info(f"PUT {url}")
-        response = requests.post(url, headers=headers, json=items)
+        response = requests.post(
+            f"{self.base_url.rstrip('/')}{endpoint}", 
+            headers=headers, 
+            json=items
+        )
 
         if response.status_code not in (200, 201):
             logging.error("Failed PUT request: %s %s", response.status_code, response.text)
@@ -91,7 +89,8 @@ class TransactionsApi:
 def submit_transactions_handler(
         event, 
         cognito_app_secret=None, # unused, but maintains signature compatibility w/ ingest API
-        stac_ingestor_api_url=None,
+        ingest_url=None,
+        endpoint="/collections/{collection_id}/bulk_items"
     ):
     """
     Handler function that can be integrated in the same way as the existing `submission_handler`,
@@ -104,10 +103,17 @@ def submit_transactions_handler(
     """
 
     collection_id = event[0].get("collection")
-    api = TransactionsApi(stac_ingestor_api_url)
+    api = TransactionsApi.from_veda_auth_secret(
+        secret_id=cognito_app_secret,
+        base_url=ingest_url,
+    )
     try:
-        response = api.post_items(collection_id, event)
-        logging.info("STAC Item POST completed successfully.")
+        response = api.post_items(
+            collection_id=collection_id, 
+            items=event,
+            endpoint=endpoint
+        )
+        logging.info("STAC Bulk Item POST completed successfully.")
     except RuntimeError as err:
         logging.error("Error while performing POST: %s", str(err))
         raise

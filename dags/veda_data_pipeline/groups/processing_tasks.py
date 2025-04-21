@@ -38,10 +38,12 @@ if TRANSACTIONS_ENDPOINT_ENABLED:
     task_kwargs = {"retries": 3, "retry_delay": 10, "retry_exponential_backoff": True, "max_active_tis_per_dag": 2}
     submit_kwargs = {}
     submit_handler = submit_transactions_handler
+    ingest_url = airflow_vars_json.get("STAC_INGESTOR_API_URL")
 else:
     task_kwargs = {"retries": 2, "retry_delay": 60, "retry_exponential_backoff": True, "max_active_tis_per_dag": 5}
     submit_kwargs = {"endpoint": "/ingestions"}
     submit_handler = submission_handler
+    ingest_url = airflow_vars_json.get("STAC_URL")
 
 # with exponential backoff enabled, retry delay is converted to seconds
 @task(**task_kwargs)
@@ -53,7 +55,6 @@ def submit_to_stac_ingestor_task(built_stac: dict):
     airflow_vars = Variable.get("aws_dags_variables")
     airflow_vars_json = json.loads(airflow_vars)
     cognito_app_secret = airflow_vars_json.get("COGNITO_APP_SECRET")
-    stac_ingestor_api_url = airflow_vars_json.get("STAC_INGESTOR_API_URL")
     try:
         success_file = event["payload"]["success_event_key"]
         with smart_open.open(success_file, "r") as _file:
@@ -66,7 +67,7 @@ def submit_to_stac_ingestor_task(built_stac: dict):
         submit_handler(
             event=item,
             cognito_app_secret=cognito_app_secret,
-            stac_ingestor_api_url=stac_ingestor_api_url,
+            ingest_url=ingest_url,
             **submit_kwargs,
         )
     return event

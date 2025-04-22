@@ -148,6 +148,7 @@ variable "gh_user_team_id" {
 
 variable "workflows_client_secret" {
 }
+
 variable "stac_ingestor_api_url" {
 }
 
@@ -246,4 +247,8 @@ variable "lambda_dag_trigger_function_name" {
 variable "transactions_endpoint_enabled" {
   type = bool
   default = false
+}
+
+variable stac_api_keycloak_client_secret {
+ type = string
 }

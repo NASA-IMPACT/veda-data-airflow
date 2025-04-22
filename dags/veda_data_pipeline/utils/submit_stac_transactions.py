@@ -11,12 +11,14 @@ class Creds(TypedDict):
     access_token: str
     expires_in: int
     token_type: str
-
-class AppConfig(TypedDict):
-    cognito_domain: str
-    client_id: str
-    client_secret: str
     scope: str
+
+class Secret(TypedDict):
+    userinfo_url: str
+    id: str
+    secret: str
+    auth_url: str
+    token_url: str
 
 class TransactionsApi:
     base_url: str
@@ -24,30 +26,31 @@ class TransactionsApi:
 
     @classmethod
     def from_veda_auth_secret(cls, *, secret_id: str, base_url: str) -> "TransactionsApi":
-        cognito_details = cls._get_cognito_service_details(secret_id)
-        credentials = cls._get_app_credentials(**cognito_details)
+        secret_details = cls._get_auth_service_details(secret_id)
+        credentials = cls._get_app_credentials(**secret_details)
         return cls(token=credentials["access_token"], base_url=base_url)
 
     @staticmethod
-    def _get_cognito_service_details(secret_id: str) -> AppConfig:
+    def _get_auth_service_details(secret_id: str) -> Secret:
         client = boto3.client("secretsmanager")
         response = client.get_secret_value(SecretId=secret_id)
         return json.loads(response["SecretString"])
 
     @staticmethod
     def _get_app_credentials(
-        cognito_domain: str, client_id: str, client_secret: str, scope: str, **kwargs
+        userinfo_url: str, id: str, secret: str, auth_url: str, token_url: str, **kwargs
     ) -> Creds:
         response = requests.post(
-            f"{cognito_domain}/oauth2/token",
+            token_url,
             headers={
                 "Content-Type": "application/x-www-form-urlencoded",
+                "Accept": "application/json"
             },
-            auth=(client_id, client_secret),
             data={
+                "client_id": id,
+                "client_secret": secret,
                 "grant_type": "client_credentials",
-                # A space-separated list of scopes to request for the generated access token.
-                "scope": scope,
+                "scopes": "stac:item:create stac:collection:create"
             },
         )
         try:
@@ -72,11 +75,11 @@ class TransactionsApi:
             "Authorization": f"Bearer {self.token}",
             "Content-Type": "application/json",
         }
-
+        bulk_items = {"items": {item['id']: item for item in items}, "method": "upsert"}
         response = requests.post(
-            f"{self.base_url.rstrip('/')}{endpoint}", 
+            f"{self.base_url.rstrip('/')}/collections/{collection_id}/bulk_items", 
             headers=headers, 
-            json=items
+            json=bulk_items
         )
 
         if response.status_code not in (200, 201):
@@ -89,8 +92,7 @@ class TransactionsApi:
 def submit_transactions_handler(
         event, 
         cognito_app_secret=None, # unused, but maintains signature compatibility w/ ingest API
-        ingest_url=None,
-        endpoint="/collections/{collection_id}/bulk_items"
+        ingest_url=None
     ):
     """
     Handler function that can be integrated in the same way as the existing `submission_handler`,
@@ -111,7 +113,6 @@ def submit_transactions_handler(
         response = api.post_items(
             collection_id=collection_id, 
             items=event,
-            endpoint=endpoint
         )
         logging.info("STAC Bulk Item POST completed successfully.")
     except RuntimeError as err:

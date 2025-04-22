@@ -76,6 +76,10 @@ module "sma-base" {
     {
       name  = "GH_USER_TEAM_ID"
       value = var.gh_user_team_id
+    },
+    {
+      name  = "GH_DAG_LAUNCHER_TEAM_ID"
+      value = var.gh_dag_launcher_team_id
     }
 
   ]

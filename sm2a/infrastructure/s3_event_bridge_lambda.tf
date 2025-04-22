@@ -163,7 +163,7 @@ resource "aws_lambda_permission" "s3_invoke" {
 
 
 resource "aws_s3_bucket_notification" "bucket_notification" {
-  count = var.eis_storage_bucket_name != "null" ? 1 : 0
+  count  = var.eis_storage_bucket_name != "null" ? 1 : 0
   bucket = var.eis_storage_bucket_name
 
   lambda_function {

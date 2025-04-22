@@ -77,6 +77,7 @@ AUTH_USER_REGISTRATION = (
 AUTH_ROLES_MAPPING = {
     "Viewer": ["Viewer"],
     "Admin": ["Admin"],
+    "Dag_Launcher": ["DAG Launcher"],
 }
 # If you wish, you can add multiple OAuth providers.
 OAUTH_PROVIDERS = [
@@ -102,9 +103,11 @@ log.setLevel(os.getenv("AIRFLOW__LOGGING__FAB_LOGGING_LEVEL", "INFO"))
 
 FAB_ADMIN_ROLE = "Admin"
 FAB_VIEWER_ROLE = "Viewer"
+FAB_DAG_LAUNCHER_ROLE = "Dag_Launcher"
 FAB_PUBLIC_ROLE = "Public"  # The "Public" role is given no permissions
 TEAM_ID_A_FROM_GITHUB = os.getenv("GH_ADMIN_TEAM_ID")
 TEAM_ID_B_FROM_GITHUB = os.getenv("GH_USER_TEAM_ID")
+TEAM_ID_DAG_LAUNCHER_FROM_GITHUB = os.getenv("GH_DAG_LAUNCHER_TEAM_ID")
 
 
 def team_parser(team_payload: dict[str, Any]) -> list[int]:
@@ -119,6 +122,7 @@ def map_roles(team_list: list[int]) -> list[str]:
     team_role_map = {
         TEAM_ID_A_FROM_GITHUB: FAB_ADMIN_ROLE,
         TEAM_ID_B_FROM_GITHUB: FAB_VIEWER_ROLE,
+        TEAM_ID_DAG_LAUNCHER_FROM_GITHUB: FAB_DAG_LAUNCHER_ROLE,
     }
     return list(set(team_role_map.get(team, FAB_PUBLIC_ROLE) for team in team_list))
 
@@ -141,7 +145,6 @@ class GithubTeamAuthorizer(FabAirflowSecurityManagerOverride):
         team_data = remote_app.get("user/teams")
         teams = team_parser(team_data.json())
         roles = map_roles(teams)
-        log.debug(f"User info from Github: {user_data}\nTeam info from Github: {teams}")
         print(f"User info from Github: {user_data}\nTeam info from Github: {teams}")
         return {"username": "github_" + user_data.get("login"), "role_keys": roles}
 

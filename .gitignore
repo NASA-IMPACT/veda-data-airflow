@@ -10,7 +10,8 @@ pyhdf*
 # Ignore pycache
 __pycache__
 
-
+# Ignore redundant DAG
+sm2a/dags
 # Ignore Terraform
 .terraform
 .env

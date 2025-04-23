@@ -37,14 +37,12 @@ if TRANSACTIONS_ENDPOINT_ENABLED:
     # assuming default chunk size (500), this matches the current dynamoDB configuration on the STAC ingestor
     task_kwargs = {"retries": 3, "retry_delay": 10, "retry_exponential_backoff": True, "max_active_tis_per_dag": 2}
     submit_kwargs = {}
-    submit_handler = submit_transactions_handler
-    ingest_url = airflow_vars_json.get("STAC_INGESTOR_API_URL")
+    ingest_url = airflow_vars_json.get("STAC_URL")
     app_secret = airflow_vars_json.get("STAC_API_KEYCLOAK_CLIENT_SECRET")
 else:
     task_kwargs = {"retries": 2, "retry_delay": 60, "retry_exponential_backoff": True, "max_active_tis_per_dag": 5}
     submit_kwargs = {"endpoint": "/ingestions"}
-    submit_handler = submission_handler
-    ingest_url = airflow_vars_json.get("STAC_URL")
+    ingest_url = airflow_vars_json.get("STAC_INGESTOR_API_URL")
     app_secret = airflow_vars_json.get("COGNITO_APP_SECRET")
 
 # with exponential backoff enabled, retry delay is converted to seconds
@@ -62,13 +60,21 @@ def submit_to_stac_ingestor_task(built_stac: dict):
         log_task("No success file found - using event directly")
         stac_items = [event]
 
-    for item in stac_items:
-        submit_handler(
-            event=item,
+    if TRANSACTIONS_ENDPOINT_ENABLED:
+        submit_transactions_handler(
+            event=stac_items,
             cognito_app_secret=app_secret,
             ingest_url=ingest_url,
             **submit_kwargs,
         )
+    else:
+        for item in stac_items:
+            submission_handler(
+                event=item,
+                cognito_app_secret=app_secret,
+                ingest_url=ingest_url,
+                **submit_kwargs,
+            )
     return event
 
 @task(retries=2, retry_delay=60, retry_exponential_backoff=True, max_active_tis_per_dag=5)

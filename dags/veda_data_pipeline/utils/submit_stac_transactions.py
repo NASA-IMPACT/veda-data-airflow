@@ -2,6 +2,7 @@ import json
 import logging
 import requests
 from typing import List, TypedDict
+from dataclasses import dataclass
 
 import boto3
 
@@ -20,6 +21,7 @@ class Secret(TypedDict):
     auth_url: str
     token_url: str
 
+@dataclass
 class TransactionsApi:
     base_url: str
     token: str
@@ -50,7 +52,7 @@ class TransactionsApi:
                 "client_id": id,
                 "client_secret": secret,
                 "grant_type": "client_credentials",
-                "scopes": "stac:item:create stac:collection:create"
+                "scope": "stac:item:create stac:collection:create stac:collection:update stac:item:update"
             },
         )
         try:
@@ -61,13 +63,12 @@ class TransactionsApi:
         return response.json()
 
 
-    def post_items(self, collection_id: str, items: List[dict], endpoint: str) -> dict:
+    def post_items(self, collection_id: str, items: List[dict]) -> dict:
         """
         Perform a PUT request to update or create a STAC Item in the given collection.
 
         :param collection_id: The target collection ID.
-        :param item_id: The target item ID.
-        :param item_body: The full STAC Item JSON body.
+        :param items: list of STAC items to be submitted.
         :return: The JSON response (as a dict) from the STAC API.
         :raises RuntimeError: If the response is not 200/201.
         """

@@ -51,7 +51,6 @@ def submit_to_stac_ingestor_task(built_stac: dict):
     """Submit STAC items to the STAC ingestor API."""
     event = built_stac.copy()
     success_file = event["payload"]["success_event_key"]
-
     try:
         success_file = event["payload"]["success_event_key"]
         with smart_open.open(success_file, "r") as _file:

@@ -120,7 +120,7 @@ module "sma-base" {
     ASSUME_ROLE_READ_ARN = var.assume_role_read_arn
     ASSUME_ROLE_WRITE_ARN = var.assume_role_write_arn
     SM2A_BASE_URL = module.sma-base.airflow_url
-    TRANSACTIONS_ENDPOINT_ENABLED = var.transactions_endpoint_enabled
+    TRANSACTIONS_ENDPOINT_ENABLED = var.transactions_endpoint_enabled==true ? "True" : null
     STAC_API_KEYCLOAK_CLIENT_SECRET=var.stac_api_keycloak_client_secret
   }
 >>>>>>> c4a6e84 (use keycloak for transactionss POST)

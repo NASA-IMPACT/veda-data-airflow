@@ -8,7 +8,7 @@ USER root
 # `apt-get clean` clears out the local repository of retrieved package files
 
 RUN apt-get update \
-  && apt-get install -y --no-install-recommends gcc libc6-dev libcurl4-openssl-dev libssl-dev \
+  && apt-get install -y --no-install-recommends gcc libc6-dev libcurl4-openssl-dev libssl-dev git \
   && apt-get autoremove -yqq --purge \
   && apt-get clean \
   && rm -rf /var/lib/apt/lists/*
@@ -19,8 +19,11 @@ COPY --chown=airflow:airflow airflow_services/requirements-in.txt "${AIRFLOW_HOM
 USER airflow
 
 RUN pip install --upgrade pip \
+  && pip install git+https://github.com/NASA-IMPACT/pyarc2stac.git@main#egg=pyarc2stac\
   && pip install --no-cache-dir -r requirements.txt -c "https://raw.githubusercontent.com/apache/airflow/constraints-${AIRFLOW_VERSION}/constraints-3.11.txt"\
-  && pip install --no-cache-dir -r requirements-in.txt apache-airflow==${AIRFLOW_VERSION}
+  && pip install --no-cache-dir -r requirements-in.txt apache-airflow==${AIRFLOW_VERSION}\
+  && pip install pystac==1.12.0
+
 
 COPY --chown=airflow:airflow dags "${AIRFLOW_HOME}/dags"
 COPY --chown=airflow:airflow plugins "${AIRFLOW_HOME}/plugins"
@@ -32,3 +35,4 @@ RUN cp ${AIRFLOW_HOME}/configuration/airflow.cfg* ${AIRFLOW_HOME}/.
 
 #ENV
 ENV PYTHONPATH /opt/airflow
+

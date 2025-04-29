@@ -52,7 +52,7 @@ class TransactionsApi:
                 "client_id": id,
                 "client_secret": secret,
                 "grant_type": "client_credentials",
-                "scope": "stac:item:create stac:collection:create stac:collection:update stac:item:update"
+                "scope": "stac:item:create stac:item:update"
             },
         )
         try:
@@ -63,7 +63,7 @@ class TransactionsApi:
         return response.json()
 
 
-    def post_items(self, collection_id: str, items: List[dict]) -> dict:
+    def post_items(self, item: dict) -> dict:
         """
         Perform a PUT request to update or create a STAC Item in the given collection.
 
@@ -76,11 +76,13 @@ class TransactionsApi:
             "Authorization": f"Bearer {self.token}",
             "Content-Type": "application/json",
         }
-        bulk_items = {"items": {item['id']: item for item in items}, "method": "upsert"}
-        response = requests.post(
-            f"{self.base_url.rstrip('/')}/collections/{collection_id}/bulk_items", 
+        collection_id = item.get("collection")
+        item_id = item.get("id")
+        
+        response = requests.put(
+            f"{self.base_url.rstrip('/')}/collections/{collection_id}/items/{item_id}", 
             headers=headers, 
-            json=bulk_items
+            json=item
         )
 
         if response.status_code not in (200, 201):
@@ -105,24 +107,23 @@ def submit_transactions_handler(
     :return: A dict representing the API response.
     """
 
-    collection_id = event[0].get("collection")
+    
     api = TransactionsApi.from_veda_auth_secret(
         secret_id=cognito_app_secret,
         base_url=ingest_url,
     )
     try:
         response = api.post_items(
-            collection_id=collection_id, 
-            items=event,
+            item=event,
         )
-        logging.info("STAC Bulk Item POST completed successfully.")
+        logging.info("STAC Item PUT completed successfully.")
     except RuntimeError as err:
-        logging.error("Error while performing POST: %s", str(err))
+        logging.error("Error while performing {PUT}: %s", str(err))
         raise
     return {
         "statusCode": 200,
         "body": json.dumps({
-            "message": "POST request completed successfully",
+            "message": "PUT request completed successfully",
             "response": response
         })
     }

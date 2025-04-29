@@ -39,17 +39,19 @@ if TRANSACTIONS_ENDPOINT_ENABLED:
     submit_kwargs = {}
     ingest_url = airflow_vars_json.get("STAC_URL")
     app_secret = airflow_vars_json.get("STAC_API_KEYCLOAK_CLIENT_SECRET")
+    submit_handler = submit_transactions_handler
 else:
     task_kwargs = {"retries": 2, "retry_delay": 60, "retry_exponential_backoff": True, "max_active_tis_per_dag": 5}
     submit_kwargs = {"endpoint": "/ingestions"}
     ingest_url = airflow_vars_json.get("STAC_INGESTOR_API_URL")
     app_secret = airflow_vars_json.get("COGNITO_APP_SECRET")
+    submit_handler = submission_handler
 
 # with exponential backoff enabled, retry delay is converted to seconds
 @task(**task_kwargs)
 def submit_to_stac_ingestor_task(built_stac: dict):
     """Submit STAC items to the STAC ingestor API."""
-    event = built_stac.copy()
+    event = built_stac.copy()   
     try:
         success_file = event["payload"]["success_event_key"]
         with smart_open.open(success_file, "r") as _file:
@@ -58,21 +60,14 @@ def submit_to_stac_ingestor_task(built_stac: dict):
         log_task("No success file found - using event directly")
         stac_items = [event]
 
-    if TRANSACTIONS_ENDPOINT_ENABLED:
-        submit_transactions_handler(
-            event=stac_items,
+    for item in stac_items:
+        submit_handler(
+            event=item,
             cognito_app_secret=app_secret,
             ingest_url=ingest_url,
             **submit_kwargs,
         )
-    else:
-        for item in stac_items:
-            submission_handler(
-                event=item,
-                cognito_app_secret=app_secret,
-                ingest_url=ingest_url,
-                **submit_kwargs,
-            )
+
     return event
 
 @task(retries=2, retry_delay=60, retry_exponential_backoff=True, max_active_tis_per_dag=5)

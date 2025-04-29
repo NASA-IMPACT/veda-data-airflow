@@ -1,11 +1,37 @@
-# How to Add a General DAG
-> A general DAG will be standalone or separate from the dynamic Vendor ETL Pipeline DAGs. General purposes may include data quality checks, data profiling, and other utility tasks. In the event that a DAG is vendor-specific but not a fit for the Vendor ETL Pipeline, let's consider it a general DAG.
+# How to Add a DAG
 
 ## Steps
 1. Copy the template DAG file from the `dags` directory
 2. Rename the file adhering to the following naming conventions
 3. Update the DAG file with the necessary configurations, including relevant Tag(s) and Owner Links
 4. Configure the DAG with the necessary tasks
+
+### Adding a DAG
+
+The DAGs are defined in Python files located in the [dags](./dags/) directory. Each DAG should be defined as a Python module that defines a DAG object. The DAGs are scheduled by  the [Airflow Scheduler](https://airflow.apache.org/docs/apache-airflow/stable/administration-and-deployment/scheduler.html#scheduler). Since we aim to keep the scheduler lightweight, every task-dependent library should be imported in the tasks and not at the DAG level.
+
+Our preferred method of defining DAGs and tasks is to use Taskflow for all Python tasks. An example DAG is shown below:
+
+```python
+from airflow.decorators import dag, task
+from airflow.operators.empty import EmptyOperator
+
+@task
+def foo_task():
+    print("Hello World")
+    return "Hello World"
+
+@dag(
+    schedule_interval='@daily',
+    start_date=pendulum.datetime(2023, 1, 1, tz="UTC"),
+    catchup=False,
+    tags=['example'],
+)
+def example_dag():
+    foo = foo_task()
+    bar = EmptyOperator(task_id='bar')
+    foo >> bar
+```
 
 
 ## Naming Conventions
@@ -20,11 +46,9 @@
 - `util_` - for utility files that can be shared across multiple DAGs (e.g. `util_s3file_check_`) 
 
 ### Tags
-- `<VendorName>` - for vendor-specific DAGs (e.g. `Maxar` or `Planet`)
-- `AWS` - for interactions with AWS services 
-- `ETL` - for ETL tasks outside of the Dynamic Vendor ETL Pipeline
-- `QAQC` - for data quality checks
-- `Template` - for templates
+- 
+
+
 
 ### General Principles
 - **Keep things simple**. If a DAG is too complex, its scheduling performance may be impacted. This includes a DAG's structure: simple linear DAGs (A -> B -> C) are preferred over deeply nested DAGs that may incur delays in scheduling ([reference](https://airflow.apache.org/docs/apache-airflow/stable/best-practices.html#reducing-dag-complexity)).

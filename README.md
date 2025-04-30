@@ -4,7 +4,7 @@ This repo houses function code and deployment code for VEDA projects.
 
 ## Project layout
 
-- [dags](./dags/) contains the Directed Acyclic Graphs which constitute Airflow state machines. This includes the python for running each task as well as the python definitions of the structure of these DAGs. Files that define a DAG object are considered top-level DAG files, which are processed by Airflow.
+- [dags](./dags/) contains the Directed Acyclic Graphs which constitute Airflow state machines. This includes the Python for running each task as well as the Python definitions of the structure of these DAGs. Files that define a DAG object are considered top-level DAG files, which are processed by Airflow.
 - [groups](./dags/veda_data_pipeline/groups/) contain common groups of tasks that can be reused in multiple DAGs.
 - [utils](./dags/veda_data_pipeline/utils) contains shared low-level functions used in tasks and DAGs.
 - [airflow_worker](./airflow_worker/) contains a dockerfile, as well as requirements for Airflow workers. This service runs the tasks in the DAGs.

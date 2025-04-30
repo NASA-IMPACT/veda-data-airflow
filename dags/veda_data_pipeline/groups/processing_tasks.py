@@ -1,4 +1,3 @@
-from datetime import timedelta
 import json
 import logging
 from copy import deepcopy
@@ -6,9 +5,13 @@ import smart_open
 from airflow.models.variable import Variable
 from airflow.decorators import task
 from veda_data_pipeline.utils.submit_stac import submission_handler
+from veda_data_pipeline.utils.submit_stac_transactions import submit_transactions_handler
 
 group_kwgs = {"group_id": "Process", "tooltip": "Process"}
 
+airflow_vars = Variable.get("aws_dags_variables")
+airflow_vars_json = json.loads(airflow_vars)
+TRANSACTIONS_ENDPOINT_ENABLED = airflow_vars_json.get("TRANSACTIONS_ENDPOINT_ENABLED", False)
 
 def log_task(text: str):
     logging.info(text)
@@ -30,17 +33,25 @@ def remove_thumbnail_asset(ti):
         payload.pop("assets", True)
     return payload
 
+if TRANSACTIONS_ENDPOINT_ENABLED:
+    # assuming default chunk size (500), this matches the current dynamoDB configuration on the STAC ingestor
+    task_kwargs = {"retries": 3, "retry_delay": 10, "retry_exponential_backoff": True, "max_active_tis_per_dag": 2}
+    submit_kwargs = {}
+    ingest_url = airflow_vars_json.get("STAC_URL")
+    app_secret = airflow_vars_json.get("STAC_API_KEYCLOAK_CLIENT_SECRET")
+    submit_handler = submit_transactions_handler
+else:
+    task_kwargs = {"retries": 2, "retry_delay": 60, "retry_exponential_backoff": True, "max_active_tis_per_dag": 5}
+    submit_kwargs = {"endpoint": "/ingestions"}
+    ingest_url = airflow_vars_json.get("STAC_INGESTOR_API_URL")
+    app_secret = airflow_vars_json.get("COGNITO_APP_SECRET")
+    submit_handler = submission_handler
+
 # with exponential backoff enabled, retry delay is converted to seconds
-@task(retries=2, retry_delay=60, retry_exponential_backoff=True, max_active_tis_per_dag=5)
+@task(**task_kwargs)
 def submit_to_stac_ingestor_task(built_stac: dict):
     """Submit STAC items to the STAC ingestor API."""
-    event = built_stac.copy()
-    success_file = event["payload"]["success_event_key"]
-
-    airflow_vars = Variable.get("aws_dags_variables")
-    airflow_vars_json = json.loads(airflow_vars)
-    cognito_app_secret = airflow_vars_json.get("COGNITO_APP_SECRET")
-    stac_ingestor_api_url = airflow_vars_json.get("STAC_INGESTOR_API_URL")
+    event = built_stac.copy()   
     try:
         success_file = event["payload"]["success_event_key"]
         with smart_open.open(success_file, "r") as _file:
@@ -50,12 +61,13 @@ def submit_to_stac_ingestor_task(built_stac: dict):
         stac_items = [event]
 
     for item in stac_items:
-        submission_handler(
+        submit_handler(
             event=item,
-            endpoint="/ingestions",
-            cognito_app_secret=cognito_app_secret,
-            stac_ingestor_api_url=stac_ingestor_api_url,
+            cognito_app_secret=app_secret,
+            ingest_url=ingest_url,
+            **submit_kwargs,
         )
+
     return event
 
 @task(retries=2, retry_delay=60, retry_exponential_backoff=True, max_active_tis_per_dag=5)

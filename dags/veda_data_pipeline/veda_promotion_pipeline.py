@@ -96,8 +96,6 @@ def transfer_assets_to_production_bucket(ti=None, payload={}):
         return payload
 
 with DAG("veda_promotion_pipeline", params=template_dag_run_conf, **dag_args) as dag:
-    # ECS dependency variable
-
     start = EmptyOperator(task_id="start", dag=dag)
     end = EmptyOperator(task_id="end", dag=dag)
 

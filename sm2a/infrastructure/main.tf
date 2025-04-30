@@ -103,8 +103,10 @@ module "sma-base" {
     ASSUME_ROLE_READ_ARN  = var.assume_role_read_arn,
     ASSUME_ROLE_WRITE_ARN = var.assume_role_write_arn,
     SM2A_BASE_URL         = module.sma-base.airflow_url,
-    CLOUDFRONT_TO_INVALIDATE = var.cloudfront_to_invalidate
-    CLOUDFRONT_PATH_TO_INVALIDATE = var.cloudfront_path_to_invalidate
+    CLOUDFRONT_TO_INVALIDATE = var.cloudfront_to_invalidate,
+    CLOUDFRONT_PATH_TO_INVALIDATE = var.cloudfront_path_to_invalidate,
+    TRANSACTIONS_ENDPOINT_ENABLED = var.transactions_endpoint_enabled==true ? "True" : null,
+    STAC_API_KEYCLOAK_CLIENT_SECRET=var.stac_api_keycloak_client_secret
   }, var.snapshot_bucket_name != "" ? module.rds_backups[0].rds_backup_environment : {}
   )
 }

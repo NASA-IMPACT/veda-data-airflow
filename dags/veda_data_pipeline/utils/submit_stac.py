@@ -101,11 +101,8 @@ def submission_handler(
     event: Union[S3LinkInput, StacItemInput, Dict[str, Any]],
     endpoint: str = "/ingestions",
     cognito_app_secret=None,
-    stac_ingestor_api_url=None,
-    context=None,
+    ingest_url=None,
 ) -> None | dict:
-    if context is None:
-        context = {}
 
     stac_item = event
 
@@ -114,12 +111,9 @@ def submission_handler(
         print(json.dumps(stac_item, indent=2))
         return
 
-    cognito_app_secret = cognito_app_secret or os.getenv("COGNITO_APP_SECRET")
-    stac_ingestor_api_url = stac_ingestor_api_url or os.getenv("STAC_INGESTOR_API_URL")
-
     ingestor = IngestionApi.from_veda_auth_secret(
         secret_id=cognito_app_secret,
-        base_url=stac_ingestor_api_url,
+        base_url=ingest_url,
     )
     return ingestor.submit(event=stac_item, endpoint=endpoint)
 

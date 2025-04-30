@@ -44,7 +44,7 @@ def ingest_collection_task(ti=None, collection=None):
         event=collection,
         endpoint="/collections",
         cognito_app_secret=cognito_app_secret,
-        stac_ingestor_api_url=stac_ingestor_api_url
+        ingest_url=stac_ingestor_api_url
     )
 
 

@@ -7,7 +7,7 @@
 
 resource "aws_iam_role" "lambda_dag_trigger_exec_role" {
   provider             = aws.aws_current
-  name                 = var.lambda_dag_trigger_function_name
+  name                 = "${var.prefix}-${var.lambda_dag_trigger_function_name}"
   permissions_boundary = var.permission_boundaries_arn
 
   assume_role_policy = <<EOF

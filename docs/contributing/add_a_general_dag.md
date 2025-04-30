@@ -46,9 +46,10 @@ def example_dag():
 - `util_` - for utility files that can be shared across multiple DAGs (e.g. `util_s3file_check_`) 
 
 ### Tags
-- 
-
-
+- `Operations` - DAGs that are used for operational purposed, not for ingesting new data (fr example, scheduling and restoring backups)
+- `Collection` - DAGs that create a new collection in the targeted STAC catalog
+- `Discovery` - DAGs that discover and ingest new assets and items
+- `Automated` - DAGs that cannot be run manually, and are scheduled to run automatically
 
 ### General Principles
 - **Keep things simple**. If a DAG is too complex, its scheduling performance may be impacted. This includes a DAG's structure: simple linear DAGs (A -> B -> C) are preferred over deeply nested DAGs that may incur delays in scheduling ([reference](https://airflow.apache.org/docs/apache-airflow/stable/best-practices.html#reducing-dag-complexity)).

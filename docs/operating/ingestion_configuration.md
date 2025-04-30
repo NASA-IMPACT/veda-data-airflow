@@ -1,6 +1,6 @@
 # Ingestion Pipeline Overview
 
-This pipeline is designed to handle the ingestion of both vector and raster data. The ingestion can be performed using the `veda-discover` DAG. Below are examples of configurations for both vector and raster data.
+This pipeline is designed to handle the ingestion of both vector and raster data. The ingestion can be performed using the `veda-discover` DAG. Below are examples of configurations for both vector and raster data. These configurations may change over time - for the most up-to-date information, please refer to the `template_dag_run_conf` provided alongside each DAG. Previously-used configurations may also be found in the [veda-data repository](https://github.com/NASA-IMPACT/veda-data).
 
 ## Ingestion Configuration
 
@@ -25,7 +25,6 @@ This pipeline is designed to handle the ingestion of both vector and raster data
   "invalidate_cloudfront": true
 }
 ```
-[Details on Vector Ingest](./dags/veda_data_pipeline/utils/vector_ingest/README.md)
 
 ### Raster Data Ingestion
 ```json

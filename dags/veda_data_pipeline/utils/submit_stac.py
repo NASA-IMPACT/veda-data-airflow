@@ -26,18 +26,19 @@ class StacItemInput(InputBase):
     stac_item: Dict[str, Any]
 
 
-class AppConfig(TypedDict):
-    cognito_domain: str
-    client_id: str
-    client_secret: str
-    scope: str
+class Secret(TypedDict):
+    userinfo_url: str
+    id: str
+    secret: str
+    auth_url: str
+    token_url: str
 
 
 class Creds(TypedDict):
     access_token: str
     expires_in: int
     token_type: str
-
+    scope: str
 
 @dataclass
 class IngestionApi:
@@ -46,30 +47,31 @@ class IngestionApi:
 
     @classmethod
     def from_veda_auth_secret(cls, *, secret_id: str, base_url: str) -> "IngestionApi":
-        cognito_details = cls._get_cognito_service_details(secret_id)
-        credentials = cls._get_app_credentials(**cognito_details)
+        secret_details = cls._get_auth_service_details(secret_id)
+        credentials = cls._get_app_credentials(**secret_details)
         return cls(token=credentials["access_token"], base_url=base_url)
 
     @staticmethod
-    def _get_cognito_service_details(secret_id: str) -> AppConfig:
+    def _get_auth_service_details(secret_id: str) -> Secret:
         client = boto3.client("secretsmanager")
         response = client.get_secret_value(SecretId=secret_id)
         return json.loads(response["SecretString"])
 
     @staticmethod
     def _get_app_credentials(
-        cognito_domain: str, client_id: str, client_secret: str, scope: str, **kwargs
+        userinfo_url: str, id: str, secret: str, auth_url: str, token_url: str, **kwargs
     ) -> Creds:
         response = requests.post(
-            f"{cognito_domain}/oauth2/token",
+            token_url,
             headers={
                 "Content-Type": "application/x-www-form-urlencoded",
+                "Accept": "application/json"
             },
-            auth=(client_id, client_secret),
             data={
+                "client_id": id,
+                "client_secret": secret,
                 "grant_type": "client_credentials",
-                # A space-separated list of scopes to request for the generated access token.
-                "scope": scope,
+                "scope": "stac:item:create stac:item:update stac:collection:create stac:collection:update"
             },
         )
         try:
@@ -100,7 +102,7 @@ class IngestionApi:
 def submission_handler(
     event: Union[S3LinkInput, StacItemInput, Dict[str, Any]],
     endpoint: str = "/ingestions",
-    cognito_app_secret=None,
+    app_secret=None,
     stac_ingestor_api_url=None,
     context=None,
 ) -> None | dict:
@@ -114,11 +116,8 @@ def submission_handler(
         print(json.dumps(stac_item, indent=2))
         return
 
-    cognito_app_secret = cognito_app_secret or os.getenv("COGNITO_APP_SECRET")
-    stac_ingestor_api_url = stac_ingestor_api_url or os.getenv("STAC_INGESTOR_API_URL")
-
     ingestor = IngestionApi.from_veda_auth_secret(
-        secret_id=cognito_app_secret,
+        secret_id=app_secret,
         base_url=stac_ingestor_api_url,
     )
     return ingestor.submit(event=stac_item, endpoint=endpoint)

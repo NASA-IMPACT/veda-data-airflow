@@ -93,10 +93,10 @@ def generate_dags():
         # veda_pyarc2stac_ingest
         scheduled_pyarcstac_configs = filter_configs_by_dag(collection_configs, "veda_pyarc2stac_ingest")
         
-        for idx, vector_config in enumerate(scheduled_pyarcstac_configs):
-            id = f"pyarc2stac-{vector_config['id']}"
+        for idx, pyarc2stac_config in enumerate(scheduled_pyarcstac_configs):
+            id = f"pyarc2stac-{pyarc2stac_config['id']}"
             get_ingest_pyarc2stac_dag(
-                id=id, event=vector_config
+                id=id, event=pyarc2stac_config
             )
 
 generate_dags()

@@ -11,58 +11,42 @@ from veda_data_pipeline.veda_vector_pipeline import get_ingest_vector_dag
 from veda_data_pipeline.veda_pyarc2stac_pipeline import get_ingest_pyarc2stac_dag
 
 def schedule_dags_by_config(
-        dag_builders: Dict[str, callable],
-        dag_name_mapping: Dict[str, callable],
+        dag_configs: Dict[str, tuple],
         collection_configs: List[Dict[str, int]],
         file_name: str 
-    ) -> List[Dict[str, int]]:
+    ) -> None:
     """
     Schedule Airflow DAGs for each collection config that includes a `schedule`.
 
-    For every config dict in `collection_configs` with a non-None `"schedule"`:
-    1. Look up its DAG key (`"dag"`, defaulting to `"veda_discover"`).
-    2. Build a unique `task_id` by combining the prefix from `dag_name_mapping`
-       with `file_name`
-    3. Invoke the corresponding builder function from `dag_builders` with:
-          builder(id=task_id, event=config)
-
     Args:
-        dag_builders (Dict[str, callable]):
-            Maps each DAG key (e.g. "veda_discover") to its factory function
-            (e.g. `get_discover_dag`). Each factory accepts `id` and `event`.
-        dag_name_mapping (Dict[str, str]):
-            Maps the same DAG keys to short ID prefixes 
-            (e.g. "discover", "vector", "pyarc2stac").
-        collection_configs (List[Dict[str, int]]):
-            List of configuration dicts loaded from JSON. Each may include:
-              - `"dag"`: which DAG to use
-              - `"schedule"`: cron or schedule specifier (must be present to schedule)
-              - other fields passed through as `event`
-        file_name (str):
-            Base name (JSON filename stem) used when generating each `task_id`.
+        dag_configs: mapping of dag_key -> (builder_fn, id_prefix)
+        collection_configs: list of config dicts, each may include:
+            - "dag": which key to use from dag_configs (defaults to "veda_discover")
+            - "schedule": cron or schedule specifier (must be present to schedule)
+            - "id": a unique identifier for the config (used by pyarc2stac)
+            - other fields passed through as `event`
+        file_name: filename stem used when generating each non-pyarc2stac task_id
 
-    Output:
-        DAG for each collection config that includes a `schedule`.
-
+    Outputs:
+        DAGs based on the provided collection configurations. Operates on each entry in the .json file.
     """
-    
-    for idx,collection in enumerate(collection_configs):
-        if collection.get("schedule", None):
+    for idx, collection in enumerate(collection_configs):
+        if not collection.get("schedule"):
+            continue
 
-            function_to_call = collection.get("dag", "veda_discover") #To align with previous code (which required veda_discover as default)
-            id = f"{dag_name_mapping[function_to_call]}-{file_name}"
+        dag_key = collection.get("dag", "veda_discover")
+        builder, prefix = dag_configs[dag_key]
 
-            is_pyarc = dag_name_mapping[function_to_call] == "pyarc2stac" 
-            #Name pyarc2stac DAGs with the collection ID instead of the file name to assist with interpretibility in the Airflow UI
-            id = (
-                f"{dag_name_mapping[function_to_call]}-{collection['id']}"
-                if is_pyarc
-                else (f"{id}-{idx}" if idx > 0 else id)
-            )
+        # base ID: <prefix>-<file_name> or <prefix>-<collection['id']> for pyarc2stac
+        if prefix == "pyarc2stac":
+            task_id = f"{prefix}-{collection['id']}"
+        else:
+            task_id = f"{prefix}-{file_name}"
+            if idx > 0:
+                task_id = f"{task_id}-{idx}"
 
-            dag_builders[function_to_call](
-                id=id, event=collection
-            )
+        builder(id=task_id, event=collection)
+
 
 
 def generate_dags():
@@ -76,19 +60,13 @@ def generate_dags():
     airflow_vars_json = json.loads(airflow_vars)
     bucket = airflow_vars_json.get("EVENT_BUCKET")
 
-    dag_builders = {
-        # Mapping of DAG keys to their builder functions
-        "veda_discover":          get_discover_dag,
-        "veda_ingest_vector":     get_ingest_vector_dag,
-        "veda_pyarc2stac_ingest": get_ingest_pyarc2stac_dag,
+    # Define the mapping of DAG builders to their respective keys and prefixes
+    dag_configs = {
+        "veda_discover":          (get_discover_dag,      "discover"),
+        "veda_ingest_vector":     (get_ingest_vector_dag, "vector"),
+        "veda_pyarc2stac_ingest": (get_ingest_pyarc2stac_dag, "pyarc2stac"),
     }
 
-    dag_name_mapping = {
-        # ID name mapping during DAG creation
-        "veda_discover":          "discover",
-        "veda_ingest_vector":     "vector",
-        "veda_pyarc2stac_ingest": "pyarc2stac",
-    }
 
     try:
         client = boto3.client("s3")
@@ -116,8 +94,7 @@ def generate_dags():
         # Allow the file content to be either one config or a list of configs
         collection_configs = [collection_configs] if type(collection_configs) is dict else collection_configs
 
-        schedule_dags_by_config(dag_builders, 
-                                dag_name_mapping, 
+        schedule_dags_by_config(dag_configs, 
                                 collection_configs, 
                                 file_name
                                 )

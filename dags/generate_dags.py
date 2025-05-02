@@ -8,6 +8,7 @@ from typing import Dict, List, Optional
 
 from veda_data_pipeline.veda_discover_pipeline import get_discover_dag
 from veda_data_pipeline.veda_vector_pipeline import get_ingest_vector_dag
+from veda_data_pipeline.veda_pyarc2stac_pipeline import get_ingest_pyarc2stac_dag
 
 def filter_configs_by_dag(
         collection_configs: List[Dict[str, int]], 
@@ -86,6 +87,15 @@ def generate_dags():
             if idx > 0:
                 id = f"{id}-{idx}"
             get_ingest_vector_dag(
+                id=id, event=vector_config
+            )
+
+        # veda_pyarc2stac_ingest
+        scheduled_pyarcstac_configs = filter_configs_by_dag(collection_configs, "veda_pyarc2stac_ingest")
+        
+        for idx, vector_config in enumerate(scheduled_pyarcstac_configs):
+            id = f"pyarc2stac-{vector_config['id']}"
+            get_ingest_pyarc2stac_dag(
                 id=id, event=vector_config
             )
 

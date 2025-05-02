@@ -60,7 +60,11 @@ def generate_dags():
     airflow_vars_json = json.loads(airflow_vars)
     bucket = airflow_vars_json.get("EVENT_BUCKET")
 
-    # Define the mapping of DAG builders to their respective keys and prefixes
+    '''Define the mapping of DAG builders to their respective keys and prefixes
+    The key values (e.g., veda_discover) are located in the AWS S3 bucket under the collections/ folder in the .json file.
+    The mapping functions are located in the veda_data_pipeline package (tuple index 0).
+    The naming ID (e.g., discover, vector, pyarc2stac) is used to generate the task_id for each DAG (tuple index 1).
+    '''
     dag_configs = {
         "veda_discover":          (get_discover_dag,      "discover"),
         "veda_ingest_vector":     (get_ingest_vector_dag, "vector"),

@@ -37,15 +37,15 @@ def schedule_dags_by_config(
         dag_key = collection.get("dag", "veda_discover")
         builder, prefix = dag_configs[dag_key]
 
-        # base ID: <prefix>-<file_name> or <prefix>-<collection['id']> for pyarc2stac
+        # Rename the task_id if the collection has an "id" field
         if prefix == "pyarc2stac":
-            task_id = f"{prefix}-{collection['id']}"
+            id = f"{prefix}-{collection['id']}"
         else:
-            task_id = f"{prefix}-{file_name}"
+            id = f"{prefix}-{file_name}"
             if idx > 0:
-                task_id = f"{task_id}-{idx}"
+                id = f"{id}-{idx}"
 
-        builder(id=task_id, event=collection)
+        builder(id=id, event=collection)
 
 
 
@@ -61,10 +61,11 @@ def generate_dags():
     bucket = airflow_vars_json.get("EVENT_BUCKET")
 
     '''Define the mapping of DAG builders to their respective keys and prefixes
-    The key values (e.g., veda_discover) are located in the AWS S3 bucket under the collections/ folder in the .json file.
-    The mapping functions are located in the veda_data_pipeline package (tuple index 0).
-    The naming ID (e.g., discover, vector, pyarc2stac) is used to generate the task_id for each DAG (tuple index 1).
+    The key values (e.g., veda_discover) are located as a key value pair in the AWS S3 bucket under the collections/ folder in the .json file.
+    The mapping functions are located in the veda_data_pipeline directory (tuple index 0).
+    The naming ID (e.g., discover, vector, pyarc2stac) is used to generate an id name for each DAG (tuple index 1).
     '''
+
     dag_configs = {
         "veda_discover":          (get_discover_dag,      "discover"),
         "veda_ingest_vector":     (get_ingest_vector_dag, "vector"),

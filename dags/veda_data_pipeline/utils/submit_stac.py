@@ -58,7 +58,7 @@ class IngestionApi:
 
     @staticmethod
     def _get_app_credentials(
-        cognito_domain: str, client_id: str, client_secret: str, scope: str, **kwargs
+            cognito_domain: str, client_id: str, client_secret: str, scope: str, **kwargs
     ) -> Creds:
         response = requests.post(
             f"{cognito_domain}/oauth2/token",
@@ -94,19 +94,16 @@ class IngestionApi:
         except Exception as e:
             print(response.text)
             raise e
-        return
+        return response.json()
 
 
 def submission_handler(
-    event: Union[S3LinkInput, StacItemInput, Dict[str, Any]],
-    endpoint: str = "/ingestions",
-    cognito_app_secret=None,
-    stac_ingestor_api_url=None,
-    context=None,
+        event: Union[S3LinkInput, StacItemInput, Dict[str, Any]],
+        endpoint: str = "/ingestions",
+        cognito_app_secret=None,
+        stac_ingestor_api_url=None,
+        context=None,  # Needed for lambda
 ) -> None | dict:
-    if context is None:
-        context = {}
-
     stac_item = event
 
     if stac_item.get("dry_run"):

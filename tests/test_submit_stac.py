@@ -1,4 +1,4 @@
-from dags.veda_data_pipeline.utils import submit_stac
+from veda_data_pipeline.utils import submit_stac
 
 import os
 import boto3
@@ -48,12 +48,13 @@ def test_submission_handler_dry_run(create_secret, capsys, **kwargs):
 def test_submission_handler(create_secret, capsys, **kwargs):
   token_endpoint = kwargs["mock"].post("http://test.com/oauth2/token", json={"token_type": "bearer", "access_token": "token"})
   ingestions_endpoint = kwargs["mock"].post("http://www.test.com/ingestions", json={"id": "123", "status": "success", "message": "STAC item ingested successfully"})
-  fake_event = {
+
+  fake_event_no_dry_run = {
     "stac_file_url": "http://www.test.com",
     "stac_item": 123
   }
 
-  res = submit_stac.submission_handler(fake_event)
+  res = submit_stac.submission_handler(fake_event_no_dry_run)
 
   assert res == {"id": "123", "status": "success", "message": "STAC item ingested successfully"}
   captured = capsys.readouterr()

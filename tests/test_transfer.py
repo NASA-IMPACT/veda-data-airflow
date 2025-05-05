@@ -1,4 +1,4 @@
-from dags.veda_data_pipeline.utils import transfer
+from veda_data_pipeline.utils import transfer
 
 import pytest
 import os

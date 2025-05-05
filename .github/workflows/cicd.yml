@@ -49,7 +49,7 @@ jobs:
           pytest
   define-environment:
     name: Set ✨ environment ✨
-    needs: gitflow-enforcer
+    needs: [gitflow-enforcer, test-dags]
     runs-on: ubuntu-latest
     steps:
       - name: Set the environment based on the branch

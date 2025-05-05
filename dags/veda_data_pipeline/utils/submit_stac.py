@@ -102,7 +102,7 @@ class IngestionApi:
 def submission_handler(
         event: Union[S3LinkInput, StacItemInput, Dict[str, Any]],
         endpoint: str = "/ingestions",
-        cognito_app_secret=None,
+        app_secret=None,
         stac_ingestor_api_url=None,
         context=None,  # Needed for lambda
 

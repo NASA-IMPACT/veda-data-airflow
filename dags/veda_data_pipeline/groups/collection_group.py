@@ -37,13 +37,13 @@ def ingest_collection_task(ti=None, collection=None):
         collection = ti.xcom_pull(task_ids='Collection.generate_collection')
     airflow_vars = Variable.get("aws_dags_variables")
     airflow_vars_json = json.loads(airflow_vars)
-    cognito_app_secret = airflow_vars_json.get("COGNITO_APP_SECRET")
+    app_secret = airflow_vars_json.get("INGEST_API_KEYCLOAK_APP_SECRET")
     stac_ingestor_api_url = airflow_vars_json.get("STAC_INGESTOR_API_URL")
 
     return submission_handler(
         event=collection,
         endpoint="/collections",
-        cognito_app_secret=cognito_app_secret,
+        app_secret=app_secret,
         stac_ingestor_api_url=stac_ingestor_api_url
     )
 

@@ -35,7 +35,7 @@ def ingest_collection_task(ti=None, collection=None):
     import json
     if not collection:
         collection = ti.xcom_pull(task_ids='Collection.generate_collection')
-    airflow_vars = Variable.get("aws_dags_variables")
+    airflow_vars_json = Variable.get("aws_dags_variables", deserialize_json=True)
     airflow_vars_json = json.loads(airflow_vars)
     app_secret = airflow_vars_json.get("INGEST_API_KEYCLOAK_APP_SECRET")
     stac_ingestor_api_url = airflow_vars_json.get("STAC_INGESTOR_API_URL")

@@ -31,7 +31,6 @@ test = [
     "mypy_boto3_s3",
     "rasterio",
     "rio_stac",
-    "airflow-multi-dagrun"
 ]
 airflow-worker = [
     "apache-airflow-providers-amazon",
@@ -66,7 +65,8 @@ airflow-worker = [
     "rioxarray",
     "apache-airflow-providers-slack",
     "apache-airflow-providers-slack[http]",
-    "stactools"
+    "stactools",
+    "stactools-noaa-hrrr"
 ]
 airflow-service = [
     "apache-airflow-providers-amazon",

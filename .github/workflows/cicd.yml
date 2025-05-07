@@ -35,9 +35,11 @@ jobs:
 
       - uses: astral-sh/setup-uv@v5
         name: Setup uv
+        with:
+          python-version: 3.11
       
       - name: Run uv sync
-        run: uv sync 
+        run: uv sync --all-groups
 
       - name: Test Airflow DAGs
         run: |

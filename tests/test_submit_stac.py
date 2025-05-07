@@ -26,7 +26,7 @@ def aws(aws_credentials):
 
 @pytest.fixture
 def create_secret(aws):
-    boto3.client("secretsmanager", region_name="us-west-2").create_secret(Name="app_secret", SecretString="{\"cognito_domain\": \"http://test.com\", \"client_id\": \"test_id\" , \"client_secret\": \"test_secret\", \"scope\": \"test_scope\"}")
+    boto3.client("secretsmanager", region_name="us-west-2").create_secret(Name="app_secret", SecretString="{\"userinfo_url\":\"https://keycloak.realm.url/openid-connect/userinfo\",\"id\":\"airflow-ingest-api-etl\",\"auth_url\":\"https://keycloak.url/veda/protocol/openid-connect/auth\",\"secret\":\"secret\",\"token_url\":\"https://keycloak.realms/veda/protocol/openid-connect/token\"")
 
 @requests_mock.Mocker(kw="mock")
 def test_submission_handler_dry_run(create_secret, capsys, **kwargs):

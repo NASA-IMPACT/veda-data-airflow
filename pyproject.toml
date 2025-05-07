@@ -30,7 +30,8 @@ test = [
     "stac_pydantic",
     "mypy_boto3_s3",
     "rasterio",
-    "rio_stac"
+    "rio_stac",
+    "airflow-multi-dagrun"
 ]
 airflow-worker = [
     "apache-airflow-providers-amazon",

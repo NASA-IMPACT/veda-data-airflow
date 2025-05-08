@@ -20,13 +20,13 @@ def schedule_dags_by_config(
     Schedule Airflow DAGs for each collection config that includes a `schedule`.
 
     Args:
-        dag_configs: mapping of dag_key -> (builder_fn, id_prefix)
+        dag_configs: mapping of dag_key to the builder_fn
         collection_configs: list of config dicts, each may include:
             - "dag": which key to use from dag_configs (defaults to "veda_discover")
             - "schedule": cron or schedule specifier (must be present to schedule)
-            - "id": a unique identifier for the config (used by pyarc2stac)
-            - other fields passed through as `event`
-        file_name: filename stem used when generating each non-pyarc2stac task_id
+            - "collection": a unique identifier for the config which is the collection id
+            - other fields passed through as `event` in the AWS .json file
+        file_name: filename stem (retrived from the AWS bucket))
 
     Outputs:
         DAGs based on the provided collection configurations. Operates on each entry in the .json file.

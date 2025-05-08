@@ -102,19 +102,10 @@ def read_url_pyarc2stac_callable(event: dict, template_conf: dict) -> dict:
     reader = ArcReader(server_url=url)
     collection = reader.generate_stac().to_dict()
 
-    # Default from the AWS .json file. If the value is an empty string, it will default to the pyarc2stac generated value.
-    keys_to_overwrite = ["id", "title", "description", "license",]
-    for key in keys_to_overwrite:
-        event_value = event.get(key)
-        if isinstance(event_value, str) and event_value.strip():
-            collection[key] = event_value
-
-
-    # Overwrite collection values with template configuration values. This will only overwrite if the value is a non-empty string within the template_conf file.
-    for key, value in template_conf.items():
-        if isinstance(value, str) and value.strip():
-            collection[key] = value
-
+    # Overwrite keys based on order of precedence. User config in manual triggering is first in template_dag_run_conf, followed by
+    # values placed within the veda-tf-state-shared S3 bucket, and the last option is pyarc2stac generated values.
+    for key in collection.keys():
+        collection[key] = (template_dag_run_conf.get(key) or event.get(key) or collection[key])
 
     return collection
 

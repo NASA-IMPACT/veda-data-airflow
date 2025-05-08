@@ -16,7 +16,7 @@ dag_doc_md = """
 This DAG is supposed to be triggered by `veda_discover`. But you still can trigger this DAG manually or through an API
 
 #### Notes
-- This DAG can run with a configuration similar to this <br>
+- This DAG can run with a configuration similar to: <br>
 ```json
 {
     "url": "https://maps.disasters.nasa.gov/ags03/rest/services/NRT/lis_ak_green_veg_fraction/ImageServer",
@@ -75,13 +75,13 @@ def read_url_pyarc2stac_callable(event: dict, template_conf: dict) -> dict:
     Returns
     -------
     dict
-        A STAC collection represented as a dictionary, with keys from `template_dag_run_conf`
+        A STAC collection represented as a dictionary, with keys from `template_conf`
         merged in where values are non-empty.
 
     Raises
     ------
     ValueError
-        If no URL is provided in either `event` or `template_dag_run_conf`, a ValueError
+        If no URL is provided in either `event` or `template_conf`, a ValueError
         is raised indicating that the URL is required.
 
     Example
@@ -95,14 +95,14 @@ def read_url_pyarc2stac_callable(event: dict, template_conf: dict) -> dict:
     url = event.get("url") or template_conf.get("url")
     if not url:
         raise ValueError(
-            "URL is required but not provided in the event or template_dag_run_conf."
+            "URL is required but not provided in the event or template_conf."
         )
 
     # Retrieve data from the ArcGIS server URL
     reader = ArcReader(server_url=url)
     collection = reader.generate_stac().to_dict()
 
-    # Overwrite keys based on order of precedence. User config in manual triggering is first in template_dag_run_conf, followed by
+    # Overwrite keys based on order of precedence. User config in manual triggering is first in template_conf, followed by
     # values placed within the veda-tf-state-shared S3 bucket, and the last option is pyarc2stac generated values.
     for key in collection.keys():
         collection[key] = (template_conf.get(key) or event.get(key) or collection[key])

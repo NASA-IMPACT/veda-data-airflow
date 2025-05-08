@@ -24,11 +24,6 @@ def discover_from_s3_task(event: dict={}, ti=None, payload: dict={}, prev_start_
         **event,
         **payload,
     }
-    # If the DAG is triggered by a schedule add the configuration to DAG run
-    if not ti.dag_run.conf:
-        ti.dag_run.conf = config
-
-    # TODO test that this context var is available in taskflow
     if event.get("schedule") and prev_start_date_success:
         config["last_successful_execution"] = prev_start_date_success.isoformat()
     # (event, chunk_size=2800, role_arn=None, bucket_output=None):

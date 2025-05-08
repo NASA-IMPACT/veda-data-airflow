@@ -2,8 +2,6 @@
 
 ## 1. Introduction
 
-* **Purpose**
-
 This is a evolving document that outlines the governance structure, development workflow, and best practices for the SM2A project. It serves as a guide for contributors to understand how to effectively participate in the project.
 
 ## 2. Code Ownership
@@ -50,7 +48,8 @@ This is a evolving document that outlines the governance structure, development 
 
 ## 4.2 Integration Testing
 
-TODO
+* DAGs are automatically tested for structural correctness and import validity.
+* The `dev` or `sit` environments should be used for manual integration tests against the dev environment from `veda-backend`
 
 ## 5. Environments & Deployment
 
@@ -73,7 +72,7 @@ TODO
 
 * Updates to secrets should be made in AWS secrets manager, which will automatically update environment for subsequent deployments.
 
-### 6 Architecture Decision Records
+## 6 Architecture Decision Records
 
 * Architecture decisions are documented in the veda-architecture [repository](https://github.com/NASA-IMPACT/veda-architecture).
 

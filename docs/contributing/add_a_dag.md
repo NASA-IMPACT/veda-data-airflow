@@ -33,6 +33,7 @@ def example_dag():
     foo >> bar
 ```
 
+Additionally, we prefer to use bitshift operators (`>>`) to define task dependencies where there are no parameterized dependencies. This is to maintain readability and consistency across DAGs.
 
 ## Naming Conventions
 

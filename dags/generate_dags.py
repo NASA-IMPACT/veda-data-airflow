@@ -10,6 +10,7 @@ from veda_data_pipeline.veda_discover_pipeline import get_discover_dag
 from veda_data_pipeline.veda_vector_pipeline import get_ingest_vector_dag
 from veda_data_pipeline.veda_pyarc2stac_pipeline import get_ingest_pyarc2stac_dag
 
+
 def schedule_dags_by_config(
         dag_configs: Dict[str, tuple],
         collection_configs: List[Dict[str, int]],
@@ -30,22 +31,18 @@ def schedule_dags_by_config(
     Outputs:
         DAGs based on the provided collection configurations. Operates on each entry in the .json file.
     """
+
     for idx, collection in enumerate(collection_configs):
         if not collection.get("schedule"):
             continue
+        
+        # Retrieves the function name from dag_configs
+        dag_builder= dag_configs[collection.get("dag", "veda_discover")]
 
-        dag_key = collection.get("dag", "veda_discover")
-        builder, prefix = dag_configs[dag_key]
+        name = (dag_builder.__name__).split('_')[-2]
+        id = f"{name}-{collection['collection']}"
 
-        # Rename the task_id if the collection has an "id" field
-        if prefix == "pyarc2stac":
-            id = f"{prefix}-{collection['id']}"
-        else:
-            id = f"{prefix}-{file_name}"
-            if idx > 0:
-                id = f"{id}-{idx}"
-
-        builder(id=id, event=collection)
+        dag_builder(id=id, event=collection)
 
 
 
@@ -62,14 +59,14 @@ def generate_dags():
 
     '''Define the mapping of DAG builders to their respective keys and prefixes
     The key values (e.g., veda_discover) are located as a key value pair in the AWS S3 bucket under the collections/ folder in the .json file.
-    The mapping functions are located in the veda_data_pipeline directory (tuple index 0).
-    The naming ID (e.g., discover, vector, pyarc2stac) is used to generate an id name for each DAG (tuple index 1).
+    The mapping functions are located in the /veda_data_pipeline 
+    The naming ID (e.g., discover, vector, pyarc2stac) is taken from the key value in dag_configs
     '''
 
     dag_configs = {
-        "veda_discover":          (get_discover_dag,      "discover"),
-        "veda_ingest_vector":     (get_ingest_vector_dag, "vector"),
-        "veda_pyarc2stac_ingest": (get_ingest_pyarc2stac_dag, "pyarc2stac"),
+        "veda_discover":          get_discover_dag,
+        "veda_ingest_vector":     get_ingest_vector_dag,
+        "veda_pyarc2stac_ingest": get_ingest_pyarc2stac_dag,
     }
 
 

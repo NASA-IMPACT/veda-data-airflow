@@ -8,25 +8,46 @@ from typing import Dict, List, Optional
 
 from veda_data_pipeline.veda_discover_pipeline import get_discover_dag
 from veda_data_pipeline.veda_vector_pipeline import get_ingest_vector_dag
+from veda_data_pipeline.veda_pyarc2stac_pipeline import get_ingest_pyarc2stac_dag
 
-def filter_configs_by_dag(
-        collection_configs: List[Dict[str, int]], 
-        dag: Optional[str] = "veda_discover"
-    ) -> List[Dict[str, int]]:
+def schedule_dags_by_config(
+        dag_configs: Dict[str, tuple],
+        collection_configs: List[Dict[str, int]],
+        file_name: str 
+    ) -> None:
     """
+    Schedule Airflow DAGs for each collection config that includes a `schedule`.
+
     Args:
-        collection_configs: The list of configs to filter
-        dag: The DAG name to filter for (default is veda_discover).
+        dag_configs: mapping of dag_key -> (builder_fn, id_prefix)
+        collection_configs: list of config dicts, each may include:
+            - "dag": which key to use from dag_configs (defaults to "veda_discover")
+            - "schedule": cron or schedule specifier (must be present to schedule)
+            - "id": a unique identifier for the config (used by pyarc2stac)
+            - other fields passed through as `event`
+        file_name: filename stem used when generating each non-pyarc2stac task_id
 
-    Returns:
-        A new list containing only the collection configs that match the filter criteria.
+    Outputs:
+        DAGs based on the provided collection configurations. Operates on each entry in the .json file.
     """
-    
-    filtered_configs = []
-    for c in collection_configs:
-        if c.get("schedule", None) and c.get("dag", "veda_discover") == dag:
-            filtered_configs.append(c)
-    return filtered_configs
+    for idx, collection in enumerate(collection_configs):
+        if not collection.get("schedule"):
+            continue
+
+        dag_key = collection.get("dag", "veda_discover")
+        builder, prefix = dag_configs[dag_key]
+
+        # Rename the task_id if the collection has an "id" field
+        if prefix == "pyarc2stac":
+            id = f"{prefix}-{collection['id']}"
+        else:
+            id = f"{prefix}-{file_name}"
+            if idx > 0:
+                id = f"{id}-{idx}"
+
+        builder(id=id, event=collection)
+
+
 
 def generate_dags():
     import boto3
@@ -38,6 +59,19 @@ def generate_dags():
     airflow_vars = Variable.get("aws_dags_variables")
     airflow_vars_json = json.loads(airflow_vars)
     bucket = airflow_vars_json.get("EVENT_BUCKET")
+
+    '''Define the mapping of DAG builders to their respective keys and prefixes
+    The key values (e.g., veda_discover) are located as a key value pair in the AWS S3 bucket under the collections/ folder in the .json file.
+    The mapping functions are located in the veda_data_pipeline directory (tuple index 0).
+    The naming ID (e.g., discover, vector, pyarc2stac) is used to generate an id name for each DAG (tuple index 1).
+    '''
+
+    dag_configs = {
+        "veda_discover":          (get_discover_dag,      "discover"),
+        "veda_ingest_vector":     (get_ingest_vector_dag, "vector"),
+        "veda_pyarc2stac_ingest": (get_ingest_pyarc2stac_dag, "pyarc2stac"),
+    }
+
 
     try:
         client = boto3.client("s3")
@@ -63,30 +97,12 @@ def generate_dags():
         collection_configs = json.loads(collection_configs)
 
         # Allow the file content to be either one config or a list of configs
-        if type(collection_configs) is dict:
-            collection_configs = [collection_configs]
+        collection_configs = [collection_configs] if type(collection_configs) is dict else collection_configs
 
-        # Filter and handle collection configs by DAG
+        schedule_dags_by_config(dag_configs, 
+                                collection_configs, 
+                                file_name
+                                )
 
-        # veda_discover
-        scheduled_discovery_configs = filter_configs_by_dag(collection_configs, "veda_discover")
-        for idx, discovery_config in enumerate(scheduled_discovery_configs):
-            id = f"discover-{file_name}"
-            if idx > 0:
-                id = f"{id}-{idx}"
-            get_discover_dag(
-                id=id, event=discovery_config
-            )
-
-        # veda_vector_ingest
-        scheduled_vector_configs = filter_configs_by_dag(collection_configs, "veda_ingest_vector")
-
-        for idx, vector_config in enumerate(scheduled_vector_configs):
-            id = f"vector-{file_name}"
-            if idx > 0:
-                id = f"{id}-{idx}"
-            get_ingest_vector_dag(
-                id=id, event=vector_config
-            )
 
 generate_dags()

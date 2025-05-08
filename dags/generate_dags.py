@@ -35,11 +35,11 @@ def schedule_dags_by_config(
     for idx, collection in enumerate(collection_configs):
         if not collection.get("schedule"):
             continue
-
+        
+        # Retrieves the function name from dag_configs
         dag_builder= dag_configs[collection.get("dag", "veda_discover")]
 
         name = (dag_builder.__name__).split('_')[-2]
-
         id = f"{name}-{collection['collection']}"
 
         dag_builder(id=id, event=collection)

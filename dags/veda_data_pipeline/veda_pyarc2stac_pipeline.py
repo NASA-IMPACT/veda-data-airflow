@@ -16,38 +16,38 @@ dag_doc_md = """
 This DAG is supposed to be triggered by `veda_discover`. But you still can trigger this DAG manually or through an API
 
 #### Notes
-- This DAG can run with the following configuration <br>
+- This DAG can run with a configuration similar to this <br>
 ```json
 {
     "url": "https://maps.disasters.nasa.gov/ags03/rest/services/NRT/lis_ak_green_veg_fraction/ImageServer",
     "stac_id": "nrt_lis_ak_green_veg_fraction",
-    "title": "collection-title",
+    "title": "NRT LIS Alaska Green Vegetation Fraction",
     "stac_version": "1.0.0",
-    "description": "collection description",
+    "description": "Insert description here",
     "data_type": "",
-    "is_periodic": true,
-    "license": "collection-LICENSE",
-    "time_density": "day",
+    "license": "CC1.0 Universal", 
+    "dashboard:is_periodic": true,
+    "dashboard:time_density": "day",
 
 """
 
 
-template_dag_run_conf = {
+template_conf = {
     "url": "",
     "id": "",
     "title": "",
     "stac_version": "",
     "description": "",
     "data_type": "",
-    "is_periodic": "",
     "license": "",
-    "time_density": ""
+    "dashboard:is_periodic": "",
+    "dashboard:time_density": ""
 }
 
 
 dag_args = {
     "start_date": pendulum.today("UTC").add(days=-1),
-    "catchup": True,
+    "catchup": False,
     "doc_md": dag_doc_md,
 }
 
@@ -105,7 +105,7 @@ def read_url_pyarc2stac_callable(event: dict, template_conf: dict) -> dict:
     # Overwrite keys based on order of precedence. User config in manual triggering is first in template_dag_run_conf, followed by
     # values placed within the veda-tf-state-shared S3 bucket, and the last option is pyarc2stac generated values.
     for key in collection.keys():
-        collection[key] = (template_dag_run_conf.get(key) or event.get(key) or collection[key])
+        collection[key] = (template_conf.get(key) or event.get(key) or collection[key])
 
     return collection
 
@@ -116,7 +116,7 @@ def get_ingest_pyarc2stac_dag(id: str, event: dict):
             id,
             schedule=event.get("schedule", None), # schedule can be None for manual triggering
             render_template_as_native_obj=True,   # required to use params in the DAG
-            params=template_dag_run_conf,
+            params=template_conf,
             **dag_args
     ) as dag:
         start = EmptyOperator(task_id="Start", dag=dag)

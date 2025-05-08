@@ -40,8 +40,8 @@ ENV PATH $PATH:/home/airflow/miniconda3/envs/py11/bin
 COPY --chown=airflow:airflow airflow_worker/requirements.txt "${AIRFLOW_HOME}/requirements.txt"
 COPY --chown=airflow:airflow airflow_worker/requirements-in.txt "${AIRFLOW_HOME}/requirements-in.txt"
 
-RUN pip install --upgrade pip \
-    && pip install virtualenv \
+RUN pip install --upgrade pip\
+    && pip install virtualenv\
     && pip install "apache-airflow[celery,amazon]==${AIRFLOW_VERSION}" -c "https://raw.githubusercontent.com/apache/airflow/constraints-${AIRFLOW_VERSION}/constraints-3.11.txt"\
     && pip install --no-cache-dir -r requirements.txt -c "https://raw.githubusercontent.com/apache/airflow/constraints-${AIRFLOW_VERSION}/constraints-3.11.txt"\
     && pip install --no-cache-dir -r requirements-in.txt apache-airflow==${AIRFLOW_VERSION}

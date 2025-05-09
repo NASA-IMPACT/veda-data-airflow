@@ -21,6 +21,8 @@ USER airflow
 RUN uv pip install --no-cache-dir -r requirements.txt -c "https://raw.githubusercontent.com/apache/airflow/constraints-${AIRFLOW_VERSION}/constraints-3.11.txt"\
   && uv pip install --no-cache-dir -r requirements-in.txt apache-airflow==${AIRFLOW_VERSION}
 
+ENV PATH=".venv/bin:$PATH"
+
 COPY --chown=airflow:airflow dags "${AIRFLOW_HOME}/dags"
 COPY --chown=airflow:airflow plugins "${AIRFLOW_HOME}/plugins"
 COPY --chown=airflow:airflow infrastructure/configuration "${AIRFLOW_HOME}/configuration"

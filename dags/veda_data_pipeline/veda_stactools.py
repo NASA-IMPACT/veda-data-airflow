@@ -22,6 +22,7 @@ dag_args = {
     "catchup": False,
     "doc_md": dag_doc_md,
     "is_paused_upon_creation": False,
+    "schedule_interval": None,
 }
 
 template_dag_run_conf = {

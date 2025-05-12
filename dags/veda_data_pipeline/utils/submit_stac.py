@@ -96,19 +96,17 @@ class IngestionApi:
         except Exception as e:
             print(response.text)
             raise e
-        return
+        return response.json()
 
 
 def submission_handler(
-    event: Union[S3LinkInput, StacItemInput, Dict[str, Any]],
-    endpoint: str = "/ingestions",
-    app_secret=None,
-    stac_ingestor_api_url=None,
-    context=None,
-) -> None | dict:
-    if context is None:
-        context = {}
+        event: Union[S3LinkInput, StacItemInput, Dict[str, Any]],
+        endpoint: str = "/ingestions",
+        app_secret=None,
+        stac_ingestor_api_url=None,
+        context=None,  # Needed for lambda
 
+) -> None | dict:
     stac_item = event
 
     if stac_item.get("dry_run"):

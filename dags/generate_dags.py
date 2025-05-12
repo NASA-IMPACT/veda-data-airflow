@@ -9,10 +9,13 @@ from typing import Dict, List, Optional
 from veda_data_pipeline.veda_discover_pipeline import get_discover_dag
 from veda_data_pipeline.veda_vector_pipeline import get_ingest_vector_dag
 
+from airflow.models import DagBag
+existing_dag_ids = set(DagBag().dags.keys())
+
 def filter_configs_by_dag(
-        collection_configs: List[Dict[str, int]], 
+        collection_configs: List[Dict[str, int]],
         dag: Optional[str] = "veda_discover"
-    ) -> List[Dict[str, int]]:
+) -> List[Dict[str, int]]:
     """
     Args:
         collection_configs: The list of configs to filter
@@ -21,12 +24,13 @@ def filter_configs_by_dag(
     Returns:
         A new list containing only the collection configs that match the filter criteria.
     """
-    
+
     filtered_configs = []
     for c in collection_configs:
         if c.get("schedule", None) and c.get("dag", "veda_discover") == dag:
             filtered_configs.append(c)
     return filtered_configs
+
 
 def generate_dags():
     import boto3
@@ -35,11 +39,9 @@ def generate_dags():
 
     from pathlib import Path
 
-    airflow_vars = Variable.get("aws_dags_variables")
-    airflow_vars_json = json.loads(airflow_vars)
-    bucket = airflow_vars_json.get("EVENT_BUCKET")
-
     try:
+        airflow_vars_json = Variable.get("aws_dags_variables", deserialize_json=True)
+        bucket = airflow_vars_json.get("EVENT_BUCKET")
         client = boto3.client("s3")
         response = client.list_objects_v2(Bucket=bucket, Prefix="collections/")
     except ClientError as e:
@@ -74,6 +76,9 @@ def generate_dags():
             id = f"discover-{file_name}"
             if idx > 0:
                 id = f"{id}-{idx}"
+            if id in existing_dag_ids:
+                print(f"Skipping duplicate DAG ID: {id}")
+                continue
             get_discover_dag(
                 id=id, event=discovery_config
             )
@@ -85,8 +90,12 @@ def generate_dags():
             id = f"vector-{file_name}"
             if idx > 0:
                 id = f"{id}-{idx}"
+            if id in existing_dag_ids:
+                print(f"Skipping duplicate DAG ID: {id}")
+                continue
             get_ingest_vector_dag(
                 id=id, event=vector_config
             )
+
 
 generate_dags()

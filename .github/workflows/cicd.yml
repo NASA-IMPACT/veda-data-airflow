@@ -25,10 +25,31 @@ jobs:
         run: |
           echo "ERROR: You can only merge to main from dev and to production from main"
           exit 1
+  test-dags:
+    name: Test Airflow DAGs 🧪
+    needs: gitflow-enforcer
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out Git repository
+        uses: actions/checkout@v2
 
+      - uses: astral-sh/setup-uv@v5
+        name: Setup uv
+        with:
+          python-version: 3.11
+      
+      - name: Run uv sync
+        run: uv sync --all-groups
+
+      - name: Test Airflow DAGs
+        run: |
+          export AIRFLOW_HOME=/tmp
+          uv run airflow db migrate
+          uv run pytest
+  
   define-environment:
     name: Set ✨ environment ✨
-    needs: gitflow-enforcer
+    needs: [gitflow-enforcer, test-dags]
     runs-on: ubuntu-latest
     steps:
       - name: Set the environment based on the branch

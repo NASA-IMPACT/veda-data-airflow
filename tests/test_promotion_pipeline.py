@@ -5,7 +5,7 @@ import pytest
 
 from moto import mock_aws
 from unittest.mock import Mock, patch
-from dags.veda_data_pipeline.veda_promotion_pipeline import transfer_assets_to_production_bucket
+from veda_data_pipeline.veda_promotion_pipeline import transfer_assets_to_production_bucket
 
 @pytest.fixture
 def mock_task_instance():

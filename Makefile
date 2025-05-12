@@ -42,14 +42,12 @@ sm2a-local-run: sm2a-local-stop
 sm2a-local-init:
 	docker compose run --rm airflow-cli db init
 	docker compose run --rm airflow-cli users create --email airflow@example.com --firstname airflow --lastname airflow --password airflow --username airflow --role Admin
-	rm -rf dags
 
 sm2a-local-stop:
 	docker compose down
 
 sm2a-local-build:
 	docker compose build
-	rm -rf dags
 
 sm2a-deploy:
 ifeq ($(GITHUB_ACTIONS_ENV),true)

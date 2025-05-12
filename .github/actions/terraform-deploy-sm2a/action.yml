@@ -31,7 +31,6 @@ runs:
       uses: astral-sh/setup-uv@v5
       with:
         python-version: "3.11"
-        cache: "pip"
   
     - name: Setup Terraform
       uses: hashicorp/setup-terraform@ed3a0531877aca392eb870f440d9ae7aba83a6bd #v1.4.0
@@ -54,6 +53,8 @@ runs:
         AWS_DEFAULT_REGION: ${{ inputs.aws-region }}
         AWS_REGION: ${{ inputs.aws-region }}
       run: |
+        # Activate uv venv
+        source ../.venv/bin/activate
         make sm2a-deploy ENV_FILE=${{ inputs.env-file }} SECRET_NAME=${{ inputs.env_aws_secret_name }}
 
     - name: Output workflows API endpoint

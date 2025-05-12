@@ -31,6 +31,7 @@ runs:
       uses: astral-sh/setup-uv@v5
       with:
         python-version: "3.11"
+        cache: "pip"
   
     - name: Setup Terraform
       uses: hashicorp/setup-terraform@ed3a0531877aca392eb870f440d9ae7aba83a6bd #v1.4.0

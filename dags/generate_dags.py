@@ -9,9 +9,6 @@ from typing import Dict, List, Optional
 from veda_data_pipeline.veda_discover_pipeline import get_discover_dag
 from veda_data_pipeline.veda_vector_pipeline import get_ingest_vector_dag
 
-from airflow.models import DagBag
-existing_dag_ids = DagBag().dag_ids
-
 def filter_configs_by_dag(
         collection_configs: List[Dict[str, int]],
         dag: Optional[str] = "veda_discover"
@@ -76,9 +73,6 @@ def generate_dags():
             id = f"discover-{file_name}"
             if idx > 0:
                 id = f"{id}-{idx}"
-            if id in existing_dag_ids:
-                print(f"Skipping duplicate DAG ID: {id}")
-                continue
             get_discover_dag(
                 id=id, event=discovery_config
             )
@@ -90,9 +84,6 @@ def generate_dags():
             id = f"vector-{file_name}"
             if idx > 0:
                 id = f"{id}-{idx}"
-            if id in existing_dag_ids:
-                print(f"Skipping duplicate DAG ID: {id}")
-                continue
             get_ingest_vector_dag(
                 id=id, event=vector_config
             )

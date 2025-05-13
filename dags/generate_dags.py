@@ -10,7 +10,7 @@ from veda_data_pipeline.veda_discover_pipeline import get_discover_dag
 from veda_data_pipeline.veda_vector_pipeline import get_ingest_vector_dag
 
 from airflow.models import DagBag
-existing_dag_ids = set(DagBag().dags.keys())
+existing_dag_ids = DagBag().dag_ids
 
 def filter_configs_by_dag(
         collection_configs: List[Dict[str, int]],

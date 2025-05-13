@@ -88,5 +88,6 @@ def generate_dags():
                 id=id, event=vector_config
             )
 
-
 generate_dags()
+get_ingest_vector_dag(id="veda_ingest_vector", event={})
+get_discover_dag(id="veda_discover", event={})

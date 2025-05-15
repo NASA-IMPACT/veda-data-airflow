@@ -46,7 +46,7 @@ def example_dag():
 - `util_` - for utility files that can be shared across multiple DAGs (e.g. `util_s3file_check_`) 
 
 ### Tags
-- `Operations` - DAGs that are used for operational purposed, not for ingesting new data (fr example, scheduling and restoring backups)
+- `Operations` - DAGs that are used for operational purposeds, not for ingesting new data (for example, scheduling and restoring backups)
 - `Collection` - DAGs that create a new collection in the targeted STAC catalog
 - `Discovery` - DAGs that discover and ingest new assets and items
 - `Automated` - DAGs that cannot be run manually, and are scheduled to run automatically

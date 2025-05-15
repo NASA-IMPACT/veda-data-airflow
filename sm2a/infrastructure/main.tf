@@ -10,6 +10,7 @@ terraform {
 provider "aws" {
   region = var.aws_region
 }
+
 resource "random_password" "password" {
   length           = 8
   special          = true
@@ -23,7 +24,6 @@ module "rds_backups" {
   permission_boundaries_arn = var.permission_boundaries_arn
   snapshot_bucket_name = var.snapshot_bucket_name
 }
-
 
 module "sma-base" {
   source                         = "https://github.com/NASA-IMPACT/self-managed-apache-airflow/releases/download/v1.1.7/self-managed-apache-airflow.zip"
@@ -40,7 +40,7 @@ module "sma-base" {
   airflow_admin_username         = "admin"
   rds_publicly_accessible        = var.rds_publicly_accessible
   permission_boundaries_arn      = var.permission_boundaries_arn
-  custom_worker_policy_statement = var.custom_worker_policy_statement
+  custom_worker_policy_statement = local.custom_worker_policy_statement
   worker_cpu                     = tonumber(var.workers_cpu)
   worker_memory                  = tonumber(var.workers_memory)
   number_of_schedulers           = var.number_of_schedulers

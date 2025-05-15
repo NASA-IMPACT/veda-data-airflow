@@ -79,63 +79,6 @@ variable "gh_team_name" {
 
 }
 
-variable "custom_worker_policy_statement" {
-  type = list(object({
-    Effect   = string
-    Action   = list(string)
-    Resource = list(string)
-  }))
-  default = [
-    {
-      Effect = "Allow"
-      Action = [
-        "sts:AssumeRole",
-        "iam:PassRole",
-        "logs:GetLogEvents"
-      ]
-      "Resource" : [
-        "*"
-      ]
-
-    },
-        {
-      Sid    = "VEDA-RDS-Disaster-Recovery"
-      Effect = "Allow"
-      Action = [
-        "rds:Describe*",
-        "rds:Start*",
-        "kms:*",
-        "glue:Get*",
-        "glue:CreateCrawler",
-        "glue:StartCrawler",
-        "glue:UpdateCrawler"
-      ]
-      Resource = [
-        "*"
-      ]
-    },
-    {
-      "Effect" : "Allow",
-      "Action" : [
-        "glue:DeleteDatabase"
-      ],
-      "Resource" : [
-        "arn:aws:glue:us-west-2:*:catalog",
-        "arn:aws:glue:us-west-2:*:database/*",
-        "arn:aws:glue:us-west-2:*:table/*",
-        "arn:aws:glue:us-west-2:*:userDefinedFunction/*"
-      ]
-    },
-    {
-            "Effect": "Allow",
-            "Action": ["cloudfront:CreateInvalidation"],
-            "Resource": ["arn:aws:cloudfront::*:distribution/*"]
-    }
-
-  ]
-
-}
-
 variable "project_name" {
   type    = string
   default = "SM2A"
@@ -246,4 +189,16 @@ variable "lambda_dag_trigger_function_name" {
 
 variable ingest_api_keycloak_client_secret {
  type = string
+}
+
+variable "ingest_api_keycloak_client_secret_arn" {
+  type        = string
+  description = "Secrets Manager arn for ingest api keycloak client secret in different aws account"
+  default     = null
+}
+
+variable "kms_key_arn" {
+  type        = string
+  description = "The ARN of the KMS key in different aws account"
+  default     = null
 }

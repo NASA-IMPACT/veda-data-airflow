@@ -4,6 +4,7 @@ from airflow.operators.empty import EmptyOperator
 from airflow.models.param import Param
 from airflow.utils.trigger_rule import TriggerRule
 from veda_data_pipeline.groups.transfer_group import subdag_transfer
+from slack_notifications import slack_fail_alert
 
 dag_doc_md = """
 ### Discover files from S3
@@ -29,6 +30,7 @@ dag_args = {
     "start_date": pendulum.today("UTC").add(days=-1),
     "schedule": None,
     "catchup": False,
+    "on_failure_callback": slack_fail_alert,
     "doc_md": dag_doc_md,
 }
 

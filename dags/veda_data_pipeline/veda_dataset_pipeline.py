@@ -5,6 +5,7 @@ from veda_data_pipeline.groups.discover_group import discover_from_s3_task, get_
 from airflow.operators.empty import EmptyOperator
 from veda_data_pipeline.groups.collection_group import collection_task_group
 from veda_data_pipeline.groups.processing_tasks import submit_to_stac_ingestor_task, build_stac_task, extract_discovery_items_from_payload, remove_thumbnail_asset
+from slack_notifications import slack_fail_alert
 
 template_dag_run_conf = {
     "collection": "<collection-id>",
@@ -41,6 +42,7 @@ dag_args = {
     "schedule": None,
     "catchup": False,
     "doc_md": dag_doc_md,
+    "on_failure_callback": slack_fail_alert,
     "tags": ["collection", "discovery"],
 }
 

@@ -87,6 +87,7 @@ module "sma-base" {
     gh_app_client_id     = var.gh_app_client_id
     gh_app_client_secret = var.gh_app_client_secret
     gh_team_id           = var.gh_team_name
+    sm2a_base_url        = "https://${lower(local.subdomain)}.${var.domain_name}"
   }
   domain_name = var.domain_name
   stage       = var.stage

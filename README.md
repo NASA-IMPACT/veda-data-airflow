@@ -33,7 +33,7 @@ See [install-docker-and-docker-compose](https://docs.docker.com/compose/install/
 - Run `uv sync` to install the required python packages. By default, all optional dependencies are included. To avoid this, use `uv sync --no-default-groups`.
 
 ### Configuration
-- ⚠️ You need to copy ./sm2a/sm2a-local-config/env_example to ./sm2a/sm2a-local-config/.env
+- ⚠️ You need to copy ./sm2a-local-config/env_example to ./sm2a-local-config/.env
 - You can define AWS credentials or other custom envs in [.env](./sm2a/sm2a-local-config/.env) file.
 - ⚠️  If you update ./sm2a/sm2a-local-config/.env file you should run `make sm2a-local-run` again
 

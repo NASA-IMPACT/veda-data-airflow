@@ -20,14 +20,16 @@ This DAG is supposed to be triggered by `veda_discover`. But you still can trigg
 ```json
 {
     "url": "https://maps.disasters.nasa.gov/ags03/rest/services/NRT/lis_ak_green_veg_fraction/ImageServer",
-    "stac_id": "nrt_lis_ak_green_veg_fraction",
+    "id": "nrt_lis_ak_green_veg_fraction",
     "title": "NRT LIS Alaska Green Vegetation Fraction",
     "stac_version": "1.0.0",
     "description": "Insert description here",
-    "data_type": "",
+    "data_type": "Research",
     "license": "CC1.0 Universal", 
     "dashboard:is_periodic": true,
     "dashboard:time_density": "day",
+    "dashboard:is_timeless":"false",
+    "temporal:{}
 
 """
 
@@ -41,7 +43,10 @@ template_conf = {
     "data_type": "",
     "license": "",
     "dashboard:is_periodic": "",
-    "dashboard:time_density": ""
+    "dashboard:time_density": "",
+    "dashboard:is_timeless":"",
+    "renders": {},
+    "temporal": {},
 }
 
 
@@ -55,57 +60,103 @@ dag_args = {
 
 def read_url_pyarc2stac_callable(event: dict, template_conf: dict) -> dict:
     """
-    Generate a STAC collection from an ArcGIS server URL and merge with a template configuration.
+    Generate a STAC collection from an ArcGIS ImageServer URL using `pyarc2stac`,
+    and merge it with a user-provided template configuration.
 
-    This function retrieves a URL from the provided `event` dictionary or, if not present,
-    from the `template_dag_run_conf` dictionary. It then uses `pyarc2stac.ArcReader` to
-    generate a STAC collection, converts it to a dictionary, and overwrites any keys with
-    non-empty values from the `template_dag_run_conf`.
+    The function uses a key precedence strategy to determine final values:
+    1. `template_conf` — manual DAG trigger config (highest priority)
+    2. `event` — JSON payload from S3 (medium priority)
+    3. `pyarc2stac` generated values (fallback)
+
+    Special handling is included for dashboard temporal flags, such as
+    `dashboard:is_periodic` and `dashboard:is_timeless`, to ensure compatibility
+    with VEDA rendering expectations.
 
     Parameters
     ----------
     event : dict
-        Dictionary containing runtime event parameters. Expected to include a key "url"
-        pointing to the ArcGIS server endpoint.
-    template_dag_run_conf : dict
-        Dictionary of default STAC collection configuration values. Any key in this
-        dictionary with a non-empty string value will overwrite the corresponding key
-        in the generated STAC collection.
+        Runtime parameters, usually from an S3-hosted JSON payload.
+    template_conf : dict
+        Template configuration provided via manual DAG triggering or defaults.
 
     Returns
     -------
     dict
-        A STAC collection represented as a dictionary, with keys from `template_conf`
-        merged in where values are non-empty.
-
+        A STAC collection dictionary with merged and sanitized configuration.
+    
     Raises
     ------
     ValueError
-        If no URL is provided in either `event` or `template_conf`, a ValueError
-        is raised indicating that the URL is required.
-
-    Example
-    -------
-    >>> event = {"url": "https://example.com/arcgis/rest/services/MyService", "id": "my_collection_id", ... remaining key/values from AWS .json file}
-    >>> template = {"title": "My Custom Title", "description": ""}
-    >>> collection = read_url_pyarc2stac_callable(event, template)
+        If no URL is found in either `event` or `template_conf`.
     """
+
     from pyarc2stac.ArcReader import ArcReader
 
-    url = event.get("url") or template_conf.get("url")
+    url =  template_conf.get("url") or event.get("url")
     if not url:
         raise ValueError(
             "URL is required but not provided in the event or template_conf."
         )
 
-    # Retrieve data from the ArcGIS server URL
+    # Generate STAC collection from ArcGIS Image/Map/Feature Server
     reader = ArcReader(server_url=url)
     collection = reader.generate_stac().to_dict()
+
+
+    def _choose_keyValues(key, default):
+        """
+        Resolve a key's value using the following precedence:
+        1. `template_conf` (highest priority)
+        2. `event`
+        3. `default` (fallback)
+
+        This logic avoids Python's built-in truthy/falsey evaluation to preserve valid values
+        like `False` or `0`, which are meaningful for flags such as `dashboard:is_timeless` 
+        and `dashboard:is_periodic`.
+        """
+        value = template_conf.get(key)
+        if value not in (None, ""):
+            return value
+
+        value = event.get(key)
+        return value if value not in (None, "") else default
+
+    def _temporal_extent_handling(template_conf,collection):
+        """
+        Override temporal extent flags for VEDA compatibility.
+
+        If `dashboard:is_periodic` is explicitly True in `template_conf`, update the
+        collection accordingly and remove `dashboard:is_timeless`, which may have been
+        set by pyarc2stac when no start/end dates are found.
+        """
+        # Normalize the input (so "true"/"false" strings become booleans)
+        raw = template_conf.get("dashboard:is_periodic")
+        periodic = raw is True or (isinstance(raw, str) and raw.lower() == "true")
+
+        if periodic:
+            collection["dashboard:is_periodic"] = True
+            # remove any timeless flag that pyarc2stac might have set
+            collection.pop("dashboard:is_timeless", None)
+        return collection
 
     # Overwrite keys based on order of precedence. User config in manual triggering is first in template_conf, followed by
     # values placed within the veda-tf-state-shared S3 bucket, and the last option is pyarc2stac generated values.
     for key in collection.keys():
-        collection[key] = (template_conf.get(key) or event.get(key) or collection[key])
+        #Override with either spatial or temporal extents
+        if key == 'extent':
+            for ex_key, ex_val in collection['extent'].items():
+                collection['extent'][ex_key] = (template_conf.get(ex_key) or event.get(ex_key) or ex_val) 
+        else:
+            # (optional) debug logging:
+            print(f"Key: {key!r}, pyarc2stac: {collection[key]!r}, template_conf: {template_conf.get(key)!r}, event: {event.get(key)!r}")
+
+            collection[key] = _choose_keyValues(key, collection[key])
+            
+            print(f"→ Final {key!r} = {collection[key]!r}")
+        print(f"Final value for {key} is {collection.get(key)}")
+
+    # Finalize special-case logic
+    collection = _temporal_extent_handling(template_conf, collection)
 
     return collection
 

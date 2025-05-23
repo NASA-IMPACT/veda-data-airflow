@@ -24,12 +24,11 @@ This DAG is supposed to be triggered by `veda_discover`. But you still can trigg
     "title": "NRT LIS Alaska Green Vegetation Fraction",
     "stac_version": "1.0.0",
     "description": "Insert description here",
-    "data_type": "Research",
     "license": "CC1.0 Universal", 
     "dashboard:is_periodic": true,
     "dashboard:time_density": "day",
     "dashboard:is_timeless":"false",
-    "temporal:{}
+    "temporal: {"interval" : [["2025-01-12T00:00:00+00:00", "2025-01-12T23:59:59+00:00"]] }
 
 """
 
@@ -40,12 +39,10 @@ template_conf = {
     "title": "",
     "stac_version": "",
     "description": "",
-    "data_type": "",
     "license": "",
     "dashboard:is_periodic": "",
     "dashboard:time_density": "",
     "dashboard:is_timeless":"",
-    "renders": {},
     "temporal": {},
 }
 
@@ -151,7 +148,7 @@ def read_url_pyarc2stac_callable(event: dict, template_conf: dict) -> dict:
             print(f"Key: {key!r}, pyarc2stac: {collection[key]!r}, template_conf: {template_conf.get(key)!r}, event: {event.get(key)!r}")
 
             collection[key] = _choose_keyValues(key, collection[key])
-            
+
             print(f"→ Final {key!r} = {collection[key]!r}")
         print(f"Final value for {key} is {collection.get(key)}")
 

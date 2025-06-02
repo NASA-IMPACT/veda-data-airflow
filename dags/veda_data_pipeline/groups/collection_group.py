@@ -1,4 +1,5 @@
 import requests
+import datetime
 from airflow.models.variable import Variable
 from airflow.decorators import task, task_group
 
@@ -79,3 +80,43 @@ def collection_task_group():
     generate_collection = generate_collection_task()
     ingest_collection = ingest_collection_task(collection=generate_collection)
 
+# Special task group to update nightlight NRT data collection that is pulled from worldview
+@task_group(group_id="Worldview nightlight NRT Collection update pipeline", tooltip="worldview nightlight NRT Collection update")
+def worldview_collection_update_task_group(**context):
+    nrt_collection = context.get("VIIRS_SNPP_NRT_collection")
+    if nrt_collection and nrt_update_check_task() and (updated_collection := update_nrt_collection_task(nrt_collection)):
+        ingest_collection_task(collection=updated_collection)
+
+@task()
+def nrt_update_check_task(ti=None):
+    import xml.etree.ElementTree as ET
+    try:
+        gibs_url = "https://gibs.earthdata.nasa.gov/wmts/epsg4326/best/1.0.0/WMTSCapabilities.xml"
+        response = requests.get(gibs_url)
+        response.raise_for_status()
+        xml_string = response.text
+        if (not xml_string):
+            return False
+        root = ET.fromstring(xml_string)
+        for layer in root.iter("Layer"):
+            if (layer.find("ows:Identifier").text == "VIIRS_SNPP_DayNightBand_At_Sensor_Radiance"):
+                dimension = layer.get("Dimension")
+                latest_layer_date = dimension.find("default")
+                year, month, day = map(int, latest_layer_date.split("-"))
+                test_date = datetime.date(year, month, day)
+                today = datetime.date.today()
+                if (test_date >= today):
+                    return True
+        return False
+    except requests.exceptions.RequestException as e:
+        print(f"Error fetching from the gibs: {e}")
+        return False
+
+@task()
+def update_nrt_collection_task(ti=None, previous_collection=None):
+    if (not previous_collection):
+        return None
+    now = datetime.datetime.now()
+    formatted_datetime = now.strftime("%Y-%m-%dT00:00:00Z")
+    updated_collection = previous_collection['extent']['temporal']['interval'][1] = formatted_datetime
+    return updated_collection

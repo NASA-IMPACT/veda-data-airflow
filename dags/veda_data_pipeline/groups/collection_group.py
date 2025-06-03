@@ -81,7 +81,7 @@ def collection_task_group():
     ingest_collection = ingest_collection_task(collection=generate_collection)
 
 # Special task group to update nightlight NRT data collection that is pulled from worldview
-@task_group(group_id="Worldview nightlight NRT Collection update pipeline", tooltip="worldview nightlight NRT Collection update")
+@task_group(group_id="worldview_nightlight_nrt_collection_update_pipeline", tooltip="worldview nightlight NRT Collection update")
 def worldview_collection_update_task_group(**context):
     nrt_collection = context.get("VIIRS_SNPP_NRT_collection")
     xml_string = fetch_nightlight_meta_from_gibs()

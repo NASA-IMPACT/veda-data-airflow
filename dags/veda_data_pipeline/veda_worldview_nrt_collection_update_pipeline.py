@@ -102,7 +102,7 @@ dag_args = {
 }
 
 with DAG(
-    "Veda worldview NRT data collection update",
+    "veda_worldview_nrt_data_collection_update",
     schedule_interval=timedelta(days=1),
     render_template_as_native_obj=True,
     **dag_args

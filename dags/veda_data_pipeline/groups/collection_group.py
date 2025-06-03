@@ -84,49 +84,61 @@ def collection_task_group():
 @task_group(group_id="Worldview nightlight NRT Collection update pipeline", tooltip="worldview nightlight NRT Collection update")
 def worldview_collection_update_task_group(**context):
     nrt_collection = context.get("VIIRS_SNPP_NRT_collection")
-    if nrt_collection and nrt_update_check_task() and (updated_collection := update_nrt_collection_task(nrt_collection)):
+    xml_string = fetch_nightlight_meta_from_gibs()
+    if (not xml_string):
+        return
+
+    latest_layer_date = extract_xml_date(xml_string)
+    if (not latest_layer_date):
+        return
+
+    if nrt_collection and nrt_update_check_task(latest_layer_date) and (updated_collection := update_nrt_collection_task(nrt_collection)):
         ingest_collection_task(collection=updated_collection)
 
 @task()
-def nrt_update_check_task(ti=None) -> bool:
-    import xml.etree.ElementTree as ET
-    try:
-        gibs_url = "https://gibs.earthdata.nasa.gov/wmts/epsg4326/best/1.0.0/WMTSCapabilities.xml"
-        response = requests.get(gibs_url)
-        response.raise_for_status()
+def nrt_update_check_task(ti=None, nrt_date: str="") -> bool:
+    """
+    Check if a Near Real-Time (NRT) data is updated to latest/today.
 
-        xml_string = response.text
-        if (not xml_string):
-            return False
-
-        latest_layer_date = extract_xml_date(xml_string)
-        if (not latest_layer_date):
-            return False
-
-        year, month, day = map(int, latest_layer_date.split("-"))
-        latest_nrt_data_date = datetime.date(year, month, day)
-        today = datetime.date.today()
-        if (latest_nrt_data_date >= today):
-            return True
+    This task compares a provided date string with the current date to determine
+    if the NRT data is up-to-date. The nrt_date parameter should be in the format
+    "%Y-%m-%d".
+    """
+    if (not nrt_date):
         return False
-    except requests.exceptions.RequestException as e:
-        print(f"Error fetching from the gibs: {e}")
-        return False
+
+    year, month, day = map(int, nrt_date.split("-"))
+    latest_nrt_data_date = datetime.date(year, month, day)
+    today = datetime.date.today()
+    if (latest_nrt_data_date >= today):
+        return True
+    return False
 
 @task()
-def update_nrt_collection_task(ti=None, previous_collection=None):
+def update_nrt_collection_task(ti=None, previous_collection=None, latest_nrt_date=None):
     import copy
 
-    if (not previous_collection):
+    if (not previous_collection or not latest_nrt_date):
         return None
 
     updated_collection = copy.deepcopy(previous_collection)
-    now = datetime.datetime.now()
-    formatted_datetime = now.strftime("%Y-%m-%dT00:00:00Z")
+    year, month, day = map(int, latest_nrt_date.split("-"))
+    latest_nrt_data_date = datetime.date(year, month, day)
+    formatted_datetime = latest_nrt_data_date.strftime("%Y-%m-%dT00:00:00Z")
     updated_collection['extent']['temporal']['interval'][0][1] = formatted_datetime
     return updated_collection
 
 # helper
+def fetch_nightlight_meta_from_gibs(gibs_url: str="https://gibs.earthdata.nasa.gov/wmts/epsg4326/best/1.0.0/WMTSCapabilities.xml") -> str:
+    try:
+        response = requests.get(gibs_url)
+        response.raise_for_status()
+        xml_string = response.text
+        return xml_string
+    except requests.exceptions.RequestException as e:
+        print(f"Error fetching from the gibs: {e}")
+        return ""
+
 def extract_xml_date(xml_string: str) -> str:
     import xml.etree.ElementTree as ET
     XML_NAMESPACE = {'xmlns': 'http://www.opengis.net/wmts/1.0'}

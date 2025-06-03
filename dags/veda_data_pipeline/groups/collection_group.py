@@ -88,25 +88,26 @@ def worldview_collection_update_task_group(**context):
         ingest_collection_task(collection=updated_collection)
 
 @task()
-def nrt_update_check_task(ti=None):
+def nrt_update_check_task(ti=None) -> bool:
     import xml.etree.ElementTree as ET
     try:
         gibs_url = "https://gibs.earthdata.nasa.gov/wmts/epsg4326/best/1.0.0/WMTSCapabilities.xml"
         response = requests.get(gibs_url)
         response.raise_for_status()
+
         xml_string = response.text
         if (not xml_string):
             return False
-        root = ET.fromstring(xml_string)
-        for layer in root.iter("Layer"):
-            if (layer.find("ows:Identifier").text == "VIIRS_SNPP_DayNightBand_At_Sensor_Radiance"):
-                dimension = layer.get("Dimension")
-                latest_layer_date = dimension.find("default")
-                year, month, day = map(int, latest_layer_date.split("-"))
-                test_date = datetime.date(year, month, day)
-                today = datetime.date.today()
-                if (test_date >= today):
-                    return True
+
+        latest_layer_date = extract_xml_date(xml_string)
+        if (not latest_layer_date):
+            return False
+
+        year, month, day = map(int, latest_layer_date.split("-"))
+        latest_nrt_data_date = datetime.date(year, month, day)
+        today = datetime.date.today()
+        if (latest_nrt_data_date >= today):
+            return True
         return False
     except requests.exceptions.RequestException as e:
         print(f"Error fetching from the gibs: {e}")
@@ -114,9 +115,39 @@ def nrt_update_check_task(ti=None):
 
 @task()
 def update_nrt_collection_task(ti=None, previous_collection=None):
+    import copy
+
     if (not previous_collection):
         return None
+
+    updated_collection = copy.deepcopy(previous_collection)
     now = datetime.datetime.now()
     formatted_datetime = now.strftime("%Y-%m-%dT00:00:00Z")
-    updated_collection = previous_collection['extent']['temporal']['interval'][1] = formatted_datetime
+    updated_collection['extent']['temporal']['interval'][0][1] = formatted_datetime
     return updated_collection
+
+# helper
+def extract_xml_date(xml_string: str) -> str:
+    import xml.etree.ElementTree as ET
+    XML_NAMESPACE = {'xmlns': 'http://www.opengis.net/wmts/1.0'}
+    OWS_NAMESPACE = {'ows': 'http://www.opengis.net/ows/1.1'}
+
+    if not xml_string:
+        return ""
+
+    root = ET.fromstring(xml_string)
+    contents = root.find('xmlns:Contents', XML_NAMESPACE)
+    if contents is None:
+        return False
+    layers = contents.findall('xmlns:Layer', XML_NAMESPACE)
+    if not layers:
+        return False
+    for layer in layers:
+        layer_id = layer.find('ows:Identifier', OWS_NAMESPACE).text
+        if (layer_id == 'VIIRS_SNPP_DayNightBand_At_Sensor_Radiance'):
+            dimension = layer.find('xmlns:Dimension', XML_NAMESPACE)
+            dimension_id = dimension.find('ows:Identifier', OWS_NAMESPACE).text
+            if (dimension_id == 'Time'):
+                layer_date = dimension.find('xmlns:Default', XML_NAMESPACE).text
+                return layer_date
+    return ""

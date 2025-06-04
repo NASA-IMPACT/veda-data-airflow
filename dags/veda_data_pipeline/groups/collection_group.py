@@ -1,5 +1,4 @@
 import requests
-import datetime
 from airflow.models.variable import Variable
 from airflow.decorators import task, task_group
 

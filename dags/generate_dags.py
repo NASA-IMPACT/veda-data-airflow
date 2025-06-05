@@ -8,6 +8,7 @@ from typing import Dict, List, Optional
 
 from veda_data_pipeline.veda_discover_pipeline import get_discover_dag
 from veda_data_pipeline.veda_vector_pipeline import get_ingest_vector_dag
+from veda_data_pipeline.veda_worldview_nrt_collection_update_pipeline import veda_worldview_nrt_data_collection_update_dag_creator
 
 def filter_configs_by_dag(
         collection_configs: List[Dict[str, int]],
@@ -87,6 +88,15 @@ def generate_dags():
             get_ingest_vector_dag(
                 id=id, event=vector_config
             )
+
+        # worldview NRT collection update
+        scheduled_worldview_nrt_collection_update_configs = filter_configs_by_dag(collection_configs, "veda_worldview_nrt_collection_update")
+
+        for idx, nrt_dag_creator_config in enumerate(scheduled_worldview_nrt_collection_update_configs):
+            id = f"veda_worldview_nrt_data_collection_update_{file_name}"
+            if idx > 0:
+                id = f"{id}-{idx}"
+            veda_worldview_nrt_data_collection_update_dag_creator(id=id, event=nrt_dag_creator_config)
 
 generate_dags()
 get_ingest_vector_dag(id="veda_ingest_vector", event={})

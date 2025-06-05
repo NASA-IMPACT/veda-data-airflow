@@ -72,7 +72,8 @@ VIIRS_SNPP_NRT_collection = {
         "renders": {},
         "stac_extensions": [
             "https://stac-extensions.github.io/render/v1.0.0/schema.json",
-            "https://stac-extensions.github.io/item-assets/v1.0.0/schema.json"
+            "https://stac-extensions.github.io/item-assets/v1.0.0/schema.json",
+            "https://stac-extensions.github.io/web-map-links/v1.2.0/schema.json"
         ],
         "stac_version": "1.1.0",
         "temporal_frequency": "twenty four hours",

@@ -90,12 +90,11 @@ def generate_dags():
             )
 
         # worldview NRT collection update
-        scheduled_worldview_nrt_collection_update_configs = filter_configs_by_dag(collection_configs, "veda_worldview_nrt_collection_update")
+        scheduled_worldview_nrt_dag_creator_configs = filter_configs_by_dag(collection_configs, "veda_worldview_nrt_collection_update")
 
-        for idx, nrt_dag_creator_config in enumerate(scheduled_worldview_nrt_collection_update_configs):
-            id = f"veda_worldview_nrt_data_collection_update_{file_name}"
-            if idx > 0:
-                id = f"{id}-{idx}"
+        for idx, nrt_dag_creator_config in enumerate(scheduled_worldview_nrt_dag_creator_configs):
+            collection_id = nrt_dag_creator_config["collection_id"]
+            id = f"veda_worldview_nrt_data_collection_update_{collection_id}"
             veda_worldview_nrt_data_collection_update_dag_creator(id=id, event=nrt_dag_creator_config)
 
 generate_dags()

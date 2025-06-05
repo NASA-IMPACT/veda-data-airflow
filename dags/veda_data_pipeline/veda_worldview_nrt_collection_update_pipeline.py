@@ -109,15 +109,15 @@ def veda_worldview_nrt_data_collection_update_dag_creator(id: str, event: NRTCol
     gibs_url = event["gibs_url"]
     collection_config = event["collection_config"]
     dag_doc_md = f"""
-        ### This DAG handles VIIRS_SNPP_DayNightBand_At_Sensor_Radiance NRT dataset update.
+        ### This DAG handles {collection_id} NRT dataset update.
         It checks if the NRT data hosted by earthdata is avaialble for the latest available date
-        via. https://gibs.earthdata.nasa.gov/wmts/epsg4326/best/1.0.0/WMTSCapabilities.xml
-        If available, it overrides the VIIRS_SNPP_DayNightBand_At_Sensor_Radiance collection
-        with the updated temporal extent and ingests into the catalog.
-        #### Notes
-        - This DAG can uses the following configuration for VIIRS_SNPP_DayNightBand_At_Sensor_Radiance NRT collection <br>
+        via. {gibs_url}
+        If available, it overrides the {collection_id} collection
+        with the updated temporal extent and ingests into the STAC.
+        #### Note
+        - This DAG uses the following configuration json for {collection_id} NRT collection <br>
         ```json
-        {VIIRS_SNPP_NRT_collection}
+        {collection_config}
         ```
         """
     dag_args = {

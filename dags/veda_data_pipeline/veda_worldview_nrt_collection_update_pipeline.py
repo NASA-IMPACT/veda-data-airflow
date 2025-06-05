@@ -124,7 +124,7 @@ def veda_worldview_nrt_data_collection_update_dag_creator(id: str, event: NRTCol
         "start_date": pendulum.today("UTC").add(days=-1),
         "catchup": False,
         "doc_md": dag_doc_md,
-        "tags": ["collection"],
+        "tags": ["collection", "update", "NRT", "worldview", "gibs"],
     }
 
     @dag(

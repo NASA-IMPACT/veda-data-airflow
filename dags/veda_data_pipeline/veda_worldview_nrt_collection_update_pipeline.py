@@ -121,7 +121,7 @@ def veda_worldview_nrt_data_collection_update():
     # TASK DEFINATION START
 
     @task_group(group_id="worldview_nightlight_nrt_collection_update_pipeline", tooltip="worldview nightlight NRT Collection update")
-    def worldview_collection_update_task_group(nrt_collection: dict, gibs_url: str ="https://gibs.earthdata.nasa.gov/wmts/epsg4326/best/1.0.0/WMTSCapabilities.xml") -> None:
+    def worldview_collection_update_task_group(nrt_collection: dict, collection_id: str, gibs_url: str ="https://gibs.earthdata.nasa.gov/wmts/epsg4326/best/1.0.0/WMTSCapabilities.xml") -> None:
         """
         Task group to manage the update of the Nightlight Near Real-Time (NRT) data collection sourced from Worldview.
 
@@ -134,16 +134,18 @@ def veda_worldview_nrt_data_collection_update():
         A branching task determines whether to proceed with the update based on the validation result.
         :param nrt_collection: A collection config dictionary.
         :param gibs_url: The URL to the GIBS metadata endpoint.
+        :param collection_id: The id of the collection in the GIBS.
         :return: None
         """
         @task_group(group_id="validation_task_group", tooltip="validate if collection update is needed via metadata available on gibs")
-        def validation_task_group(gibs_url: str) -> dict:
+        def validation_task_group(gibs_url: str, collection_id: str) -> dict:
             """
             Task group to validate if a collection update is needed based on metadata from GIBS.
 
             This group fetches metadata from GIBS which is in XML format, extracts the latest date, and checks if an update is needed.
 
             :param gibs_url: The URL to the GIBS metadata endpoint.
+            :param collection_id: The id of the collection in the GIBS.
             :return: A dictionary containing a boolean indicating if an update is needed and the latest layer date.
             """
             xml_string_data = fetch_metadata_from_gibs(gibs_url)
@@ -178,7 +180,7 @@ def veda_worldview_nrt_data_collection_update():
             else:
                 return 'worldview_nightlight_nrt_collection_update_pipeline.collection_update_task_group.update_nrt_collection_task'
 
-        validation_result = validation_task_group(gibs_url)
+        validation_result = validation_task_group(gibs_url, collection_id)
         branch_choice_instance = branch_update_needed(validation_result['is_update_needed'])
         branch_choice_instance >> [end, collection_update_task_group(nrt_collection, validation_result['latest_layer_date'])]
 
@@ -305,7 +307,7 @@ def veda_worldview_nrt_data_collection_update():
 
     # TASK DEFINATION END
 
-    collection_grp = worldview_collection_update_task_group(nrt_collection=VIIRS_SNPP_NRT_collection, gibs_url=gibs_url)
+    collection_grp = worldview_collection_update_task_group(nrt_collection=VIIRS_SNPP_NRT_collection, gibs_url=gibs_url, collection_id=collection_id)
     start >> collection_grp >> end
 
 veda_worldview_nrt_data_collection_update()

@@ -19,7 +19,7 @@ class NRTCollectionUpdateConfig:
 
 VIIRS_SNPP_NRT_collection: CollectionConfig = {
         "assets": {},
-        "collection": "VIIRS_SNPP_DayNightBand_At_Sensor_Radiance",
+        "id": "VIIRS_SNPP_DayNightBand_At_Sensor_Radiance",
         "dashboard:is_periodic": True,
         "dashboard:time_density": "day",
         "dashboard:time_interval": "P1D",

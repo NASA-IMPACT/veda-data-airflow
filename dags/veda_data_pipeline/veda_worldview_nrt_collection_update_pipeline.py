@@ -146,10 +146,10 @@ def veda_worldview_nrt_data_collection_update():
             :param gibs_url: The URL to the GIBS metadata endpoint.
             :return: A dictionary containing a boolean indicating if an update is needed and the latest layer date.
             """
-            xml_string_data = fetch_nightlight_meta_from_gibs(gibs_url)
-            latest_layer_date = extract_latest_nrt_date(xml_string_data, collection_id)
+            xml_string_data = fetch_metadata_from_gibs(gibs_url)
+            latest_layer_date = extract_latest_nrt_date_for_collection(xml_string_data, collection_id)
             is_update_needed = nrt_update_check(latest_layer_date)
-            # the above TaskFlow API implementation represents: fetch_nightlight_meta_from_gibs >> extract_latest_nrt_date >> nrt_update_check
+            # the above TaskFlow API implementation represents: fetch_metadata_from_gibs >> extract_latest_nrt_date_for_collection >> nrt_update_check
             return {
                 "is_update_needed": is_update_needed,
                 "latest_layer_date": latest_layer_date
@@ -167,7 +167,7 @@ def veda_worldview_nrt_data_collection_update():
             ingest_collection_task(collection=updated_collection)
 
         @task.branch
-        def update_needed_check(update_needed: bool) -> str:
+        def branch_update_needed(update_needed: bool) -> str:
             """
             This task branches to either end or to upadte_nrt_collection_task,
             based on the provided boolean representing if updated is needed or not.
@@ -179,7 +179,7 @@ def veda_worldview_nrt_data_collection_update():
                 return 'worldview_nightlight_nrt_collection_update_pipeline.collection_update_task_group.update_nrt_collection_task'
 
         validation_result = validation_task_group(gibs_url)
-        branch_choice_instance = update_needed_check(validation_result['is_update_needed'])
+        branch_choice_instance = branch_update_needed(validation_result['is_update_needed'])
         branch_choice_instance >> [end, collection_update_task_group(nrt_collection, validation_result['latest_layer_date'])]
 
     @task
@@ -236,7 +236,7 @@ def veda_worldview_nrt_data_collection_update():
         return updated_collection
 
     @task
-    def fetch_nightlight_meta_from_gibs(gibs_url: str="https://gibs.earthdata.nasa.gov/wmts/epsg4326/best/1.0.0/WMTSCapabilities.xml") -> str:
+    def fetch_metadata_from_gibs(gibs_url: str="https://gibs.earthdata.nasa.gov/wmts/epsg4326/best/1.0.0/WMTSCapabilities.xml") -> str:
         """
         Fetches the nightlight metadata from the NASA Global Imagery Browse Services (GIBS) server.
 
@@ -261,7 +261,7 @@ def veda_worldview_nrt_data_collection_update():
             return ""
 
     @task
-    def extract_latest_nrt_date(xml_string: str, collection_id:str='VIIRS_SNPP_DayNightBand_At_Sensor_Radiance') -> str:
+    def extract_latest_nrt_date_for_collection(xml_string: str, collection_id:str='VIIRS_SNPP_DayNightBand_At_Sensor_Radiance') -> str:
         """
         Extracts the latest date from the WMTS GetCapabilities XML response for a specified layer.
 

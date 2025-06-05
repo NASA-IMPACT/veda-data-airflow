@@ -109,23 +109,24 @@ def worldview_collection_update_task_group(**context):
     nrt_collection = context.get("VIIRS_SNPP_NRT_collection")
     gibs_url: str ="https://gibs.earthdata.nasa.gov/wmts/epsg4326/best/1.0.0/WMTSCapabilities.xml"
 
-    @task_group(tooltip="validate if collection update is needed via metadata available on gibs")
+    @task_group(group_id="validation_task_group", tooltip="validate if collection update is needed via metadata available on gibs")
     def validation_task_group(gibs_url: str) -> dict:
         xml_string_data = fetch_nightlight_meta_from_gibs(gibs_url)
         latest_layer_date = extract_latest_nrt_date(xml_string_data)
         is_update_needed = nrt_update_check(latest_layer_date)
+        # the above TaskFlow API implementation represents: fetch_nightlight_meta_from_gibs >> extract_latest_nrt_date >> nrt_update_check
         return {
             "is_update_needed": is_update_needed,
             "latest_layer_date": latest_layer_date
         }
 
-    @task_group(tooltip="update the nightlight nrt collection with the available nrt date")
+    @task_group(group_id="collection_update_task_group", tooltip="update the nightlight nrt collection with the available nrt date")
     def collection_update_task_group(nrt_collection: dict, latest_layer_date: str) -> None:
         updated_collection = update_nrt_collection_task(nrt_collection, latest_layer_date)
         ingest_collection_task(collection=updated_collection)
 
     @task.branch
-    def update_needed(update_needed: bool) -> str:
+    def update_needed_check(update_needed: bool) -> str:
         """
         This task branches to either end or to upadte_nrt_collection_task,
         based on the provided string date "%Y-%m-%d".
@@ -133,13 +134,11 @@ def worldview_collection_update_task_group(**context):
         if not update_needed:
             return 'end'
         else:
-            return 'update_nrt_collection_task'
+            return 'worldview_nightlight_nrt_collection_update_pipeline.collection_update_task_group.update_nrt_collection_task'
 
     validation_result = validation_task_group(gibs_url)
-    branch_choice_instance = update_needed(validation_result['is_update_needed'])
-    
-    branch_choice_instance >> end
-    branch_choice_instance >> collection_update_task_group(nrt_collection, validation_result['latest_layer_date'])
+    branch_choice_instance = update_needed_check(validation_result['is_update_needed'])
+    branch_choice_instance >> [end, collection_update_task_group(nrt_collection, validation_result['latest_layer_date'])]
 
 @task
 def nrt_update_check(nrt_date: str="") -> bool:

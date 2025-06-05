@@ -78,3 +78,4 @@ def generate_collection_task(ti=None):
 def collection_task_group():
     generate_collection = generate_collection_task()
     ingest_collection = ingest_collection_task(collection=generate_collection)
+

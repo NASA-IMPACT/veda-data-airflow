@@ -31,6 +31,4 @@ COPY --chown=airflow:airflow airflow_services/webserver_config.py "${AIRFLOW_HOM
 RUN cp ${AIRFLOW_HOME}/configuration/airflow.cfg* ${AIRFLOW_HOME}/.
 
 #ENV
-# ENV PYTHONPATH /opt/airflow
-ENV PATH /home/airflow/miniconda3/envs/py11/bin:$PATH
-ENV PYTHONPATH /opt/airflow:/home/airflow/miniconda3/envs/py11/lib/python3.11/site-packages
+ENV PYTHONPATH /opt/airflow

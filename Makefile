@@ -61,6 +61,14 @@ else
 	$(call important_message, "Wait a minute you are not github 😡")
 endif
 
+sm2a-plan:
+	@echo "Installing the deployment dependency"
+	pip install -r ./deploy_requirements.txt
+	@echo "Shopwing Plan for Deploying SM2A"
+	python scripts/generate_env_file.py --secret-id ${SECRET_NAME} --env-file ${ENV_FILE}
+	@bash -c './scripts/deploy.sh ${ENV_FILE} <<< init'
+	@bash -c './scripts/deploy.sh ${ENV_FILE} <<< plan'
+
 clean: sm2a-local-stop
 	@echo "Cleaning local env"
 	docker container prune -f

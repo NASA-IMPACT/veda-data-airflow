@@ -53,4 +53,4 @@ with DAG("veda_dataset_pipeline", params=template_dag_run_conf, **dag_args) as d
     discover = discover_from_s3_task.partial(payload=mutated_payloads).expand(event=discovery_items)
     get_files = get_files_task(payload=discover)
     build_stac = build_stac_task.expand(payload=get_files)
-    submit_stac = submit_to_stac_ingestor_task.expand(built_stac=build_stac) >> end
+    submit_stac = submit_to_stac_ingestor_task.expand(built_stac=build_stac) >> post_ingest_report() >> end

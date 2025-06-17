@@ -169,7 +169,7 @@ def stac_handler(payload_src: dict, bucket_output):
             logging.warning(
                 f"Some items failed to be processed. Failures logged here: {dead_letter_key}"
             )
-            raise AirflowException(f"Build STAC completed with {len(payload_failures)} failures. See logs for details.")
+            raise AirflowException(f"Build STAC completed with {len(payload_failures)} failures. See logs for details {dead_letter_key}")
 
         return result
 

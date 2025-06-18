@@ -115,6 +115,6 @@ def post_ingest_report(ti, logical_date):  # params are Airflow kwargs - use thi
 
     yield Metadata(
         Dataset(f"{collection}"),
-        extra={"ingest_datetime": logical_date },  # extra has to be provided, can be {}
+        extra={"ingest_datetime": str(logical_date) },  # extra has to be provided, can be {}
         alias="VEDA-Datasets",
     )

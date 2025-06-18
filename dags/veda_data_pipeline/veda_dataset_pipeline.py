@@ -4,7 +4,7 @@ from airflow.models.param import Param
 from veda_data_pipeline.groups.discover_group import discover_from_s3_task, get_files_task
 from airflow.operators.empty import EmptyOperator
 from veda_data_pipeline.groups.collection_group import collection_task_group
-from veda_data_pipeline.groups.processing_tasks import submit_to_stac_ingestor_task, build_stac_task, extract_discovery_items_from_payload, remove_thumbnail_asset
+from veda_data_pipeline.groups.processing_tasks import submit_to_stac_ingestor_task, build_stac_task, extract_discovery_items_from_payload, remove_thumbnail_asset, post_ingest_report
 
 template_dag_run_conf = {
     "collection": "<collection-id>",

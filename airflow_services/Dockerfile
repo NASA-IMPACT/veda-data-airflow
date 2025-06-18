@@ -32,4 +32,4 @@ COPY --chown=airflow:airflow airflow_services/webserver_config.py "${AIRFLOW_HOM
 RUN cp ${AIRFLOW_HOME}/configuration/airflow.cfg* ${AIRFLOW_HOME}/.
 
 #ENV
-ENV PYTHONPATH /opt/airflow
+ENV PYTHONPATH="/opt/airflow"

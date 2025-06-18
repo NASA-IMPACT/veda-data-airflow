@@ -55,7 +55,7 @@ if __name__ == "__main__":
             Examples
             --------
             Initialize the db
-            $ python3 scripts/run_task.py --public-subnet-ids subnet-xxx --security-group sg-xxx --command 'db init'
+            $ python3 scripts/run_task.py --public-subnet-ids subnet-xxx --security-group sg-xxx --command 'db migrate --initialize'
 
             Create an admin user
             $ python3 scripts/run_task.py --public-subnet-ids subnet-xxx --security-group sg-xxx --command \\

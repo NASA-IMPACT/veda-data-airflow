@@ -75,8 +75,8 @@ def submit_to_stac_ingestor_task_direct(stac_items: dict):
 
 
 @task(max_active_tis_per_dag=5)
-def build_stac_task(payload):
+def build_stac_task(payload, ti=None):
     from veda_data_pipeline.utils.build_stac.handler import stac_handler
     airflow_vars_json = Variable.get("aws_dags_variables", deserialize_json=True)
     event_bucket = airflow_vars_json.get("EVENT_BUCKET")
-    return stac_handler(payload_src=payload, bucket_output=event_bucket)
+    return stac_handler(payload_src=payload, bucket_output=event_bucket, ti=ti)

@@ -1,6 +1,5 @@
 import logging
 import json
-from datetime import datetime
 from typing import Any, Dict, TypedDict, Union
 from uuid import uuid4
 import smart_open
@@ -92,8 +91,7 @@ def write_outputs_to_s3(key, payload_success, payload_failures):
 
 
 
-def stac_handler(payload_src: dict, bucket_output):
-    start_time = datetime.now()
+def stac_handler(payload_src: dict, bucket_output, ti=None):
     payload_event = payload_src.copy()
     s3_event = payload_event.pop("payload")
     collection = payload_event.get("collection", "not_provided")
@@ -130,8 +128,11 @@ def stac_handler(payload_src: dict, bucket_output):
             key=key, payload_success=payload_success, payload_failures=payload_failures
         )
 
-        end_time = datetime.now()
-        duration = (end_time - start_time).total_seconds()
+        if ti:
+            duration = ti.duration.total_seconds()
+        else:
+            duration = 0
+
         total_processed = len(payload_success) + len(payload_failures)
         items_per_second = total_processed / duration if duration > 0 else 0
 

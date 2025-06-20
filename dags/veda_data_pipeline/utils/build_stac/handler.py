@@ -168,9 +168,8 @@ def stac_handler(payload_src: dict, bucket_output, ti=None):
 
         if len(payload_failures) != 0:
             logging.warning(
-                f"Some items failed to be processed. Failures logged here: {dead_letter_key}"
+                f"Build STAC completed with {len(payload_failures)} failures. See logs for details {dead_letter_key}"
             )
-            raise AirflowException(f"Build STAC completed with {len(payload_failures)} failures. See logs for details {dead_letter_key}")
 
         return result
 

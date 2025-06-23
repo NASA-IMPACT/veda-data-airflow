@@ -128,13 +128,7 @@ def stac_handler(payload_src: dict, bucket_output, ti=None):
             key=key, payload_success=payload_success, payload_failures=payload_failures
         )
 
-        if ti:
-            duration = ti.duration.total_seconds()
-        else:
-            duration = 0
-
         total_processed = len(payload_success) + len(payload_failures)
-        items_per_second = total_processed / duration if duration > 0 else 0
 
         logging.info("\n=== Run Summary ===")
         logging.info(f"Collection: {collection}")
@@ -142,8 +136,6 @@ def stac_handler(payload_src: dict, bucket_output, ti=None):
         logging.info(f"Successes: {len(payload_success)}")
         logging.info(f"Failures: {len(payload_failures)}")
         logging.info(f"Success Rate: {(len(payload_success) / total_processed) * 100:.2f}%" if total_processed > 0 else "0%")
-        logging.info(f"Duration: {duration:.2f} seconds")
-        logging.info(f"Processing Rate: {items_per_second:.2f} items/second")
 
         if payload_failures:
             logging.warning("\n=== Error Breakdown ===")

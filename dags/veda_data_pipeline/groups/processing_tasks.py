@@ -4,6 +4,7 @@ import logging
 from copy import deepcopy
 import smart_open
 from airflow.models.variable import Variable
+from airflow.models.xcom import LazyXComSelectSequence
 from airflow.decorators import task
 from airflow.datasets import Dataset, DatasetAlias
 from airflow.datasets.metadata import Metadata
@@ -88,7 +89,7 @@ def build_stac_task(payload, ti=None):
             DatasetAlias("VEDA-Datasets")
         ],
 )
-def post_ingest_report(ti, logical_date):  # params are Airflow kwargs - use this task without input
+def post_ingest_dataset_event(ti, logical_date, built_items = {}):  # params are Airflow kwargs - use this task without input
     """
     Logs a Dataset event, saving the config used as a versioned object in s3, and creating a Metadata object visible in Airflow.
     
@@ -113,8 +114,22 @@ def post_ingest_report(ti, logical_date):  # params are Airflow kwargs - use thi
         json.dump(payload, f, indent=2)
     log_task(f"Payload written to {key}")
 
+    # built items can be either a dict or a list of dicts
+    if isinstance(built_items, LazyXComSelectSequence):
+        built_items = list(built_items)
+    elif not isinstance(built_items, list):
+        built_items = [built_items]
+    print(f"Built items: {built_items}")
+    success_count = sum(item.get("payload", {}).get("status", {}).get("successes", 0) for item in built_items)
+    failure_count = sum(item.get("payload", {}).get("status", {}).get("failures", 0) for item in built_items)
+
     yield Metadata(
         Dataset(f"{collection}"),
-        extra={"ingest_datetime": str(logical_date) },  # extra has to be provided, can be {}
+        extra={
+            "ingest_datetime": str(logical_date),
+            "ingest_configuration": key,
+            "successful_items": success_count,
+            "failed_items": failure_count,
+        },  # extra has to be provided, can be {}
         alias="VEDA-Datasets",
     )

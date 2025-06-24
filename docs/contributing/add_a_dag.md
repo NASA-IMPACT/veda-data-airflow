@@ -33,7 +33,30 @@ def example_dag():
     foo >> bar
 ```
 
-Additionally, we prefer to use bitshift operators (`>>`) to define task dependencies where there are no parameterized dependencies. This is to maintain readability and consistency across DAGs.
+Additionally, we prefer to use bitshift operators (`>>`) to define task dependencies where there are no parameterized dependencies. This is to maintain readability and consistency across DAGs. The following examples illustrate the preferred way to define task dependencies:
+
+Preferred:
+
+```python
+output_a = task_a()
+output_b = task_b(input=output_a)
+```
+
+Not preferred:
+
+```python
+def task_b():
+    xcom_pull("task_a")
+
+task_a >> task_b
+```
+
+But if the dependency is orchestration-only, it's fine to do something like:
+
+```python
+output_c = task_a() >> task_b() >> task_c()
+output_d = task_d(input=output_d)
+```
 
 ## Naming Conventions
 

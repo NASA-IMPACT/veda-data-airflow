@@ -48,8 +48,6 @@ To retrieve the variables for a stage that has been previously deployed, the sec
 > [!IMPORTANT]
 > Be careful not to check in `.env` (or whatever you called your env file) when committing work.
 
-Currently, the client id and domain of an existing Cognito user pool programmatic client must be supplied in [configuration](ingest_api/infrastructure/config.py) as `VEDA_CLIENT_ID` and `VEDA_COGNITO_DOMAIN` (the [veda-auth project](https://github.com/NASA-IMPACT/veda-auth) can be used to deploy a Cognito user pool and client). To dispense auth tokens via the workflows API swagger docs, an administrator must add the ingest API lambda URL to the allowed callbacks of the Cognito client.
-
 
 ### Setup a local SM2A development environment
 

@@ -15,7 +15,7 @@ WORKDIR /opt/airflow
 RUN chown $UNAME:$GID /opt/airflow
 
 RUN apt-get -y update \
-        && apt-get install -y --no-install-recommends gcc libc6-dev libcurl4-openssl-dev libssl-dev \
+        && apt-get install -y --no-install-recommends gcc libc6-dev libcurl4-openssl-dev libssl-dev python3.11 python3.11-venv python3.11-dev \
         && apt-get autoremove -yqq --purge \
         && apt-get clean \
         && rm -rf /var/lib/apt/lists/*
@@ -25,9 +25,7 @@ USER airflow
 COPY --chown=airflow:airflow airflow_worker/requirements.txt "${AIRFLOW_HOME}/requirements.txt"
 COPY --chown=airflow:airflow airflow_worker/requirements-in.txt "${AIRFLOW_HOME}/requirements-in.txt"
 
-RUN uv python install 3.11
-RUN uv venv
-
+RUN uv venv --python python3.11
 RUN uv pip install "apache-airflow[celery,amazon]==${AIRFLOW_VERSION}" -c "https://raw.githubusercontent.com/apache/airflow/constraints-${AIRFLOW_VERSION}/constraints-3.11.txt"\
     && uv pip install --no-cache-dir -r requirements.txt -c "https://raw.githubusercontent.com/apache/airflow/constraints-${AIRFLOW_VERSION}/constraints-3.11.txt"\
     && uv pip install --no-cache-dir -r requirements-in.txt apache-airflow==${AIRFLOW_VERSION}

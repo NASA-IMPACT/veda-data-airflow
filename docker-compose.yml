@@ -76,7 +76,7 @@ services:
   # Doesn't have ARM64 image
   # https://github.com/roribio/alpine-sqs
   celery-broker:
-    image: roribio16/alpine-sqs:latest
+    image: softwaremill/elasticmq:latest
     platform: linux/amd64
     expose:
       - 9324
@@ -122,7 +122,7 @@ services:
 
   airflow-worker:
     <<: *airflow-worker
-    command: airflow celery worker
+    command: uv run airflow celery worker
     # SQS does not support worker remote control commands.
     # We will ping celery broker from the worker to test healthcheck.
     healthcheck:

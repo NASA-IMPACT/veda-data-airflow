@@ -26,7 +26,7 @@ module "rds_backups" {
 
 
 module "sma-base" {
-  source                         = "https://github.com/NASA-IMPACT/self-managed-apache-airflow/releases/download/v1.1.7/self-managed-apache-airflow.zip"
+  source                         = "https://github.com/NASA-IMPACT/self-managed-apache-airflow/releases/download/v1.1.11/self-managed-apache-airflow.zip"
   project                        = var.project_name
   airflow_db                     = var.airflow_db
   fernet_key                     = var.fernet_key
@@ -51,6 +51,7 @@ module "sma-base" {
   rds_allocated_storage          = tonumber(var.rds_allocated_storage)
   rds_max_allocated_storage      = tonumber(var.rds_max_allocated_storage)
   workers_logs_retention_days    = tonumber(var.workers_logs_retention_days)
+  airflow_version                = var.airflow_version
 
   extra_airflow_task_common_environment = [
     {

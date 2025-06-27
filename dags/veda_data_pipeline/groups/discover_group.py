@@ -24,6 +24,11 @@ def discover_from_s3_task(event: dict={}, ti=None, payload: dict={}, prev_start_
         **event,
         **payload,
     }
+    
+    # TODO: verify that scheduled DAGS that include a discovery step will work without this config mutation
+    if not ti.dag_run.conf:
+        ti.dag_run.conf = config
+
     if event.get("schedule") and prev_start_date_success:
         config["last_successful_execution"] = prev_start_date_success.isoformat()
     # (event, chunk_size=2800, role_arn=None, bucket_output=None):

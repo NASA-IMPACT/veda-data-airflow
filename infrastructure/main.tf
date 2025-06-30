@@ -51,6 +51,7 @@ module "sma-base" {
   rds_allocated_storage          = tonumber(var.rds_allocated_storage)
   rds_max_allocated_storage      = tonumber(var.rds_max_allocated_storage)
   workers_logs_retention_days    = tonumber(var.workers_logs_retention_days)
+  airflow_version                = var.airflow_version
 
   extra_airflow_task_common_environment = [
     {

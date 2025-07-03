@@ -64,11 +64,16 @@ def check_collection_exists_task(ti=None):
 def generate_collection_task(ti=None):
     import json
     config = ti.dag_run.conf
+
+    # If a STAC Collection is provided, we don't need to generate generate a collection from the dataset config.
+    # We assume the collection being passed is a valid STAC Collection and the config is validated upstream (i.e. Ingest UI)
+    if not config.get("collection"): # Only the dataset config has a collection key
+        return config
+
     airflow_vars = Variable.get("aws_dags_variables")
     airflow_vars_json = json.loads(airflow_vars)
     role_arn = airflow_vars_json.get("ASSUME_ROLE_READ_ARN")
 
-    # TODO it would be ideal if this also works with complete collections where provided - this would make the collection ingest more re-usable
     collection = generator.generate_stac(
         dataset_config=config, role_arn=role_arn
     )

@@ -252,3 +252,8 @@ variable "lambda_dag_trigger_function_name" {
 variable ingest_api_keycloak_client_secret {
  type = string
 }
+
+variable "airflow_version" {
+  type    = string
+  default = "2.10.5"
+}

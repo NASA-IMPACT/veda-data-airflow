@@ -164,25 +164,10 @@ variable "vector_security_group" {
   default = "null"
 }
 
-variable "eis_storage_bucket_name" {
-  type    = string
-  default = "null"
-}
-
-variable "eis_s3_invoke_filter_prefix" {
-  type    = string
-  default = "null"
-}
 variable "sm2a_secret_manager_name" {
   type    = string
   default = "null"
 }
-
-variable "target_dag_id" {
-  type    = string
-  default = "null"
-}
-
 
 variable "workers_cpu" {
   default = 2048

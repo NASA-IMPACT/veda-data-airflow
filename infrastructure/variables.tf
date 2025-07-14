@@ -159,6 +159,11 @@ variable "vector_secret_name" {
   default = "null"
 }
 
+variable "vector_security_group" {
+  type = string
+  default = "null"
+}
+
 variable "sm2a_secret_manager_name" {
   type    = string
   default = "null"
@@ -217,7 +222,7 @@ variable "glue_role_arn" {
 variable "s3_export_kms_key_id" {
   default = ""
 }
-  
+
 variable "cloudfront_to_invalidate" {
   default = null
 }

@@ -33,7 +33,7 @@ def schedule_dags_by_config(
     """
 
     for idx, collection in enumerate(collection_configs):
-        if not collection.get("schedule") and collection.get('id') != 'manual-trigger':
+        if not collection.get("schedule"):
             continue
         
         # Retrieves the function name from dag_configs

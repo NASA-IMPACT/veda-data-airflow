@@ -1,308 +1,122 @@
-module "mwaa" {
-  source                           = "https://github.com/NASA-IMPACT/mwaa_tf_module/releases/download/v1.2.0/mwaa_tf_module.zip"
-  prefix                           = var.prefix
-  vpc_id                           = var.vpc_id
-  iam_role_additional_arn_policies = merge(module.custom_policy.custom_policy_arns_map)
-  permissions_boundary_arn         = var.iam_policy_permissions_boundary_name == "null" ? null : "arn:aws:iam::${local.account_id}:policy/${var.iam_policy_permissions_boundary_name}"
-  subnet_tagname                   = var.subnet_tagname
-  local_requirement_file_path      = "${path.module}/../dags/requirements.txt"
-  local_dag_folder                 = "${path.module}/../dags/"
-  mwaa_variables_json_file_id_path = { file_path = local_file.mwaa_variables.filename, file_id = local_file.mwaa_variables.id }
-  provision_s3_access_block        = var.provision_s3_access_block
-  stage                            = var.stage
-  airflow_version                  = "2.5.1"
-  airflow_configuration_options    = { "webserver.instance_name" = "${var.prefix} DAGs", "webserver.expose_config" = true }
-  environment_class                = var.mwaa_environment_class
-  min_workers                      = var.min_workers
-  ecs_containers = [
-    {
-      handler_file_path         = "${path.module}/../docker_tasks/build_stac/handler.py"
-      docker_file_path          = "${path.module}/../docker_tasks/build_stac/Dockerfile"
-      ecs_container_folder_path = "${path.module}/../docker_tasks/build_stac"
-      ecr_repo_name             = "${var.prefix}-veda-build_stac"
-    },
-    {
-      handler_file_path         = "${path.module}/../docker_tasks/cogify_transfer/handler.py"
-      docker_file_path          = "${path.module}/../docker_tasks/cogify_transfer/Dockerfile"
-      ecs_container_folder_path = "${path.module}/../docker_tasks/cogify_transfer"
-      ecr_repo_name             = "${var.prefix}-veda-cogify_transfer"
-    },
-    {
-      handler_file_path         = "${path.module}/../docker_tasks/vector_ingest/handler.py"
-      docker_file_path          = "${path.module}/../docker_tasks/vector_ingest/Dockerfile"
-      ecs_container_folder_path = "${path.module}/../docker_tasks/vector_ingest"
-      ecr_repo_name             = "${var.prefix}-veda-vector_ingest"
-    },
-    {
-      handler_file_path         = "${path.module}/../docker_tasks/generic_vector_ingest/handler.py"
-      docker_file_path          = "${path.module}/../docker_tasks/generic_vector_ingest/Dockerfile"
-      ecs_container_folder_path = "${path.module}/../docker_tasks/generic_vector_ingest"
-      ecr_repo_name             = "${var.prefix}-veda-generic_vector_ingest"
+terraform {
+  required_providers {
+    aws = {
+      version = "~> 4.0"
     }
+  }
+  required_version = ">= 1.3"
+}
+
+provider "aws" {
+  region = var.aws_region
+}
+resource "random_password" "password" {
+  length           = 8
+  special          = true
+  override_special = "_%@"
+}
+
+module "rds_backups" {
+  source = "./rds_backups"
+  count = var.snapshot_bucket_name != "" ? 1 : 0
+  prefix = var.prefix
+  permission_boundaries_arn = var.permission_boundaries_arn
+  snapshot_bucket_name = var.snapshot_bucket_name
+}
+
+
+module "sma-base" {
+  source                         = "https://github.com/NASA-IMPACT/self-managed-apache-airflow/releases/download/v1.1.12/self-managed-apache-airflow.zip"
+  project                        = var.project_name
+  airflow_db                     = var.airflow_db
+  fernet_key                     = var.fernet_key
+  prefix                         = var.prefix
+  private_subnets_tagname        = var.private_subnets_tagname
+  public_subnets_tagname         = var.public_subnets_tagname
+  vpc_id                         = var.vpc_id
+  state_bucketname               = var.state_bucketname
+  desired_max_workers_count      = var.desired_max_workers_count
+  airflow_admin_password         = random_password.password.result
+  airflow_admin_username         = "admin"
+  rds_publicly_accessible        = var.rds_publicly_accessible
+  permission_boundaries_arn      = var.permission_boundaries_arn
+  custom_worker_policy_statement = var.custom_worker_policy_statement
+  worker_cpu                     = tonumber(var.workers_cpu)
+  worker_memory                  = tonumber(var.workers_memory)
+  number_of_schedulers           = var.number_of_schedulers
+  scheduler_cpu                  = tonumber(var.scheduler_cpu)
+  scheduler_memory               = tonumber(var.scheduler_memory)
+  rds_engine_version             = var.rds_engine_version
+  rds_instance_class             = var.rds_instance_class
+  rds_allocated_storage          = tonumber(var.rds_allocated_storage)
+  rds_max_allocated_storage      = tonumber(var.rds_max_allocated_storage)
+  workers_logs_retention_days    = tonumber(var.workers_logs_retention_days)
+  airflow_version                = var.airflow_version
+
+  extra_airflow_task_common_environment = [
+    {
+      name  = "AIRFLOW__CORE__DAGBAG_IMPORT_TIMEOUT"
+      value = "100"
+    },
+    {
+      name  = "AIRFLOW__CORE__DEFAULT_TASK_RETRIES"
+      value = var.workers_task_retries
+    },
+    {
+      name  = "GH_CLIENT_ID"
+      value = var.gh_app_client_id
+    },
+    {
+      name  = "GH_CLIENT_SECRET"
+      value = var.gh_app_client_secret
+    },
+    {
+      name  = "GH_ADMIN_TEAM_ID"
+      value = var.gh_team_name
+    },
+    {
+      name  = "GH_USER_TEAM_ID"
+      value = var.gh_user_team_id
+    },
+    {
+      name  = "GH_DAG_LAUNCHER_TEAM_ID"
+      value = var.gh_dag_launcher_team_id
+    }
+
   ]
-}
-
-module "custom_policy" {
-  source             = "./custom_policies"
-  prefix             = var.prefix
-  account_id         = data.aws_caller_identity.current.account_id
-  cluster_name       = module.mwaa.cluster_name
-  mwaa_arn           = module.mwaa.mwaa_arn
-  assume_role_arns   = var.assume_role_arns
-  region             = local.aws_region
-  cognito_app_secret = var.workflows_client_secret
-  vector_secret_name = var.vector_secret_name
-}
-
-data "aws_subnets" "vector_aws_subnets" {
-  filter {
-    name   = "vpc-id"
-    values = [var.vector_vpc == null ? "" : var.vector_vpc]
+  extra_airflow_configuration = {
+    gh_app_client_id     = var.gh_app_client_id
+    gh_app_client_secret = var.gh_app_client_secret
+    gh_team_id           = var.gh_team_name
   }
+  domain_name = var.domain_name
+  stage       = var.stage
+  subdomain   = var.subdomain
+  worker_cmd  = ["airflow", "celery", "worker"]
 
-  tags = {
-    Scope = "private"
-  }
-}
-
-resource "aws_security_group" "vector_sg" {
-  count  = var.vector_vpc == "null" ? 0 : 1
-  name   = "${var.prefix}_veda_vector_sg"
-  vpc_id = var.vector_vpc
-
-  egress {
-    from_port        = 0
-    to_port          = 0
-    protocol         = "-1"
-    cidr_blocks      = ["0.0.0.0/0"]
-    ipv6_cidr_blocks = ["::/0"]
-  }
+  # add custom env, with conditional rds backup env vars
+  airflow_custom_variables = merge({
+    EVENT_BUCKET          = var.state_bucketname,
+    COGNITO_APP_SECRET    = var.workflows_client_secret,
+    STAC_INGESTOR_API_URL = var.stac_ingestor_api_url,
+    STAC_URL              = var.stac_url,
+    VECTOR_SECRET_NAME    = var.vector_secret_name,
+    ASSUME_ROLE_READ_ARN  = var.assume_role_read_arn,
+    ASSUME_ROLE_WRITE_ARN = var.assume_role_write_arn,
+    SM2A_BASE_URL         = module.sma-base.airflow_url,
+    CLOUDFRONT_TO_INVALIDATE = var.cloudfront_to_invalidate,
+    CLOUDFRONT_PATH_TO_INVALIDATE = var.cloudfront_path_to_invalidate,
+    INGEST_API_KEYCLOAK_APP_SECRET=var.ingest_api_keycloak_client_secret
+  }, var.snapshot_bucket_name != "" ? module.rds_backups[0].rds_backup_environment : {}
+  )
 }
 
 resource "aws_vpc_security_group_ingress_rule" "vector_rds_ingress" {
-  count             = var.vector_vpc == "null" ? 0 : 1
+  count             = var.vector_security_group == "null" ? 0 : 1
   security_group_id = var.vector_security_group
 
   from_port                    = 5432
   to_port                      = 5432
   ip_protocol                  = "tcp"
-  referenced_security_group_id = aws_security_group.vector_sg[count.index].id
-}
-
-resource "local_file" "mwaa_variables" {
-  content = templatefile("${path.module}/mwaa_environment_variables.tpl",
-    {
-      prefix                  = var.prefix
-      event_bucket            = module.mwaa.mwaa_s3_name
-      securitygroup_1         = module.mwaa.mwaa_security_groups[0]
-      subnet_1                = module.mwaa.subnets[0]
-      subnet_2                = module.mwaa.subnets[1]
-      stage                   = var.stage
-      ecs_cluster_name        = module.mwaa.cluster_name
-      log_group_name          = module.mwaa.log_group_name
-      mwaa_execution_role_arn = module.mwaa.mwaa_role_arn
-      assume_role_read_arn    = length(var.assume_role_arns) > 0 ? var.assume_role_arns[0] : ""
-      assume_role_write_arn   = length(var.assume_role_arns) > 0 ? var.assume_role_arns[1] : ""
-      account_id              = local.account_id
-      aws_region              = local.aws_region
-      cognito_app_secret      = var.workflows_client_secret
-      stac_ingestor_api_url   = var.stac_ingestor_api_url
-      stac_url                = var.stac_url
-      vector_secret_name      = var.vector_secret_name
-      vector_subnet_1         = length(data.aws_subnets.vector_aws_subnets.ids) > 0 ? data.aws_subnets.vector_aws_subnets.ids[0] : data.aws_subnets.subnet_ids.ids[0]
-      vector_subnet_2         = length(data.aws_subnets.vector_aws_subnets.ids) > 0 ? data.aws_subnets.vector_aws_subnets.ids[1] : data.aws_subnets.subnet_ids.ids[1]
-      vector_security_group   = length(aws_security_group.vector_sg) > 0 ? aws_security_group.vector_sg[0].id : ""
-      vector_vpc              = var.vector_vpc
-  })
-  filename = "/tmp/mwaa_vars.json"
-}
-
-##########################################################
-# Workflows API
-##########################################################
-
-# ECR repository to host workflows API image
-resource "aws_ecr_repository" "workflows_api_lambda_repository" {
-  name = "${var.prefix}_workflows-api-lambda-repository"
-}
-
-resource "null_resource" "if_change_run_provisioner" {
-  triggers = {
-    always_run = "${timestamp()}"
-  }
-  provisioner "local-exec" {
-    command = <<-EOT
-      set -e
-      aws ecr get-login-password --region ${local.aws_region} | docker login --username AWS --password-stdin ${aws_ecr_repository.workflows_api_lambda_repository.repository_url}
-      docker build --platform=linux/amd64 -t ${aws_ecr_repository.workflows_api_lambda_repository.repository_url}:latest ../workflows_api/runtime/
-      docker push ${aws_ecr_repository.workflows_api_lambda_repository.repository_url}:latest
-    EOT
-  }
-}
-
-# IAM Role for Lambda Execution
-resource "aws_iam_role" "lambda_execution_role" {
-  name                 = "${var.prefix}_lambda_execution_role"
-  permissions_boundary = var.iam_policy_permissions_boundary_name == "null" ? null : "arn:aws:iam::${local.account_id}:policy/${var.iam_policy_permissions_boundary_name}"
-
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17",
-    Statement = [
-      {
-        Action = "sts:AssumeRole",
-        Effect = "Allow",
-        Principal = {
-          Service = "lambda.amazonaws.com",
-        },
-      },
-    ],
-  })
-}
-
-resource "aws_iam_policy" "lambda_access" {
-  name        = "${var.prefix}_Access_For_Lambda"
-  path        = "/"
-  description = "Access policy for Lambda function"
-  policy = jsonencode({
-    Version   = "2012-10-17",
-    Statement = local.conditional_workflows_lambda_policy,
-  })
-}
-
-resource "aws_iam_policy" "s3_bucket_access" {
-  name        = "${var.prefix}_S3_Access_For_Lambda"
-  path        = "/"
-  description = "Policy to access S3 bucket"
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Action = [
-          "s3:*",
-        ]
-        Effect = "Allow"
-        Resource = [
-          "arn:aws:s3:::*",
-          "arn:aws:s3:::*/*"
-        ]
-      },
-    ]
-  })
-}
-
-resource "aws_iam_role_policy_attachment" "lambda_access_attach" {
-  role       = aws_iam_role.lambda_execution_role.name
-  policy_arn = aws_iam_policy.lambda_access.arn
-}
-
-resource "aws_iam_role_policy_attachment" "lambda_basic_execution" {
-  role       = aws_iam_role.lambda_execution_role.name
-  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
-}
-
-resource "aws_iam_role_policy_attachment" "lambda_s3_access" {
-  role       = aws_iam_role.lambda_execution_role.name
-  policy_arn = aws_iam_policy.s3_bucket_access.arn
-}
-
-resource "aws_security_group" "workflows_api_handler_sg" {
-  name        = "${var.prefix}_workflows_security_group"
-  description = "Security group for Lambda function"
-
-  vpc_id = var.backend_vpc_id != "" ? var.backend_vpc_id : var.vpc_id
-
-  egress {
-    from_port        = 0
-    to_port          = 0
-    protocol         = "-1"
-    cidr_blocks      = ["0.0.0.0/0"]
-    ipv6_cidr_blocks = ["::/0"]
-  }
-
-  lifecycle { create_before_destroy = true }
-}
-
-
-resource "aws_lambda_function" "workflows_api_handler" {
-  function_name = "${var.prefix}_workflows_api_handler"
-  role          = aws_iam_role.lambda_execution_role.arn
-  package_type  = "Image"
-  timeout       = 30
-  image_uri     = "${aws_ecr_repository.workflows_api_lambda_repository.repository_url}:latest"
-
-  # prevents handler from instantiating if provisioner has not created an image
-  depends_on = [null_resource.if_change_run_provisioner]
-
-  vpc_config {
-    subnet_ids         = var.subnet_ids
-    security_group_ids = [aws_security_group.workflows_api_handler_sg.id]
-  }
-
-  environment {
-    variables = {
-      WORKFLOWS_CLIENT_SECRET_ID = var.cognito_app_secret
-      STAGE                      = var.stage
-      DATA_ACCESS_ROLE_ARN       = var.data_access_role_arn
-      WORKFLOW_ROOT_PATH         = var.workflow_root_path
-      INGEST_URL                 = var.stac_ingestor_api_url
-      RASTER_URL                 = var.raster_url
-      STAC_URL                   = var.stac_url
-      MWAA_ENV                   = "${var.prefix}-mwaa"
-      COGNITO_DOMAIN             = var.cognito_domain
-      CLIENT_ID                  = var.client_id
-      JWKS_URL                   = local.build_jwks_url
-    }
-  }
-}
-
-resource "null_resource" "update_workflows_lambda_image" {
-  triggers = {
-    always_run = "${timestamp()}"
-  }
-
-  depends_on = [aws_lambda_function.workflows_api_handler, null_resource.if_change_run_provisioner]
-  provisioner "local-exec" {
-    command = <<-EOT
-      set -e
-      aws lambda update-function-code \
-           --function-name ${aws_lambda_function.workflows_api_handler.function_name} \
-           --image-uri ${aws_ecr_repository.workflows_api_lambda_repository.repository_url}:latest
-    EOT
-  }
-}
-
-# API Gateway HTTP API
-resource "aws_apigatewayv2_api" "workflows_http_api" {
-  name                         = "${var.prefix}_workflows_http_api"
-  protocol_type                = "HTTP"
-  disable_execute_api_endpoint = var.disable_default_apigw_endpoint
-}
-
-# Lambda Integration for API Gateway
-resource "aws_apigatewayv2_integration" "workflows_lambda_integration" {
-  api_id                 = aws_apigatewayv2_api.workflows_http_api.id
-  integration_type       = "AWS_PROXY"
-  integration_uri        = aws_lambda_function.workflows_api_handler.invoke_arn
-  payload_format_version = "2.0"
-}
-
-# Default Route for API Gateway
-resource "aws_apigatewayv2_route" "workflows_default_route" {
-  api_id    = aws_apigatewayv2_api.workflows_http_api.id
-  route_key = "$default"
-  target    = "integrations/${aws_apigatewayv2_integration.workflows_lambda_integration.id}"
-}
-
-resource "aws_apigatewayv2_stage" "workflows_default_stage" {
-  api_id      = aws_apigatewayv2_api.workflows_http_api.id
-  name        = "$default"
-  auto_deploy = true
-}
-
-resource "aws_lambda_permission" "api-gateway" {
-  statement_id  = "AllowExecutionFromAPIGateway"
-  action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.workflows_api_handler.arn
-  principal     = "apigateway.amazonaws.com"
-  source_arn    = "${aws_apigatewayv2_api.workflows_http_api.execution_arn}/*/$default"
+  referenced_security_group_id = module.sma-base.worker_security_group_id
 }

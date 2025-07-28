@@ -1,4 +1,4 @@
-from dags.veda_data_pipeline.utils import s3_discovery
+from veda_data_pipeline.utils import s3_discovery
 
 import pytest
 import os

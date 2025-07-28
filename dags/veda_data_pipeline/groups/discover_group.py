@@ -3,8 +3,8 @@ import json
 import uuid
 
 from airflow.models.variable import Variable
-from airflow.models.xcom import LazyXComAccess
 from airflow.decorators import task
+from airflow.models.xcom import LazyXComSelectSequence
 from veda_data_pipeline.utils.s3_discovery import (
     s3_discovery_handler, EmptyFileListError
 )
@@ -24,7 +24,11 @@ def discover_from_s3_task(event: dict={}, ti=None, payload: dict={}, prev_start_
         **event,
         **payload,
     }
-    # TODO test that this context var is available in taskflow
+    
+    # TODO: verify that scheduled DAGS that include a discovery step will work without this config mutation
+    if not ti.dag_run.conf:
+        ti.dag_run.conf = config
+
     if event.get("schedule") and prev_start_date_success:
         config["last_successful_execution"] = prev_start_date_success.isoformat()
     # (event, chunk_size=2800, role_arn=None, bucket_output=None):
@@ -62,7 +66,7 @@ def get_files_task(payload, ti=None):
     payloads = payload if isinstance(payload, list) else [payload]
 
     for item in payloads:
-        if isinstance(item, LazyXComAccess):  # Dynamic task mapping case
+        if isinstance(item, LazyXComSelectSequence):  # Dynamic task mapping case
             payloads_xcom = item[0].pop("payload", [])
             base_payload = item[0]
         else:
@@ -84,7 +88,7 @@ def get_files_to_process(payload, ti=None):
     """Get files from S3 produced by the discovery task.
     Used as part of both the parallel_run_process_rasters and parallel_run_process_vectors tasks.
     """
-    if isinstance(payload, LazyXComAccess):  # if used as part of a dynamic task mapping
+    if isinstance(payload, LazyXComSelectSequence):  # if used as part of a dynamic task mapping
         payloads_xcom = payload[0].pop("payload", [])
         payload = payload[0]
     else:
@@ -107,7 +111,7 @@ def get_dataset_files_to_process(payload, ti=None):
 
     result = []
     for x in payload:
-        if isinstance(x, LazyXComAccess):  # if used as part of a dynamic task mapping
+        if isinstance(x, LazyXComSelectSequence):  # if used as part of a dynamic task mapping
             payloads_xcom = x[0].pop("payload", [])
             payload_0 = x[0]
         else:

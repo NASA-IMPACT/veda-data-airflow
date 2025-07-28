@@ -1,12 +1,9 @@
 
-import logging
 import pendulum
 from airflow.models.param import Param
-from airflow.decorators import task
 from airflow import DAG
 from airflow.operators.empty import EmptyOperator
 from airflow.utils.trigger_rule import TriggerRule
-from airflow.models.variable import Variable
 from airflow.operators.python import PythonVirtualenvOperator
 from veda_data_pipeline.groups.collection_group import ingest_collection_task
 
@@ -27,23 +24,22 @@ This DAG is supposed to be triggered by `veda_discover`. But you still can trigg
     "license": "CC1.0 Universal", 
     "dashboard:is_periodic": true,
     "dashboard:time_density": "day",
-    "dashboard:is_timeless":"false",
-    "temporal: {"interval" : [["2025-01-12T00:00:00+00:00", "2025-01-12T23:59:59+00:00"]] }
-
+    "temporal": {"interval": [["2025-01-12T00:00:00+00:00", "2025-01-12T23:59:59+00:00"]]}
+}
+```
 """
 
 
 template_conf = {
-    "url": "",
-    "id": "",
-    "title": "",
-    "stac_version": "",
-    "description": "",
-    "license": "",
-    "dashboard:is_periodic": "",
-    "dashboard:time_density": "",
-    "dashboard:is_timeless":"",
-    "temporal": {},
+    "url": Param(default=None, type=["null", "string"], description="ArcGIS Image|Map|Feature Server URL"),
+    "id": Param(default=None, type=["null", "string"], description="Collection ID within VEDA STAC"),
+    "title": Param(default=None, type=["null", "string"], description="Collection title"),
+    "description": Param(default=None, type=["null", "string"], description="Collection description"),
+    "stac_version": Param(default=None, type=["null", "string"], description="STAC version"),
+    "license": Param(default=None, type=["null", "string"], description="Data license"),
+    "dashboard:is_periodic": Param(default=None, type=["null", "boolean", "string"], description="Is data periodic: Bool (True|False)"),
+    "dashboard:time_density": Param(default=None, type=["null", "string"], description="Time density: (day, month, year)"),
+    "temporal": Param(default=None, type=["null", "object"], description="Temporal extent"),
 }
 
 
@@ -65,10 +61,6 @@ def read_url_pyarc2stac_callable(event: dict, template_conf: dict) -> dict:
     2. `event` — JSON payload from S3 (medium priority)
     3. `pyarc2stac` generated values (fallback)
 
-    Special handling is included for dashboard temporal flags, such as
-    `dashboard:is_periodic` and `dashboard:is_timeless`, to ensure compatibility
-    with VEDA rendering expectations.
-
     Parameters
     ----------
     event : dict
@@ -86,10 +78,10 @@ def read_url_pyarc2stac_callable(event: dict, template_conf: dict) -> dict:
     ValueError
         If no URL is found in either `event` or `template_conf`.
     """
-
     from pyarc2stac.ArcReader import ArcReader
 
-    url =  template_conf.get("url") or event.get("url")
+    # Get URL from either source
+    url = template_conf.get("url") or event.get("url")
     if not url:
         raise ValueError(
             "URL is required but not provided in the event or template_conf."
@@ -99,63 +91,28 @@ def read_url_pyarc2stac_callable(event: dict, template_conf: dict) -> dict:
     reader = ArcReader(server_url=url)
     collection = reader.generate_stac().to_dict()
 
+    # Create merged configuration with proper precedence
+    # Filter out None and empty string values from configs
+    filtered_template = {k: v for k, v in template_conf.items() if v not in (None, "")}
+    filtered_event = {k: v for k, v in event.items() if v not in (None, "")}
+    
+    # Merge with precedence: template_conf > event > pyarc2stac defaults
+    # Start with collection (pyarc2stac defaults), update with event, then template
+    merged = collection.copy()
+    
+    # Handle temporal extent separately if it exists in configs.
+    # This is useful for items with no temporal extent in the initial pyarc2stac item creation
+    if "temporal" in filtered_event:
+        merged["extent"]["temporal"] = filtered_event["temporal"]
+    if "temporal" in filtered_template:
+        merged["extent"]["temporal"] = filtered_template["temporal"]
+    
+    # Update with event and template configs
+    merged.update(filtered_event)
+    merged.update(filtered_template)
+    merged.pop("dashboard:is_timeless", None) #we do not want dashboard:is_timeless. Temporal extent should be specified.         
 
-    def _choose_keyValues(key, default):
-        """
-        Resolve a key's value using the following precedence:
-        1. `template_conf` (highest priority)
-        2. `event`
-        3. `default` (fallback)
-
-        This logic avoids Python's built-in truthy/falsey evaluation to preserve valid values
-        like `False` or `0`, which are meaningful for flags such as `dashboard:is_timeless` 
-        and `dashboard:is_periodic`.
-        """
-        value = template_conf.get(key)
-        if value not in (None, ""):
-            return value
-
-        value = event.get(key)
-        return value if value not in (None, "") else default
-
-    def _temporal_extent_handling(template_conf,collection):
-        """
-        Override temporal extent flags for VEDA compatibility.
-
-        If `dashboard:is_periodic` is explicitly True in `template_conf`, update the
-        collection accordingly and remove `dashboard:is_timeless`, which may have been
-        set by pyarc2stac when no start/end dates are found.
-        """
-        # Normalize the input (so "true"/"false" strings become booleans)
-        raw = template_conf.get("dashboard:is_periodic")
-        periodic = raw is True or (isinstance(raw, str) and raw.lower() == "true")
-
-        if periodic:
-            collection["dashboard:is_periodic"] = True
-            # remove any timeless flag that pyarc2stac might have set
-            collection.pop("dashboard:is_timeless", None)
-        return collection
-
-    # Overwrite keys based on order of precedence. User config in manual triggering is first in template_conf, followed by
-    # values placed within the veda-tf-state-shared S3 bucket, and the last option is pyarc2stac generated values.
-    for key in collection.keys():
-        #Override with either spatial or temporal extents
-        if key == 'extent':
-            for ex_key, ex_val in collection['extent'].items():
-                collection['extent'][ex_key] = (template_conf.get(ex_key) or event.get(ex_key) or ex_val) 
-        else:
-            # (optional) debug logging:
-            print(f"Key: {key!r}, pyarc2stac: {collection[key]!r}, template_conf: {template_conf.get(key)!r}, event: {event.get(key)!r}")
-
-            collection[key] = _choose_keyValues(key, collection[key])
-
-            print(f"→ Final {key!r} = {collection[key]!r}")
-        print(f"Final value for {key} is {collection.get(key)}")
-
-    # Finalize special-case logic
-    collection = _temporal_extent_handling(template_conf, collection)
-
-    return collection
+    return merged
 
 
 

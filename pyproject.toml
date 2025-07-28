@@ -31,6 +31,7 @@ test = [
     "mypy_boto3_s3",
     "rasterio",
     "rio_stac",
+    "virtualenv",
 ]
 airflow-worker = [
     "apache-airflow-providers-amazon",

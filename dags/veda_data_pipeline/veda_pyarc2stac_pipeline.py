@@ -147,4 +147,4 @@ def get_ingest_pyarc2stac_dag(id: str, event: dict):
 
 # Sending empty event because we rely on task instance (ti) for manual runs
 # and payload for scheduled runs
-get_ingest_pyarc2stac_dag(id="veda_pyarc2stac_ingest", event={})
+# get_ingest_pyarc2stac_dag(id="veda_pyarc2stac_ingest", event={})

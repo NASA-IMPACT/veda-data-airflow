@@ -4,7 +4,6 @@ from typing import Callable, Dict, Tuple, Union
 
 from dateutil.relativedelta import relativedelta
 
-from . import events
 
 DATERANGE = Tuple[datetime, datetime]
 
@@ -27,7 +26,7 @@ def _calculate_day_range(datetime_obj: datetime) -> DATERANGE:
     return start_datetime, end_datetime
 
 
-DATETIME_RANGE_METHODS: Dict[events.INTERVAL, Callable[[datetime], DATERANGE]] = {
+DATETIME_RANGE_METHODS: Dict[INTERVAL, Callable[[datetime], DATERANGE]] = {
     "month": _calculate_month_range,
     "year": _calculate_year_range,
     "day": _calculate_day_range,
@@ -35,19 +34,19 @@ DATETIME_RANGE_METHODS: Dict[events.INTERVAL, Callable[[datetime], DATERANGE]] =
 
 
 def extract_dates(
-    filename: str, datetime_range: events.INTERVAL
+    filename: str, datetime_range: INTERVAL
 ) -> Union[Tuple[datetime, datetime, None], Tuple[None, None, datetime]]:
     """
     Extracts start & end or single date string from filename.
     """
     DATE_REGEX_STRATEGIES = [
-        (r"[_\.\-](\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})", "%Y-%m-%dT%H:%M:%S"),
-        (r"[_\.\-](\d{8}T\d{6})", "%Y%m%dT%H%M%S"),
-        (r"[_\.\-](\d{4}_\d{2}_\d{2})", "%Y_%m_%d"),
-        (r"[_\.\-](\d{4}-\d{2}-\d{2})", "%Y-%m-%d"),
-        (r"[_\.\-](\d{8})", "%Y%m%d"),
-        (r"[_\.\-](\d{6})", "%Y%m"),
-        (r"[_\.\-](\d{4})", "%Y"),
+        (r"(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})", "%Y-%m-%dT%H:%M:%S"),
+        (r"(\d{8}T\d{6})", "%Y%m%dT%H%M%S"),
+        (r"(\d{4}_\d{2}_\d{2})", "%Y_%m_%d"),
+        (r"(\d{4}-\d{2}-\d{2})", "%Y-%m-%d"),
+        (r"(\d{8})", "%Y%m%d"),
+        (r"(\d{6})", "%Y%m"),
+        (r"(\d{4})", "%Y"),
     ]
 
     # Find dates in filename

@@ -26,7 +26,7 @@ def _calculate_day_range(datetime_obj: datetime) -> DATERANGE:
     return start_datetime, end_datetime
 
 
-DATETIME_RANGE_METHODS: Dict[INTERVAL, Callable[[datetime], DATERANGE]] = {
+DATETIME_RANGE_METHODS: Dict[events.INTERVAL, Callable[[datetime], DATERANGE]] = {
     "month": _calculate_month_range,
     "year": _calculate_year_range,
     "day": _calculate_day_range,
@@ -34,7 +34,7 @@ DATETIME_RANGE_METHODS: Dict[INTERVAL, Callable[[datetime], DATERANGE]] = {
 
 
 def extract_dates(
-    filename: str, datetime_range: INTERVAL
+    filename: str, datetime_range: events.INTERVAL
 ) -> Union[Tuple[datetime, datetime, None], Tuple[None, None, datetime]]:
     """
     Extracts start & end or single date string from filename.

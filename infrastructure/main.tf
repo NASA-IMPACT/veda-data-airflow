@@ -53,6 +53,7 @@ module "sma-base" {
   workers_logs_retention_days    = tonumber(var.workers_logs_retention_days)
   rds_deletion_protection        = var.rds_deletion_protection
   rds_storage_encrypted          = var.rds_storage_encrypted
+  rds_snapshot_identifier        = var.rds_snapshot_identifier
   airflow_version                = var.airflow_version
 
   extra_airflow_task_common_environment = [

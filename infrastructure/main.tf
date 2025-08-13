@@ -88,6 +88,7 @@ module "sma-base" {
     gh_app_client_id     = var.gh_app_client_id
     gh_app_client_secret = var.gh_app_client_secret
     gh_team_id           = var.gh_team_name
+    sm2a_base_url        = "https://${lower(var.subdomain)}.${var.domain_name}"
   }
   domain_name = var.domain_name
   stage       = var.stage
@@ -103,7 +104,7 @@ module "sma-base" {
     VECTOR_SECRET_NAME    = var.vector_secret_name,
     ASSUME_ROLE_READ_ARN  = var.assume_role_read_arn,
     ASSUME_ROLE_WRITE_ARN = var.assume_role_write_arn,
-    SM2A_BASE_URL         = module.sma-base.airflow_url,
+    SM2A_BASE_URL         = "https://${lower(var.subdomain)}.${var.domain_name}",
     CLOUDFRONT_TO_INVALIDATE = var.cloudfront_to_invalidate,
     CLOUDFRONT_PATH_TO_INVALIDATE = var.cloudfront_path_to_invalidate,
     INGEST_API_KEYCLOAK_APP_SECRET=var.ingest_api_keycloak_client_secret

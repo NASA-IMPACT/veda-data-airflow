@@ -242,3 +242,19 @@ variable "airflow_version" {
   type    = string
   default = "2.10.5"
 }
+
+variable "rds_deletion_protection" {
+  description = "Enable deletion protection on Airflow RDS instance"
+  type        = bool
+  default     = true
+}
+
+variable "rds_storage_encrypted" {
+  description = "Encrypt Airflow RDS data at rest"
+  type        = bool
+}
+
+variable "rds_snapshot_identifier" {
+  description = "Snapshot from which to create Airflow RDS instance"
+  default     = null
+}

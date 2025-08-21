@@ -109,9 +109,13 @@ def post_ingest_dataset_event(ti, logical_date, built_items = {}):  # params are
         raise ValueError("Collection ID is required in the payload to create a report.")
     
     # write the payload to S3 as a versioned object
-    key = f"s3://{event_bucket_name}/airflow_events/{collection}/{logical_date.isoformat()}.json"
-    with smart_open.open(key, "w") as f:
-        json.dump(payload, f, indent=2)
+    key = f"s3://{event_bucket_name}/airflow_events/{collection}/{logical_date.format('YYYYMMDDHHmmss')}.json"
+    try:
+        with smart_open.open(key, "w") as f:
+            json.dump(payload, f, indent=2)
+    except Exception as e:
+        log_task(f"Error writing payload to {key}: {e}")
+        raise
     log_task(f"Payload written to {key}")
 
     # built items can be either a dict or a list of dicts

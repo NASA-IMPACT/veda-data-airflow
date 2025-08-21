@@ -91,7 +91,7 @@ check_create_remote_state $AWS_REGION $STATE_BUCKET_NAME $STATE_DYNAMO_TABLE
 read -rp 'action [init|plan|deploy]: ' ACTION
 case $ACTION in
   init)
-    terraform init -reconfigure
+    terraform init
     ;;
   plan)
     terraform plan

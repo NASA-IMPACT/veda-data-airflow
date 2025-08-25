@@ -4,47 +4,23 @@ These DAGs are used to discover and ingest items for each collection.
 """
 
 from airflow.models.variable import Variable
-from typing import Dict, List, Optional
 
 from veda_data_pipeline.veda_discover_pipeline import get_discover_dag
 from veda_data_pipeline.veda_vector_pipeline import get_ingest_vector_dag
 from veda_data_pipeline.veda_pyarc2stac_pipeline import get_ingest_pyarc2stac_dag
 
+dag_generators = {
+        "veda_discover":          get_discover_dag,
+        "veda_ingest_vector":     get_ingest_vector_dag,
+        "veda_pyarc2stac_ingest": get_ingest_pyarc2stac_dag,
+    }
 
-def schedule_dags_by_config(
-        dag_configs: Dict[str, tuple],
-        collection_configs: List[Dict[str, int]],
-        file_name: str 
-    ) -> None:
-    """
-    Schedule Airflow DAGs for each collection config that includes a `schedule`.
-
-    Args:
-        dag_configs: mapping of dag_key to the builder_fn
-        collection_configs: list of config dicts, each may include:
-            - "dag": which key to use from dag_configs (defaults to "veda_discover")
-            - "schedule": cron or schedule specifier (must be present to schedule)
-            - "collection": a unique identifier for the config which is the collection id
-            - other fields passed through as `event` in the AWS .json file
-        file_name: filename stem (retrived from the AWS bucket))
-
-    Outputs:
-        DAGs based on the provided collection configurations. Operates on each entry in the .json file.
-    """
-
-    for idx, collection in enumerate(collection_configs):
-        if not collection.get("schedule"):
-            continue
-        
-        # Retrieves the function name from dag_configs
-        dag_builder= dag_configs[collection.get("dag", "veda_discover")]
-
-        name = (dag_builder.__name__).split('_')[-2]
-        id = f"{name}-{collection.get('id')}"
-
-        dag_builder(id=id, event=collection)
-
-
+# preserve DAG history
+dag_names = {
+    "veda_discover": "discover",
+    "veda_ingest_vector": "vector",
+    "veda_pyarc2stac_ingest": "pyarc2stac",
+}
 
 def generate_dags():
     import boto3
@@ -53,24 +29,9 @@ def generate_dags():
 
     from pathlib import Path
 
-    airflow_vars = Variable.get("aws_dags_variables")
-    airflow_vars_json = json.loads(airflow_vars)
-    bucket = airflow_vars_json.get("EVENT_BUCKET")
-
-    '''Define the mapping of DAG builders to their respective keys and prefixes
-    The key values (e.g., veda_discover) are located as a key value pair in the AWS S3 bucket under the collections/ folder in the .json file.
-    The mapping functions are located in the /veda_data_pipeline 
-    The naming ID (e.g., discover, vector, pyarc2stac) is taken from the key value in dag_configs
-    '''
-
-    dag_configs = {
-        "veda_discover":          get_discover_dag,
-        "veda_ingest_vector":     get_ingest_vector_dag,
-        "veda_pyarc2stac_ingest": get_ingest_pyarc2stac_dag,
-    }
-
-
     try:
+        airflow_vars_json = Variable.get("aws_dags_variables", deserialize_json=True)
+        bucket = airflow_vars_json.get("EVENT_BUCKET")
         client = boto3.client("s3")
         response = client.list_objects_v2(Bucket=bucket, Prefix="collections/")
     except ClientError as e:
@@ -94,12 +55,15 @@ def generate_dags():
         collection_configs = json.loads(collection_configs)
 
         # Allow the file content to be either one config or a list of configs
-        collection_configs = [collection_configs] if type(collection_configs) is dict else collection_configs
+        if type(collection_configs) is dict:
+            collection_configs = [collection_configs]
 
-        schedule_dags_by_config(dag_configs, 
-                                collection_configs, 
-                                file_name
-                                )
+        for c in collection_configs:
+            if c.get("schedule", None) and (dag := c.get("dag", "veda_discover")):
+                dag_generators[dag](id=f"{dag_names[dag]}-{file_name}", event=c)
 
 
 generate_dags()
+# create default DAGs (no config or schedule)
+get_ingest_vector_dag(id="veda_ingest_vector", event={})
+get_discover_dag(id="veda_discover", event={})

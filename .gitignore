@@ -47,3 +47,4 @@ env.sh
 .hypothesis
 .env_sit
 terraform.tfstate
+.envs/

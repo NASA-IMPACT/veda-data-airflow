@@ -2,7 +2,7 @@
 
 set -e
 
-AIRFLOW_VERSION=2.8.4
+AIRFLOW_VERSION=2.10.5
 
 pip install --constraint "https://raw.githubusercontent.com/apache/airflow/constraints-${AIRFLOW_VERSION}/constraints-3.11.txt" "apache-airflow[celery,amazon]==${AIRFLOW_VERSION}"
 pip install -r sm2a/airflow_worker/requirements.txt "apache-airflow[celery,amazon]==${AIRFLOW_VERSION}"

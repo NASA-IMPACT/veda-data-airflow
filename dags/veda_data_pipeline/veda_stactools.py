@@ -24,6 +24,7 @@ dag_args = {
     "doc_md": dag_doc_md,
     "on_failure_callback": slack_fail_alert,
     "is_paused_upon_creation": False,
+    "schedule_interval": None,
 }
 
 template_dag_run_conf = {

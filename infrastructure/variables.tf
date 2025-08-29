@@ -1,137 +1,260 @@
-
-# Required variables
-variable "subnet_tagname" {
-  description = "Private subnet tagname to use for MWAA"
+variable "airflow_db" {
+  type = object({
+    db_name  = string
+    username = string
+    password = string
+    port     = number
+  })
+  sensitive = true
 }
 
-variable "subnet_ids" {
-  type        = list(string)
-  description = "Private subnets to be used for workflows api lambdas"
-}
-
-variable "vpc_id" {
-  description = "Account VPC to use"
-}
-
-variable "prefix" {
-  description = "Deployment prefix"
-}
-
-variable "iam_policy_permissions_boundary_name" {
-  description = "Permission boundaries"
-  default     = null
-}
-
-variable "assume_role_arns" {
-  type        = list(string)
-  description = "Assume role ARNs (MCP)"
-}
-# Optional variables
-
-variable "aws_profile" {
-  description = "AWS profile"
-  default     = null
-}
 variable "aws_region" {
   default = "us-west-2"
 }
 
+
+variable "prefix" {
+}
+
+variable "fernet_key" {
+}
+
+
+variable "vpc_id" {
+}
+variable "private_subnets_tagname" {
+
+}
+variable "public_subnets_tagname" {
+
+}
+variable "state_bucketname" {
+
+}
+
+variable "permission_boundaries_arn" {
+  default = "null"
+}
+
+variable "rds_publicly_accessible" {
+  default = false
+}
+
+
+variable "scheduler_cpu" {
+  type    = number
+  default = 1024 * 2
+}
+variable "scheduler_memory" {
+  type    = number
+  default = 2048 * 2
+}
+
+variable "number_of_schedulers" {
+  default = 1
+}
+
+variable "domain_name" {
+
+}
 variable "stage" {
   default = "dev"
 }
 
-variable "cognito_app_secret" {
-  type = string
+variable "subdomain" {
+  default = "null"
+}
+
+variable "desired_max_workers_count" {
+  default = "5"
+}
+
+variable "gh_app_client_id" {
+
+}
+variable "gh_app_client_secret" {
+
+}
+variable "gh_team_name" {
+
+}
+
+variable "custom_worker_policy_statement" {
+  type = list(object({
+    Effect   = string
+    Action   = list(string)
+    Resource = list(string)
+  }))
+  default = [
+    {
+      Effect = "Allow"
+      Action = [
+        "sts:AssumeRole",
+        "iam:PassRole",
+        "logs:GetLogEvents"
+      ]
+      "Resource" : [
+        "*"
+      ]
+
+    },
+        {
+      Sid    = "VEDA-RDS-Disaster-Recovery"
+      Effect = "Allow"
+      Action = [
+        "rds:Describe*",
+        "rds:Start*",
+        "kms:*",
+        "glue:Get*",
+        "glue:CreateCrawler",
+        "glue:StartCrawler",
+        "glue:UpdateCrawler"
+      ]
+      Resource = [
+        "*"
+      ]
+    },
+    {
+      "Effect" : "Allow",
+      "Action" : [
+        "glue:DeleteDatabase"
+      ],
+      "Resource" : [
+        "arn:aws:glue:us-west-2:*:catalog",
+        "arn:aws:glue:us-west-2:*:database/*",
+        "arn:aws:glue:us-west-2:*:table/*",
+        "arn:aws:glue:us-west-2:*:userDefinedFunction/*"
+      ]
+    },
+    {
+            "Effect": "Allow",
+            "Action": ["cloudfront:CreateInvalidation"],
+            "Resource": ["arn:aws:cloudfront::*:distribution/*"]
+    }
+
+  ]
+
+}
+
+variable "project_name" {
+  type    = string
+  default = "SM2A"
+}
+
+
+variable "gh_user_team_id" {
+  default = "csda-airflow-data-pipeline-users"
 }
 
 variable "workflows_client_secret" {
-  type = string
 }
-
 variable "stac_ingestor_api_url" {
-  type = string
 }
 
-variable "min_workers" {
-  type    = number
-  default = 2
-}
-
-variable "mwaa_environment_class" {
-  type        = string
-  description = "MWAA class, options are mw1.small,mw1.large, mw1.xlarge,mw1.2xlarge"
-  default     = "mw1.small"
+variable "stac_url" {
 }
 
 variable "vector_secret_name" {
-  type = string
-}
-
-variable "vector_security_group" {
-  type = string
-}
-
-variable "vector_vpc" {
   type    = string
   default = "null"
 }
 
-variable "deploy_vector_automation" {
-  type    = bool
-  default = "false"
-}
-
-variable "data_access_role_arn" {
+variable "vector_security_group" {
   type = string
+  default = "null"
 }
 
-variable "raster_url" {
-  type = string
-}
-
-variable "stac_url" {
-  type = string
-}
-
-variable "workflow_root_path" {
+variable "sm2a_secret_manager_name" {
   type    = string
-  default = "/api/workflows"
+  default = "null"
 }
 
-variable "cognito_domain" {
-  type = string
-}
-
-variable "client_id" {
-  type = string
-}
-
-variable "userpool_id" {
-  type = string
-}
-
-variable "backend_vpc_id" {
-  type        = string
-  description = "VPC ID used for VEDA Backend lambdas"
-}
-
-variable "provision_s3_access_block" {
-  type        = bool
-  description = "Boolean used to control creation of s3_access_block"
-  default     = "true"
-}
-
-variable "ecs_task_cpu" {
-  type    = number
+variable "workers_cpu" {
   default = 2048
 }
-
-variable "ecs_task_memory" {
-  type    = number
+variable "workers_memory" {
   default = 4096
 }
 
-variable "disable_default_apigw_endpoint" {
-  type    = bool
-  default = false
+variable "rds_engine_version" {
+  default = "13"
+}
+variable "rds_instance_class" {
+  default = "db.t4g.medium"
+}
+variable "rds_allocated_storage" {
+  default = 20
+}
+variable "rds_max_allocated_storage" {
+  default = 200
+}
+variable "workers_logs_retention_days" {
+  default = 1
+}
+
+variable "workers_task_retries" {
+  default = "1"
+}
+
+variable "assume_role_read_arn" {
+  type    = string
+  default = ""
+}
+
+variable "assume_role_write_arn" {
+  type    = string
+  default = ""
+}
+
+variable "gh_dag_launcher_team_id" {
+  default = "VEDA-DAG-Launcher"
+}
+
+variable "snapshot_bucket_name" {
+  default = ""
+}
+variable "snapshot_export_role" {
+  default = ""
+}
+variable "glue_role_arn" {
+  default = ""
+}
+variable "s3_export_kms_key_id" {
+  default = ""
+}
+
+variable "cloudfront_to_invalidate" {
+  default = null
+}
+variable "cloudfront_path_to_invalidate" {
+  default = null
+
+}
+variable "lambda_dag_trigger_function_name" {
+  default = "trigger-sm2a-dag"
+}
+
+variable ingest_api_keycloak_client_secret {
+ type = string
+}
+
+variable "airflow_version" {
+  type    = string
+  default = "2.10.5"
+}
+
+variable "rds_deletion_protection" {
+  description = "Enable deletion protection on Airflow RDS instance"
+  type        = bool
+  default     = true
+}
+
+variable "rds_storage_encrypted" {
+  description = "Encrypt Airflow RDS data at rest"
+  type        = bool
+}
+
+variable "rds_snapshot_identifier" {
+  description = "Snapshot from which to create Airflow RDS instance"
+  default     = null
 }

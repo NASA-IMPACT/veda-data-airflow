@@ -1,6 +1,7 @@
 #! /bin/bash
 # Check .env file
 
+export TF_INPUT=0
 
 DOT_ENV=$1
 

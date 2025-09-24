@@ -30,7 +30,7 @@ test = [
     "stac_pydantic",
     "mypy_boto3_s3",
     "rasterio",
-    "rio_stac",
+    "rio_stac==0.12.0",
     "virtualenv",
 ]
 airflow-worker = [
@@ -58,7 +58,7 @@ airflow-worker = [
     "xstac",
     "pystac",
     "rasterio",
-    "rio-stac",
+    "rio_stac==0.12.0",
     "GeoAlchemy2",
     "geopandas==0.14.4",
     "fiona==1.9.6",

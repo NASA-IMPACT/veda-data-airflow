@@ -23,12 +23,36 @@ def list_public_subnet_ids(botocore_ec2_client, vpc_id: str) -> List[str]:
 
     subnets = botocore_ec2_client.describe_subnets(
         Filters=[{"Name": "vpc-id", "Values": [vpc_id]}]
-    )
-    public_subnet_ids = [
-        subnet["SubnetId"]
-        for subnet in subnets["Subnets"]
-        if subnet["MapPublicIpOnLaunch"]
-    ]
+    )["Subnets"]
+
+    public_subnets = []
+
+    for subnet in subnets:
+        subnet_id = subnet["SubnetId"]
+
+        # Get route table(s) associated with this subnet
+        route_tables = botocore_ec2_client.describe_route_tables(
+            Filters=[{"Name": "association.subnet-id", "Values": [subnet_id]}]
+        )["RouteTables"]
+
+        # If no explicit subnet association, check the main route table
+        if not route_tables:
+            route_tables = botocore_ec2_client.describe_route_tables(
+                Filters=[{"Name": "vpc-id", "Values": [vpc_id]}]
+            )["RouteTables"]
+
+            # keep only the main one
+            route_tables = [
+                rt for rt in route_tables
+                if any(assoc.get("Main") for assoc in rt.get("Associations", []))
+            ]
+
+        # Check if any route points to an Internet Gateway
+        for rt in route_tables:
+            for route in rt.get("Routes", []):
+                if route.get("GatewayId", "").startswith("igw-"):
+                    public_subnets.append(subnet_id)
+
     return public_subnet_ids
 
 

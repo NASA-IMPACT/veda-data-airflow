@@ -25,7 +25,7 @@ def list_public_subnet_ids(botocore_ec2_client, vpc_id: str) -> List[str]:
         Filters=[{"Name": "vpc-id", "Values": [vpc_id]}]
     )["Subnets"]
 
-    public_subnets = []
+    public_subnet_ids = []
 
     for subnet in subnets:
         subnet_id = subnet["SubnetId"]
@@ -51,7 +51,7 @@ def list_public_subnet_ids(botocore_ec2_client, vpc_id: str) -> List[str]:
         for rt in route_tables:
             for route in rt.get("Routes", []):
                 if route.get("GatewayId", "").startswith("igw-"):
-                    public_subnets.append(subnet_id)
+                    public_subnet_ids.append(subnet_id)
 
     return public_subnet_ids
 

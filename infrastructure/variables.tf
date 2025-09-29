@@ -47,7 +47,7 @@ variable "scheduler_cpu" {
 }
 variable "scheduler_memory" {
   type    = number
-  default = 1536
+  default = 2048
 }
 
 variable "number_of_schedulers" {

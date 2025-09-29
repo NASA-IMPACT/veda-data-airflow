@@ -43,11 +43,11 @@ variable "rds_publicly_accessible" {
 
 variable "scheduler_cpu" {
   type    = number
-  default = 1024 * 2
+  default = 1024
 }
 variable "scheduler_memory" {
   type    = number
-  default = 2048 * 2
+  default = 1536
 }
 
 variable "number_of_schedulers" {
@@ -170,10 +170,10 @@ variable "sm2a_secret_manager_name" {
 }
 
 variable "workers_cpu" {
-  default = 2048
+  default = 1024
 }
 variable "workers_memory" {
-  default = 4096
+  default = 2048
 }
 
 variable "rds_engine_version" {

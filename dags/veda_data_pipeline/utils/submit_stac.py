@@ -43,28 +43,6 @@ class Creds(TypedDict):
     scope: str
 
 
-def sanitize_for_json(obj: Any) -> Any:
-    """
-    Recursively sanitize an object by replacing inf and NaN float values with None.
-    This ensures the object can be JSON serialized without errors.
-
-    Args:
-        obj: Any Python object (dict, list, float, etc.)
-
-    Returns:
-        Sanitized object with inf/NaN replaced by None
-    """
-    if isinstance(obj, dict):
-        return {key: sanitize_for_json(value) for key, value in obj.items()}
-    elif isinstance(obj, list):
-        return [sanitize_for_json(item) for item in obj]
-    elif isinstance(obj, float):
-        if math.isnan(obj) or math.isinf(obj):
-            return None
-        return obj
-    else:
-        return obj
-
 @dataclass
 class IngestionApi:
     base_url: str

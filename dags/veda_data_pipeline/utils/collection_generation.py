@@ -99,7 +99,6 @@ class GenerateCollection:
         # Override the extents if they exists
         if spatial_extent := dataset.get("spatial_extent"):
             collection_stac["extent"]["spatial"] = {"bbox": [list(spatial_extent.values())]}
-        
         if temporal_extent := dataset.get("temporal_extent"):
             collection_stac["extent"]["temporal"] = {
                 "interval": [
@@ -111,14 +110,14 @@ class GenerateCollection:
                 ]
             }
 
-        collection_stac["item_assets"] = {
+        collection_stac["item_assets"] = dataset.get("item_assets", {
             "cog_default": {
                 "type": "image/tiff; application=geotiff; profile=cloud-optimized",
                 "roles": ["data", "layer"],
                 "title": "Default COG Layer",
                 "description": "Cloud optimized default layer to display on map",
             }
-        }
+        })
         return collection_stac
 
     def generate_stac(

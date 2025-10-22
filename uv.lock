@@ -2322,7 +2322,7 @@ wheels = [
 
 [[package]]
 name = "pystac"
-version = "1.10.1"
+version = "1.14.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "python-dateutil" },

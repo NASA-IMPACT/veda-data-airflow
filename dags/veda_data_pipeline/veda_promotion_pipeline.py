@@ -2,14 +2,12 @@ import pendulum
 from airflow import DAG
 from airflow.decorators import task
 from airflow.operators.empty import EmptyOperator
-from airflow.models.variable import Variable
 from airflow.models.param import Param
-
-import json
 from veda_data_pipeline.groups.collection_group import collection_task_group
 from veda_data_pipeline.groups.discover_group import discover_from_s3_task, get_dataset_files_to_process
 from veda_data_pipeline.groups.processing_tasks import submit_to_stac_ingestor_task, build_stac_task, extract_discovery_items_from_payload, remove_thumbnail_asset
 from veda_data_pipeline.groups.transfer_group import transfer_data
+from slack_notifications import slack_fail_alert
 
 dag_doc_md = """
 ### Promotion Pipeline
@@ -47,6 +45,7 @@ dag_args = {
     "schedule": None,
     "catchup": False,
     "doc_md": dag_doc_md,
+    "on_failure_callback": slack_fail_alert,
     "tags": ["collection", "discovery"],
 }
 

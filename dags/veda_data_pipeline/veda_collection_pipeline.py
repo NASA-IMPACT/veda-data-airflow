@@ -3,6 +3,7 @@ from airflow import DAG
 from airflow.operators.empty import EmptyOperator
 from airflow.utils.trigger_rule import TriggerRule
 from veda_data_pipeline.groups.collection_group import collection_task_group
+from slack_notifications import slack_fail_alert
 
 dag_doc_md = """
 ### Collection Creation and Ingestion
@@ -27,6 +28,7 @@ dag_args = {
     "schedule": None,
     "catchup": False,
     "doc_md": dag_doc_md,
+    "on_failure_callback": slack_fail_alert,
     "tags": ["collection"],
 }
 

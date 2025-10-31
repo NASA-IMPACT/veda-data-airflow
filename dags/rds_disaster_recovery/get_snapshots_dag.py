@@ -13,7 +13,7 @@ from airflow.operators.python import PythonOperator
 from airflow.utils.dates import days_ago
 from airflow_multi_dagrun.operators import TriggerMultiDagRunOperator
 from botocore.exceptions import BotoCoreError, ClientError
-
+from slack_notifications import slack_fail_alert
 
 def generate_hash(input_string: str) -> str:
     """
@@ -299,6 +299,7 @@ with DAG(
     doc_md=doc_get_snapshots_dag_md_DAG,
     params=dag_params,
     default_args=default_args,
+    on_failure_callback=slack_fail_alert,
     tags=["RDS", "Operations", "Disaster Recovery", "Trigger Export", "Long Term"],
 ) as dag:
     start = EmptyOperator(task_id="start")

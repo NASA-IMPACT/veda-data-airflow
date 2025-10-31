@@ -1,4 +1,5 @@
 from datetime import timedelta
+from slack_notifications import slack_fail_alert
 
 import boto3
 from airflow import DAG
@@ -99,6 +100,7 @@ with DAG(
     max_active_runs=4,  # Only 5 parallel exports are allowed
     catchup=False,
     params=default_params,
+    on_failure_callback=slack_fail_alert,
     render_template_as_native_obj=True,
     doc_md=f"""
         ### RDS to S3 Snapshot Export and S3 Data Crawling

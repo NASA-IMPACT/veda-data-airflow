@@ -6,6 +6,7 @@ from airflow import DAG
 from airflow.operators.empty import EmptyOperator
 from airflow.utils.trigger_rule import TriggerRule
 from airflow.models.variable import Variable
+from slack_notifications import slack_fail_alert
 from veda_data_pipeline.groups.discover_group import discover_from_s3_task, get_files_task
 
 dag_doc_md = """
@@ -58,6 +59,7 @@ template_dag_run_conf = {
 dag_args = {
     "start_date": pendulum.today("UTC").add(days=-1),
     "catchup": False,
+    "on_failure_callback": slack_fail_alert,
     "doc_md": dag_doc_md,
 }
 

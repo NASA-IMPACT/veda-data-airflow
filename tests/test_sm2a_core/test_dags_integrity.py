@@ -1,4 +1,5 @@
 from airflow.models import DagBag
+from slack_notifications import slack_fail_alert
 
 
 def get_dag_bag():
@@ -22,3 +23,14 @@ def test_dags_exist():
     dag_bag = get_dag_bag()
     assert len(dag_bag.dags) > 0, "No DAGs found in the dag folder."
 
+
+def test_dags_have_failure_callback():
+    """
+    Test that all DAGs have on_failure_callback set to slack_fail_alert
+    """
+    dag_bag = get_dag_bag()
+    for dag_id, dag in dag_bag.dags.items():
+        assert hasattr(dag, "on_failure_callback"), f"DAG {dag_id} is missing on_failure_callback"
+        assert dag.on_failure_callback == slack_fail_alert, (
+            f"DAG {dag_id} does not have slack_fail_alert set as on_failure_callback"
+        )

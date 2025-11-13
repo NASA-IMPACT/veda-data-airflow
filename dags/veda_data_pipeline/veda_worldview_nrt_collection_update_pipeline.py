@@ -9,14 +9,15 @@ from airflow.utils.trigger_rule import TriggerRule
 from airflow.decorators import dag, task, task_group
 from veda_data_pipeline.groups.collection_group import ingest_collection_task
 
-CollectionConfig = dict[str, any] # this mostly comply with a STAC defination
+CollectionConfig = dict[str, any] # this mostly comply with a STAC json config
 
 @dataclass
 class NRTCollectionUpdateConfig:
-    collection_id: str
+    collection_id: str # Collection_id in STAC
     gibs_url: str
     collection_config: CollectionConfig
 
+# Example Collection Config. Used as a default value.
 VIIRS_SNPP_NRT_collection: CollectionConfig = {
         "assets": {},
         "id": "VIIRS_SNPP_DayNightBand_At_Sensor_Radiance",
@@ -93,6 +94,7 @@ VIIRS_SNPP_NRT_collection: CollectionConfig = {
         "units": "m·s⁻¹"
     }
 
+# Example NRT Collection Update Config. Used as a default value.
 veda_worldview_nrt_data_collection_update_dag_creator_config: NRTCollectionUpdateConfig = {
     "collection_id": "VIIRS_SNPP_DayNightBand_At_Sensor_Radiance",
     "gibs_url": "https://gibs.earthdata.nasa.gov/wmts/epsg4326/best/1.0.0/WMTSCapabilities.xml",

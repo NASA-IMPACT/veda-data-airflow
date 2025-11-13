@@ -337,8 +337,3 @@ def veda_gibs_wmts_to_stac_update_dag_generator(id: str, event: VedaGibsWMTSConf
 
     veda_worldview_nrt_data_collection_update(collection_config=collection_config, collection_id=collection_id, gibs_url=gibs_url)
 
-# # the following DAG Creator has a default values provided to its arguments
-# veda_gibs_wmts_to_stac_update_dag_generator(
-#     id="veda_worldview_nrt_data_collection_update_nightlight",
-#     event=veda_gibs_wmts_to_stac_update_dag_generator_config
-# )

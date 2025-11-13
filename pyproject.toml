@@ -5,7 +5,7 @@ description = "Function and deployment code for producing cloud-optimized data p
 readme = "README.md"
 requires-python = ">=3.11.5, <3.12"
 dependencies = [
-    "apache-airflow==2.8.4",
+    "apache-airflow==2.10.5",
     "pytest>=8.3.5",
 ]
 
@@ -31,6 +31,7 @@ test = [
     "mypy_boto3_s3",
     "rasterio",
     "rio_stac",
+    "virtualenv",
 ]
 airflow-worker = [
     "apache-airflow-providers-amazon",
@@ -57,7 +58,7 @@ airflow-worker = [
     "xstac",
     "pystac",
     "rasterio",
-    "rio-stac",
+    "rio_stac",
     "GeoAlchemy2",
     "geopandas==0.14.4",
     "fiona==1.9.6",

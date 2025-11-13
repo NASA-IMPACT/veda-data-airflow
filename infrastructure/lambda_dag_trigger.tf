@@ -113,32 +113,3 @@ data "archive_file" "python_dag_trigger_lambda_package" {
   source_dir  = "functions/trigger_sm2a_dag"
   output_path = "/tmp/trigger_sm2a_dag.zip"
 }
-
-
-
-resource "aws_lambda_function" "dag_trigger_lambda" {
-
-  provider         = aws.aws_current
-  filename         = "/tmp/trigger_sm2a_dag.zip"
-  function_name    = "${var.prefix}-${var.lambda_dag_trigger_function_name}"
-  role             = aws_iam_role.lambda_dag_trigger_exec_role.arn
-  handler          = "lambda_function.lambda_handler"
-  source_code_hash = data.archive_file.python_lambda_package.output_base64sha256
-  runtime          = "python3.10"
-  publish          = true
-
-  environment {
-    variables = {
-      SM2A_SECRET_MANAGER_NAME = var.sm2a_secret_manager_name
-
-    }
-  }
-}
-
-resource "aws_cloudwatch_log_group" "dag_trigger_lambda_log_group" {
-
-
-  provider          = aws.aws_current
-  name              = "/aws/lambda/${aws_lambda_function.dag_trigger_lambda.function_name}"
-  retention_in_days = 5
-}

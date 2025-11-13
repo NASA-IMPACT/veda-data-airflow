@@ -1,13 +1,12 @@
-from typing import Any, Dict, List
+from typing import List
 import pendulum
-import json
+from slack_notifications import slack_fail_alert
 
 from airflow.decorators import task
 
 from airflow import DAG
 from airflow.operators.dummy_operator import DummyOperator
 from airflow.utils.trigger_rule import TriggerRule
-from airflow.models.variable import Variable
 from stactools.core import use_fsspec
 from stactools.noaa_hrrr.metadata import parse_href, CloudProvider, Product, Region
 from stactools.noaa_hrrr.stac import create_item, create_collection
@@ -24,6 +23,7 @@ dag_args = {
     "start_date": pendulum.today("UTC").add(days=-1),
     "catchup": False,
     "doc_md": dag_doc_md,
+    "on_failure_callback": slack_fail_alert,
     "is_paused_upon_creation": False,
 }
 
@@ -72,7 +72,7 @@ def get_stactools_dag(id, event={}):
     params_dag_run_conf = event or template_dag_run_conf
     with DAG(
         id,
-        schedule_interval=event.get("schedule"),
+        schedule_interval=event.get("schedule", None),
         params=params_dag_run_conf,
         **dag_args
     ) as dag:

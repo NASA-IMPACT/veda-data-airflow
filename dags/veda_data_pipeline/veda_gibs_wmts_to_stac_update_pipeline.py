@@ -98,8 +98,8 @@ VIIRS_SNPP_NRT_collection: GibsWMTS2STACConfig = {
 
 # Example NRT Collection Update Config. Used as a default value.
 veda_gibs_wmts_to_stac_update_dag_generator_config: VedaGibsWMTSConfig = {
-    "id": "",
-    "dag": "",
+    "id": "wmts2stacupdate-wmts_gibs_update",
+    "dag": "wmts2stacupdate",
     "collection_id": "VIIRS_SNPP_DayNightBand_At_Sensor_Radiance",
     "gibs_url": "https://gibs.earthdata.nasa.gov/wmts/epsg4326/best/1.0.0/WMTSCapabilities.xml",
     "collection_config": VIIRS_SNPP_NRT_collection

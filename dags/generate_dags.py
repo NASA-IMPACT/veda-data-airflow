@@ -4,31 +4,26 @@ These DAGs are used to discover and ingest items for each collection.
 """
 
 from airflow.models.variable import Variable
-from typing import Dict, List, Optional
 
 from veda_data_pipeline.veda_discover_pipeline import get_discover_dag
 from veda_data_pipeline.veda_vector_pipeline import get_ingest_vector_dag
 from dags.veda_data_pipeline.veda_gibs_wmts_to_stac_update_pipeline import veda_gibs_wmts_to_stac_update_dag_generator
+from veda_data_pipeline.veda_pyarc2stac_pipeline import get_ingest_pyarc2stac_dag
 
-def filter_configs_by_dag(
-        collection_configs: List[Dict[str, int]],
-        dag: Optional[str] = "veda_discover"
-) -> List[Dict[str, int]]:
-    """
-    Args:
-        collection_configs: The list of configs to filter
-        dag: The DAG name to filter for (default is veda_discover).
+dag_generators = {
+        "veda_discover":          get_discover_dag,
+        "veda_ingest_vector":     get_ingest_vector_dag,
+        "veda_pyarc2stac_ingest": get_ingest_pyarc2stac_dag,
+        "veda_wmts_update": veda_gibs_wmts_to_stac_update_dag_generator
+    }
 
-    Returns:
-        A new list containing only the collection configs that match the filter criteria.
-    """
-
-    filtered_configs = []
-    for c in collection_configs:
-        if c.get("schedule", None) and c.get("dag", "veda_discover") == dag:
-            filtered_configs.append(c)
-    return filtered_configs
-
+# preserve DAG history
+dag_names = {
+    "veda_discover": "discover",
+    "veda_ingest_vector": "vector",
+    "veda_pyarc2stac_ingest": "pyarc2stac",
+    "veda_wmts_update": "wmts2stacupdate"
+}
 
 def generate_dags():
     import boto3
@@ -66,37 +61,13 @@ def generate_dags():
         if type(collection_configs) is dict:
             collection_configs = [collection_configs]
 
-        # Filter and handle collection configs by DAG
-
-        # veda_discover
-        scheduled_discovery_configs = filter_configs_by_dag(collection_configs, "veda_discover")
-        for idx, discovery_config in enumerate(scheduled_discovery_configs):
-            id = f"discover-{file_name}"
-            if idx > 0:
-                id = f"{id}-{idx}"
-            get_discover_dag(
-                id=id, event=discovery_config
-            )
-
-        # veda_vector_ingest
-        scheduled_vector_configs = filter_configs_by_dag(collection_configs, "veda_ingest_vector")
-
-        for idx, vector_config in enumerate(scheduled_vector_configs):
-            id = f"vector-{file_name}"
-            if idx > 0:
-                id = f"{id}-{idx}"
-            get_ingest_vector_dag(
-                id=id, event=vector_config
-            )
-
-        # worldview NRT collection update
-        scheduled_worldview_nrt_dag_creator_configs = filter_configs_by_dag(collection_configs, "veda_worldview_nrt_collection_update")
-
-        for idx, nrt_dag_creator_config in enumerate(scheduled_worldview_nrt_dag_creator_configs):
-            collection_id = nrt_dag_creator_config["collection_id"]
-            id = f"veda_worldview_nrt_data_collection_update_{collection_id}"
-            veda_gibs_wmts_to_stac_update_dag_generator(id=id, event=nrt_dag_creator_config)
+        for c in collection_configs:
+            if c.get("schedule", None) and (dag := c.get("dag", "veda_discover")):
+                if id := c.get("id"):
+                    file_name = id # use id for DAG name if provided, otherwise default to file name
+                dag_generators[dag](id=f"{dag_names[dag]}-{file_name}", event=c)
 
 generate_dags()
+# create default DAGs (no config or schedule)
 get_ingest_vector_dag(id="veda_ingest_vector", event={})
 get_discover_dag(id="veda_discover", event={})

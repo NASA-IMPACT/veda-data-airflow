@@ -26,7 +26,7 @@ module "rds_backups" {
 
 
 module "sma-base" {
-  source                         = "https://github.com/NASA-IMPACT/self-managed-apache-airflow/releases/download/v1.1.7/self-managed-apache-airflow.zip"
+  source                         = "https://github.com/NASA-IMPACT/self-managed-apache-airflow/releases/download/v1.1.13/self-managed-apache-airflow.zip"
   project                        = var.project_name
   airflow_db                     = var.airflow_db
   fernet_key                     = var.fernet_key
@@ -51,6 +51,10 @@ module "sma-base" {
   rds_allocated_storage          = tonumber(var.rds_allocated_storage)
   rds_max_allocated_storage      = tonumber(var.rds_max_allocated_storage)
   workers_logs_retention_days    = tonumber(var.workers_logs_retention_days)
+  rds_deletion_protection        = var.rds_deletion_protection
+  rds_storage_encrypted          = var.rds_storage_encrypted
+  rds_snapshot_identifier        = var.rds_snapshot_identifier
+  airflow_version                = var.airflow_version
 
   extra_airflow_task_common_environment = [
     {
@@ -87,6 +91,7 @@ module "sma-base" {
     gh_app_client_id     = var.gh_app_client_id
     gh_app_client_secret = var.gh_app_client_secret
     gh_team_id           = var.gh_team_name
+    sm2a_base_url        = "https://${lower(var.subdomain)}.${var.domain_name}"
   }
   domain_name = var.domain_name
   stage       = var.stage
@@ -102,10 +107,20 @@ module "sma-base" {
     VECTOR_SECRET_NAME    = var.vector_secret_name,
     ASSUME_ROLE_READ_ARN  = var.assume_role_read_arn,
     ASSUME_ROLE_WRITE_ARN = var.assume_role_write_arn,
-    SM2A_BASE_URL         = module.sma-base.airflow_url,
+    SM2A_BASE_URL         = "https://${lower(var.subdomain)}.${var.domain_name}",
     CLOUDFRONT_TO_INVALIDATE = var.cloudfront_to_invalidate,
     CLOUDFRONT_PATH_TO_INVALIDATE = var.cloudfront_path_to_invalidate,
     INGEST_API_KEYCLOAK_APP_SECRET=var.ingest_api_keycloak_client_secret
   }, var.snapshot_bucket_name != "" ? module.rds_backups[0].rds_backup_environment : {}
   )
+}
+
+resource "aws_vpc_security_group_ingress_rule" "vector_rds_ingress" {
+  count             = var.vector_security_group == "null" ? 0 : 1
+  security_group_id = var.vector_security_group
+
+  from_port                    = 5432
+  to_port                      = 5432
+  ip_protocol                  = "tcp"
+  referenced_security_group_id = module.sma-base.worker_security_group_id
 }

@@ -159,25 +159,15 @@ variable "vector_secret_name" {
   default = "null"
 }
 
-variable "eis_storage_bucket_name" {
-  type    = string
+variable "vector_security_group" {
+  type = string
   default = "null"
 }
 
-variable "eis_s3_invoke_filter_prefix" {
-  type    = string
-  default = "null"
-}
 variable "sm2a_secret_manager_name" {
   type    = string
   default = "null"
 }
-
-variable "target_dag_id" {
-  type    = string
-  default = "null"
-}
-
 
 variable "workers_cpu" {
   default = 2048
@@ -232,7 +222,7 @@ variable "glue_role_arn" {
 variable "s3_export_kms_key_id" {
   default = ""
 }
-  
+
 variable "cloudfront_to_invalidate" {
   default = null
 }
@@ -246,4 +236,25 @@ variable "lambda_dag_trigger_function_name" {
 
 variable ingest_api_keycloak_client_secret {
  type = string
+}
+
+variable "airflow_version" {
+  type    = string
+  default = "2.10.5"
+}
+
+variable "rds_deletion_protection" {
+  description = "Enable deletion protection on Airflow RDS instance"
+  type        = bool
+  default     = true
+}
+
+variable "rds_storage_encrypted" {
+  description = "Encrypt Airflow RDS data at rest"
+  type        = bool
+}
+
+variable "rds_snapshot_identifier" {
+  description = "Snapshot from which to create Airflow RDS instance"
+  default     = null
 }

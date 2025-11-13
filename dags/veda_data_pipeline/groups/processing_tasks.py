@@ -4,7 +4,10 @@ import logging
 from copy import deepcopy
 import smart_open
 from airflow.models.variable import Variable
+from airflow.models.xcom import LazyXComSelectSequence
 from airflow.decorators import task
+from airflow.datasets import Dataset, DatasetAlias
+from airflow.datasets.metadata import Metadata
 from veda_data_pipeline.utils.submit_stac import submission_handler
 
 group_kwgs = {"group_id": "Process", "tooltip": "Process"}
@@ -75,8 +78,62 @@ def submit_to_stac_ingestor_task_direct(stac_items: dict):
 
 
 @task(max_active_tis_per_dag=5)
-def build_stac_task(payload):
+def build_stac_task(payload, ti=None):
     from veda_data_pipeline.utils.build_stac.handler import stac_handler
     airflow_vars_json = Variable.get("aws_dags_variables", deserialize_json=True)
     event_bucket = airflow_vars_json.get("EVENT_BUCKET")
-    return stac_handler(payload_src=payload, bucket_output=event_bucket)
+    return stac_handler(payload_src=payload, bucket_output=event_bucket, ti=ti)
+
+@task(
+        outlets=[
+            DatasetAlias("VEDA-Datasets")
+        ],
+)
+def post_ingest_dataset_event(ti, logical_date, built_items = {}):  # params are Airflow kwargs - use this task without input
+    """
+    Logs a Dataset event, saving the config used as a versioned object in s3, and creating a Metadata object visible in Airflow.
+    
+    Datasets are per-collection, with an alias of "VEDA-Datasets" for additional DAG triggers.
+
+    Args:
+        (Automatically populated by airflow when invoked)
+        ti: Airflow TaskInstance, used to access the DAG run configuration.
+        logical_date: The logical date of the DAG run, used for versioning.
+    Returns:
+        Yields a Metadata object that Airflow uses to register the Dataset event.
+    """
+    payload = ti.dag_run.conf
+    event_bucket_name = Variable.get("aws_dags_variables", deserialize_json=True).get("EVENT_BUCKET")
+    collection = payload.get("collection", None)
+    if not collection:
+        raise ValueError("Collection ID is required in the payload to create a report.")
+    
+    # write the payload to S3 as a versioned object
+    key = f"s3://{event_bucket_name}/airflow_events/{collection}/{logical_date.format('YYYYMMDDHHmmss')}.json"
+    try:
+        with smart_open.open(key, "w") as f:
+            json.dump(payload, f, indent=2)
+    except Exception as e:
+        log_task(f"Error writing payload to {key}: {e}")
+        raise
+    log_task(f"Payload written to {key}")
+
+    # built items can be either a dict or a list of dicts
+    if isinstance(built_items, LazyXComSelectSequence):
+        built_items = list(built_items)
+    elif not isinstance(built_items, list):
+        built_items = [built_items]
+    print(f"Built items: {built_items}")
+    success_count = sum(item.get("payload", {}).get("status", {}).get("successes", 0) for item in built_items)
+    failure_count = sum(item.get("payload", {}).get("status", {}).get("failures", 0) for item in built_items)
+
+    yield Metadata(
+        Dataset(f"{collection}"),
+        extra={
+            "ingest_datetime": str(logical_date),
+            "ingest_configuration": key,
+            "successful_items": success_count,
+            "failed_items": failure_count,
+        },  # extra has to be provided, can be {}
+        alias="VEDA-Datasets",
+    )

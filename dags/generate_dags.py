@@ -7,14 +7,14 @@ from airflow.models.variable import Variable
 
 from veda_data_pipeline.veda_discover_pipeline import get_discover_dag
 from veda_data_pipeline.veda_vector_pipeline import get_ingest_vector_dag
-from dags.veda_data_pipeline.veda_gibs_wmts_to_stac_update_pipeline import veda_gibs_wmts_to_stac_update_dag_generator
+from dags.veda_data_pipeline.veda_gibs_wmts2stac_update_pipeline import get_ingest_gibswmts2stac_dag
 from veda_data_pipeline.veda_pyarc2stac_pipeline import get_ingest_pyarc2stac_dag
 
 dag_generators = {
         "veda_discover":          get_discover_dag,
         "veda_ingest_vector":     get_ingest_vector_dag,
         "veda_pyarc2stac_ingest": get_ingest_pyarc2stac_dag,
-        "veda_wmts_update": veda_gibs_wmts_to_stac_update_dag_generator
+        "veda_wmts2stac_ingest": get_ingest_gibswmts2stac_dag
     }
 
 # preserve DAG history
@@ -22,7 +22,7 @@ dag_names = {
     "veda_discover": "discover",
     "veda_ingest_vector": "vector",
     "veda_pyarc2stac_ingest": "pyarc2stac",
-    "veda_wmts_update": "wmts2stacupdate"
+    "veda_wmts2stac_ingest": "wmts2stac"
 }
 
 def generate_dags():

@@ -234,10 +234,10 @@ def get_ingest_gibswmts2stac_dag(id: str, event: VedaGibsWMTSConfig) -> DAG:
             root = ET.fromstring(xml_string)
             contents = root.find('xmlns:Contents', XML_NAMESPACE)
             if contents is None:
-                return False
+                return ""
             layers = contents.findall('xmlns:Layer', XML_NAMESPACE)
             if not layers:
-                return False
+                return ""
             for layer in layers:
                 layer_id = layer.find('ows:Identifier', OWS_NAMESPACE).text
                 if (layer_id == collection_id):

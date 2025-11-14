@@ -269,19 +269,20 @@ def get_ingest_gibswmts2stac_dag(id: str, event: VedaGibsWMTSConfig) -> DAG:
 
         # TASK DEFINITION END
 
-        # Create task group instances
-        wmts2stac_group = wmts2stac_task_group(collection=collection_config)
-        gibs_update_group = gibs_wmts2stac_update_task_group(
-            collection=collection_config,
-            gibs_url=gibs_url,
-            collection_id=collection_id
-        )
-
-        # Branching logic
-        task_choice = is_gibs(gibs_url)
-        start >> task_choice >> [wmts2stac_group, gibs_update_group] >> end
-
-    return veda_gibs_wmts2stac_with_update(collection_config=collection_config, collection_id=collection_id, gibs_url=gibs_url)
+        # Only instantiate the task group that will actually execute
+        if gibs_url:
+            gibs_update_group = gibs_wmts2stac_update_task_group(
+                        collection=collection_config,
+                        gibs_url=gibs_url,
+                        collection_id=collection_id
+                    )
+            task_choice = is_gibs(gibs_url)
+            start >> task_choice >> gibs_update_group >> end
+        else:
+            wmts2stac_group = wmts2stac_task_group(collection=collection_config)
+            start >> task_choice >> wmts2stac_group >> end
+            task_choice = is_gibs(gibs_url)
+            return veda_gibs_wmts2stac_with_update(collection_config=collection_config, collection_id=collection_id, gibs_url=gibs_url)
 
 # Example Collection Config. Used as a default value.
 VIIRS_SNPP_NRT_collection: GibsWMTS2STACConfig = {

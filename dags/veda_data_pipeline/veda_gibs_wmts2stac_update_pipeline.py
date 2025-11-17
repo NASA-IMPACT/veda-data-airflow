@@ -20,7 +20,7 @@ def get_ingest_gibswmts2stac_dag(id: str, event: VedaGibsWMTSConfig) -> DAG:
     if not collection_id:
         raise ValueError("Missing required field 'id' in collection_config")
 
-    gibs_url: str = event.get("gibs_url")
+    gibs_url: str = event.get("gibs_url", "")
     schedule: str = event.get("schedule", "0 0 * * *") if gibs_url else None
     dag_doc_md = f"""
         ## This DAG handles creation of STAC Collection from (GIBS) WMTS. If a schedule is provided along with Gibs url in event: VedaGibsWMTSConfig, it sets a scheduler to check and update the STAC.
@@ -69,18 +69,15 @@ def get_ingest_gibswmts2stac_dag(id: str, event: VedaGibsWMTSConfig) -> DAG:
             else:
                 return 'wmts2stac_task_group'
 
-        # Only instantiate the task group that will actually execute
-        if gibs_url:
-            gibs_update_group = gibs_wmts2stac_update_task_group(
-                        collection=collection_config,
-                        gibs_url=gibs_url,
-                        collection_id=collection_id
-                    )
-            task_choice = is_gibs(gibs_url)
-            start >> task_choice >> gibs_update_group >> end
-        else:
-            wmts2stac_group = wmts2stac_task_group(collection=collection_config)
-            start >> task_choice >> wmts2stac_group >> end
-            task_choice = is_gibs(gibs_url)
+        gibs_update_group = gibs_wmts2stac_update_task_group(
+            collection=collection_config,
+            gibs_url=gibs_url if gibs_url else "",
+            collection_id=collection_id
+        )
+        wmts2stac_group = wmts2stac_task_group(collection=collection_config)
+
+        task_choice = is_gibs(gibs_url)
+        start >> task_choice
+        task_choice >> [gibs_update_group, wmts2stac_group] >> end
 
     return veda_gibs_wmts2stac_with_update(collection_config=collection_config, collection_id=collection_id, gibs_url=gibs_url)

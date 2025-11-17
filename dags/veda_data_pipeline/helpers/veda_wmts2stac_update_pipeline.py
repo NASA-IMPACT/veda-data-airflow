@@ -136,6 +136,117 @@ def extract_latest_nrt_date_for_collection(xml_string: str, collection_id:str='V
                 return layer_date
     return ""
 
+@task
+def validate_web_map_links_schema_task(collection_config: dict) -> dict:
+    """
+    Validates the collection config against the Web Map Links STAC extension schema.
+    This extension is used by the WMTS.
+    :param collection_config: The collection configuration dictionary
+    :return: The validated collection config
+    :raises ValidationError: If the config doesn't conform to the schema
+    """
+    import jsonschema
+    
+    # pulled from: https://stac-extensions.github.io/web-map-links/v1.2.0/schema.json
+    schema = {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "$id": "https://stac-extensions.github.io/web-map-links/v1.2.0/schema.json#",
+        "title": "Web Map Links Extension",
+        "description": "STAC Web Map Links Extension for STAC Items, STAC Catalogs and STAC Collections.",
+        "type": "object",
+        "required": ["stac_extensions", "type", "links"],
+        "properties": {
+            "stac_extensions": {
+                "type": "array",
+                "contains": {
+                    "const": "https://stac-extensions.github.io/web-map-links/v1.2.0/schema.json"
+                }
+            },
+            "type": {
+                "type": "string",
+                "enum": ["Catalog", "Collection", "Feature"]
+            },
+            "links": {
+                "type": "array",
+                "contains": {
+                    "type": "object",
+                    "required": ["rel"],
+                    "properties": {
+                        "rel": {
+                            "enum": ["xyz", "wms", "wmts", "tilejson", "pmtiles", "3d-tiles"]
+                        }
+                    }
+                },
+                "items": {
+                    "type": "object",
+                    "allOf": [
+                        {
+                            "$comment": "Defines WMTS links",
+                            "if": {
+                                "properties": {
+                                    "rel": {"const": "wmts"}
+                                }
+                            },
+                            "then": {
+                                "required": ["wmts:layer"],
+                                "properties": {
+                                    "wmts:layer": {
+                                        "oneOf": [
+                                            {"type": "string", "minLength": 1},
+                                            {
+                                                "type": "array",
+                                                "minItems": 1,
+                                                "items": {"type": "string", "minLength": 1}
+                                            }
+                                        ]
+                                    },
+                                    "wmts:dimensions": {
+                                        "type": "object",
+                                        "additionalProperties": {"type": "string"}
+                                    }
+                                }
+                            }
+                        },
+                        {
+                            "$comment": "Defines WMS links",
+                            "if": {
+                                "properties": {
+                                    "rel": {"const": "wms"}
+                                }
+                            },
+                            "then": {
+                                "required": ["wms:layers"],
+                                "properties": {
+                                    "wms:layers": {
+                                        "type": "array",
+                                        "minItems": 1,
+                                        "items": {"type": "string", "minLength": 1}
+                                    },
+                                    "wms:styles": {
+                                        "type": "array",
+                                        "items": {"type": "string", "minLength": 1}
+                                    },
+                                    "wms:dimensions": {
+                                        "type": "object",
+                                        "additionalProperties": {"type": "string"}
+                                    }
+                                }
+                            }
+                        }
+                    ]
+                }
+            }
+        }
+    }
+
+    try:
+        jsonschema.validate(instance=collection_config, schema=schema)
+        print("✓ Collection config is valid according to Web Map Links schema")
+        return collection_config
+    except jsonschema.exceptions.ValidationError as e:
+        raise ValueError(f"Collection config validation failed: {e.message}")
+
+
 ## Task groups
 
 @task_group(group_id="validation_task_group", tooltip="validate if collection update is needed via metadata available on gibs")
@@ -263,12 +374,10 @@ VIIRS_SNPP_NRT_collection: WMTS2STACConfig = {
                 "rel": "wmts",
                 "title": "Visualized through a WMTS",
                 "type": "image/png",
-                "wmts:dimensions": [
-                    "default"
-                ],
-                "wmts:layers": [
-                    "VIIRS_SNPP_DayNightBand_At_Sensor_Radiance"
-                ]
+                "wmts:dimensions": {
+                    "default": "default"
+                },
+                "wmts:layer": "VIIRS_SNPP_DayNightBand_At_Sensor_Radiance"
             }
         ],
         "product_level": "L2",
@@ -290,8 +399,7 @@ VIIRS_SNPP_NRT_collection: WMTS2STACConfig = {
 get_ingest_wmts2stac_dag_config: VedaWMTS2STACConfig = {
     "id": "wmts2stac-wmts_gibs_update",
     "dag": "veda_wmts2stac_ingest",
-    "collection_id": "VIIRS_SNPP_DayNightBand_At_Sensor_Radiance",
     "schedule": "0 0 * * *",
-    "gibs_url": "https://gibs.earthdata.nasa.gov/wmts/epsg4326/best/1.0.0/WMTSCapabilities.xml",
-    "collection_config": VIIRS_SNPP_NRT_collection
+    "collection_config": VIIRS_SNPP_NRT_collection,
+    "gibs_url": "https://gibs.earthdata.nasa.gov/wmts/epsg4326/best/1.0.0/WMTSCapabilities.xml"
 }

@@ -3,7 +3,7 @@ from airflow import DAG
 from airflow.operators.empty import EmptyOperator
 from airflow.utils.trigger_rule import TriggerRule
 from airflow.decorators import dag, task
-from dags.veda_data_pipeline.helpers.veda_wmts2stac_update_pipeline import gibs_wmts2stac_update_task_group, wmts2stac_task_group, VedaWMTS2STACConfig
+from dags.veda_data_pipeline.helpers.veda_wmts2stac_update_pipeline import gibs_wmts2stac_update_task_group, wmts2stac_task_group, validate_web_map_links_schema_task, VedaWMTS2STACConfig
 
 def get_ingest_wmts2stac_dag(id: str, event: VedaWMTS2STACConfig) -> DAG:
     """
@@ -16,19 +16,15 @@ def get_ingest_wmts2stac_dag(id: str, event: VedaWMTS2STACConfig) -> DAG:
     if not collection_config:
         raise ValueError("Missing required field 'collection_config' in event")
 
-    collection_id: str = collection_config.get("id", "")
-    if not collection_id:
-        raise ValueError("Missing required field 'id' in collection_config")
-
     gibs_url: str = event.get("gibs_url", "")
-    schedule: str = event.get("schedule", "0 0 * * *") if gibs_url else None
+    schedule = event.get("schedule") if gibs_url else None
     dag_doc_md = f"""
         ## This DAG handles creation of STAC Collection from WMTS.
         If a schedule is provided along with Gibs url in event: VedaWMTS2STACConfig, it sets a scheduler to check and update the STAC based on GIBS metadata.
         Else, The collection_config is used to ingest the Gibs.
         ### How does update task group work:
         - For the frequency set by schedule in VedaWMTS2STACConfig, the DAG checks if the source wmts collection is avaialble for the latest available date via. {gibs_url}
-        - If available, it overrides the {collection_id} collection with the updated temporal extent into the STAC.
+        - If available, it overrides the collection with the updated temporal extent into the STAC.
         #### Note
         - This DAG uses the following configuration json to ingest to STAC<br>
         - TODO: validation of the collection_config with respect to STAC extension for WMTS.
@@ -36,11 +32,16 @@ def get_ingest_wmts2stac_dag(id: str, event: VedaWMTS2STACConfig) -> DAG:
         {collection_config}
         ```
         """
+
     dag_args = {
         "start_date": pendulum.today("UTC").add(days=-1),
         "catchup": False,
         "doc_md": dag_doc_md,
         "tags": ["collection", "WMTS", "GIBS", "STAC", "NRT", "worldview"],
+        "max_active_runs": 1,
+        "default_args": {
+            "retries": 0,  # Don't retry failed tasks
+        }
     }
 
     @dag(
@@ -49,12 +50,25 @@ def get_ingest_wmts2stac_dag(id: str, event: VedaWMTS2STACConfig) -> DAG:
         render_template_as_native_obj=True,
         **dag_args
     )
-    def veda_gibs_wmts2stac_with_update(collection_config: dict, collection_id: str, gibs_url: str):
+    def veda_gibs_wmts2stac_with_update(collection_config: dict, gibs_url: str):
         start = EmptyOperator(task_id="start")
         end = EmptyOperator(
             task_id="end",
-            trigger_rule=TriggerRule.NONE_FAILED_MIN_ONE_SUCCESS
+            trigger_rule=TriggerRule.ALL_DONE
         )
+
+        @task
+        def extract_collection_id(collection_config: dict) -> str:
+            """
+            Extracts and validates the collection ID from the collection config.
+            :param collection_config: The collection configuration dictionary
+            :return: The collection ID
+            :raises ValueError: If collection ID is missing
+            """
+            collection_id = collection_config.get("id", "")
+            if not collection_id:
+                raise ValueError("Missing required field 'id' in collection_config")
+            return collection_id
 
         @task.branch
         def is_gibs(gibs_url: str) -> str:
@@ -70,15 +84,19 @@ def get_ingest_wmts2stac_dag(id: str, event: VedaWMTS2STACConfig) -> DAG:
             else:
                 return 'wmts2stac_task_group'
 
+        validated_config = validate_web_map_links_schema_task(collection_config)
+        collection_id = extract_collection_id(validated_config)
+
         gibs_update_group = gibs_wmts2stac_update_task_group(
-            collection=collection_config,
+            collection=validated_config,
             gibs_url=gibs_url if gibs_url else "",
             collection_id=collection_id
         )
-        wmts2stac_group = wmts2stac_task_group(collection=collection_config)
+        wmts2stac_group = wmts2stac_task_group(collection=validated_config)
 
         task_choice = is_gibs(gibs_url)
-        start >> task_choice
+        start >> validated_config >> task_choice
         task_choice >> [gibs_update_group, wmts2stac_group] >> end
+        validated_config >> end
 
-    return veda_gibs_wmts2stac_with_update(collection_config=collection_config, collection_id=collection_id, gibs_url=gibs_url)
+    return veda_gibs_wmts2stac_with_update(collection_config=collection_config, gibs_url=gibs_url)

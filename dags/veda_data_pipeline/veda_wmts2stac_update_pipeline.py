@@ -27,7 +27,6 @@ def get_ingest_wmts2stac_dag(id: str, event: VedaWMTS2STACConfig) -> DAG:
         - If available, it overrides the collection with the updated temporal extent into the STAC.
         #### Note
         - This DAG uses the following configuration json to ingest to STAC<br>
-        - TODO: validation of the collection_config with respect to STAC extension for WMTS.
         ```json
         {collection_config}
         ```

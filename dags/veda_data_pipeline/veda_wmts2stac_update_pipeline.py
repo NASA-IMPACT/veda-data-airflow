@@ -23,10 +23,11 @@ def get_ingest_wmts2stac_dag(id: str, event: VedaWMTS2STACConfig) -> DAG:
     gibs_url: str = event.get("gibs_url", "")
     schedule: str = event.get("schedule", "0 0 * * *") if gibs_url else None
     dag_doc_md = f"""
-        ## This DAG handles creation of STAC Collection from (GIBS) WMTS. If a schedule is provided along with Gibs url in event: VedaWMTS2STACConfig, it sets a scheduler to check and update the STAC.
-        ### How does it update:
-        - For the frequency set by schedule in VedaWMTS2STACConfig, the DAG checks if the source wmts collection which is indexed as STAC collection
-        is avaialble for the latest available date via. {gibs_url}
+        ## This DAG handles creation of STAC Collection from WMTS.
+        If a schedule is provided along with Gibs url in event: VedaWMTS2STACConfig, it sets a scheduler to check and update the STAC based on GIBS metadata.
+        Else, The collection_config is used to ingest the Gibs.
+        ### How does update task group work:
+        - For the frequency set by schedule in VedaWMTS2STACConfig, the DAG checks if the source wmts collection is avaialble for the latest available date via. {gibs_url}
         - If available, it overrides the {collection_id} collection with the updated temporal extent into the STAC.
         #### Note
         - This DAG uses the following configuration json to ingest to STAC<br>

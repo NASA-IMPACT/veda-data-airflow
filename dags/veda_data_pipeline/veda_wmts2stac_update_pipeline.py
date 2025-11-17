@@ -3,7 +3,7 @@ from airflow import DAG
 from airflow.operators.empty import EmptyOperator
 from airflow.utils.trigger_rule import TriggerRule
 from airflow.decorators import dag, task
-from dags.veda_data_pipeline.helpers.veda_wmts2stac_update_pipeline import gibs_wmts2stac_update_task_group, wmts2stac_task_group, validate_web_map_links_schema_task, VedaWMTS2STACConfig
+from veda_data_pipeline.helpers.veda_wmts2stac_update_pipeline import gibs_wmts2stac_update_task_group, wmts2stac_task_group, validate_web_map_links_schema_task, VedaWMTS2STACConfig
 
 def get_ingest_wmts2stac_dag(id: str, event: VedaWMTS2STACConfig) -> DAG:
     """

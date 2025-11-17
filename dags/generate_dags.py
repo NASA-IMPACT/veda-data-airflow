@@ -7,7 +7,7 @@ from airflow.models.variable import Variable
 
 from veda_data_pipeline.veda_discover_pipeline import get_discover_dag
 from veda_data_pipeline.veda_vector_pipeline import get_ingest_vector_dag
-from dags.veda_data_pipeline.veda_wmts2stac_update_pipeline import get_ingest_wmts2stac_dag
+from veda_data_pipeline.veda_wmts2stac_update_pipeline import get_ingest_wmts2stac_dag
 from veda_data_pipeline.veda_pyarc2stac_pipeline import get_ingest_pyarc2stac_dag
 
 dag_generators = {

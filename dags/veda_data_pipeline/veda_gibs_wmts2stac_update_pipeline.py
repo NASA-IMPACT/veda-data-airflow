@@ -12,10 +12,16 @@ def get_ingest_gibswmts2stac_dag(id: str, event: VedaGibsWMTSConfig) -> DAG:
     :param id: Id for the DAG. should be unique
     : param event: A config dict 
     """
-    collection_config = event["collection_config"]
-    collection_id = collection_config["id"]
-    gibs_url = event["gibs_url"]
-    schedule=event["schedule"] or "0 0 * * *"
+    collection_config: VedaGibsWMTSConfig = event.get("collection_config", {})
+    if not collection_config:
+        raise ValueError("Missing required field 'collection_config' in event")
+
+    collection_id: str = collection_config.get("id", "")
+    if not collection_id:
+        raise ValueError("Missing required field 'id' in collection_config")
+
+    gibs_url: str = event.get("gibs_url")
+    schedule: str = event.get("schedule", "0 0 * * *") if gibs_url else None
     dag_doc_md = f"""
         ## This DAG handles creation of STAC Collection from (GIBS) WMTS. If a schedule is provided along with Gibs url in event: VedaGibsWMTSConfig, it sets a scheduler to check and update the STAC.
         ### How does it update:

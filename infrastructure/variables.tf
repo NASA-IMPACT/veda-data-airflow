@@ -140,8 +140,18 @@ variable "custom_worker_policy_statement" {
         "arn:aws:secretsmanager:us-west-2:853558080719:secret:veda-keycloak*",
         "arn:aws:secretsmanager:us-west-2:114506680961:secret:veda-keycloak*"
       ]
+    },
+    {
+      Effect = "Allow"
+      Action = [
+        "kms:Decrypt"
+      ]
+      Resource = [
+        "arn:aws:kms:us-west-2:853558080719:key/*",
+        "arn:aws:kms:us-west-2:114506680961:key/*"
+      ]
     }
-
+  
   ]
 
 }

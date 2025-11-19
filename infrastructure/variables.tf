@@ -130,6 +130,16 @@ variable "custom_worker_policy_statement" {
             "Effect": "Allow",
             "Action": ["cloudfront:CreateInvalidation"],
             "Resource": ["arn:aws:cloudfront::*:distribution/*"]
+    },
+    {
+      Effect = "Allow"
+      Action = [
+        "secretsmanager:GetSecretValue"
+      ]
+      Resource = [
+        "arn:aws:secretsmanager:us-west-2:853558080719:secret:veda-keycloak*",
+        "arn:aws:secretsmanager:us-west-2:114506680961:secret:veda-keycloak*"
+      ]
     }
 
   ]
@@ -167,6 +177,12 @@ variable "vector_security_group" {
 variable "sm2a_secret_manager_name" {
   type    = string
   default = "null"
+}
+
+variable "secrets_manager_arns" {
+  type        = list(string)
+  description = "List of Secrets Manager ARNs that workers can access"
+  default     = []
 }
 
 variable "workers_cpu" {

@@ -189,12 +189,6 @@ variable "sm2a_secret_manager_name" {
   default = "null"
 }
 
-variable "secrets_manager_arns" {
-  type        = list(string)
-  description = "List of Secrets Manager ARNs that workers can access"
-  default     = []
-}
-
 variable "workers_cpu" {
   default = 2048
 }

@@ -151,7 +151,6 @@ variable "custom_worker_policy_statement" {
         "arn:aws:kms:us-west-2:114506680961:key/*"
       ]
     }
-  
   ]
 
 }

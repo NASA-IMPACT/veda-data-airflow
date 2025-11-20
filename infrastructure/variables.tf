@@ -130,8 +130,26 @@ variable "custom_worker_policy_statement" {
             "Effect": "Allow",
             "Action": ["cloudfront:CreateInvalidation"],
             "Resource": ["arn:aws:cloudfront::*:distribution/*"]
+    },
+    {
+      Effect = "Allow"
+      Action = [
+        "secretsmanager:GetSecretValue"
+      ]
+      Resource = [
+        "arn:aws:secretsmanager:us-west-2:853558080719:secret:veda-keycloak*",
+        "arn:aws:secretsmanager:us-west-2:114506680961:secret:veda-keycloak*"
+      ]
+    },
+    {
+      Effect = "Allow"
+      Action = [
+        "kms:Decrypt"
+      ]
+      Resource = [
+        "arn:aws:kms:us-west-2:853558080719:key/360b41aa-0c14-4d64-a213-fb7c7ac83cd7"
+      ]
     }
-
   ]
 
 }

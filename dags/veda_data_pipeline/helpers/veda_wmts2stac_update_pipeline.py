@@ -149,7 +149,11 @@ def validate_collection_task(collection_config: dict) -> dict:
     :return: The validated collection config
     :raises ValueError: If the config doesn't conform to the STAC schema or extensions
     """
-    return validate_collection(collection_config)
+
+    if "https://stac-extensions.github.io/web-map-links/v1.2.0/schema.json" in collection_config.get('stac_extensions', []):
+        return validate_collection(collection_config)
+    else:     
+        raise ValueError("STAC does not have web-map-link extension needed for WMTS!")
 
 
 ## Task groups

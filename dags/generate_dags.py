@@ -9,6 +9,7 @@ from veda_data_pipeline.veda_discover_pipeline import get_discover_dag
 from veda_data_pipeline.veda_vector_pipeline import get_ingest_vector_dag
 from veda_data_pipeline.veda_wmts2stac_update_pipeline import get_ingest_wmts2stac_dag
 from veda_data_pipeline.veda_pyarc2stac_pipeline import get_ingest_pyarc2stac_dag
+from veda_data_pipeline.helpers.veda_wmts2stac_update_pipeline import get_ingest_wmts2stac_dag_config
 
 dag_generators = {
         "veda_discover":          get_discover_dag,
@@ -71,3 +72,4 @@ generate_dags()
 # create default DAGs (no config or schedule)
 get_ingest_vector_dag(id="veda_ingest_vector", event={})
 get_discover_dag(id="veda_discover", event={})
+get_ingest_wmts2stac_dag(id='veda_wmts2stac', event=get_ingest_wmts2stac_dag_config)

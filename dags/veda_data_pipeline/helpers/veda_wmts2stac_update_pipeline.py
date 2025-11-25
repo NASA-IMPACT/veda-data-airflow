@@ -5,6 +5,7 @@ from typing import Optional
 from airflow.operators.empty import EmptyOperator
 from airflow.decorators import dag, task, task_group
 from veda_data_pipeline.groups.collection_group import ingest_collection_task
+from veda_data_pipeline.utils.validate import validate_collection
 
 WMTS2STACConfig = dict[str, any] # this mostly comply with a STAC json config
 
@@ -137,114 +138,18 @@ def extract_latest_nrt_date_for_collection(xml_string: str, collection_id:str='V
     return ""
 
 @task
-def validate_web_map_links_schema_task(collection_config: dict) -> dict:
+def validate_collection_task(collection_config: dict) -> dict:
     """
-    Validates the collection config against the Web Map Links STAC extension schema.
-    This extension is used by the WMTS.
+    Validates the collection config using PySTAC's native validation.
+
+    This uses pystac.Collection.validate() which automatically validates against
+    the STAC specification and all declared extensions in stac_extensions.
+
     :param collection_config: The collection configuration dictionary
     :return: The validated collection config
-    :raises ValidationError: If the config doesn't conform to the schema
+    :raises ValueError: If the config doesn't conform to the STAC schema or extensions
     """
-    import jsonschema
-    
-    # pulled from: https://stac-extensions.github.io/web-map-links/v1.2.0/schema.json
-    schema = {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "$id": "https://stac-extensions.github.io/web-map-links/v1.2.0/schema.json#",
-        "title": "Web Map Links Extension",
-        "description": "STAC Web Map Links Extension for STAC Items, STAC Catalogs and STAC Collections.",
-        "type": "object",
-        "required": ["stac_extensions", "type", "links"],
-        "properties": {
-            "stac_extensions": {
-                "type": "array",
-                "contains": {
-                    "const": "https://stac-extensions.github.io/web-map-links/v1.2.0/schema.json"
-                }
-            },
-            "type": {
-                "type": "string",
-                "enum": ["Catalog", "Collection", "Feature"]
-            },
-            "links": {
-                "type": "array",
-                "contains": {
-                    "type": "object",
-                    "required": ["rel"],
-                    "properties": {
-                        "rel": {
-                            "enum": ["xyz", "wms", "wmts", "tilejson", "pmtiles", "3d-tiles"]
-                        }
-                    }
-                },
-                "items": {
-                    "type": "object",
-                    "allOf": [
-                        {
-                            "$comment": "Defines WMTS links",
-                            "if": {
-                                "properties": {
-                                    "rel": {"const": "wmts"}
-                                }
-                            },
-                            "then": {
-                                "required": ["wmts:layer"],
-                                "properties": {
-                                    "wmts:layer": {
-                                        "oneOf": [
-                                            {"type": "string", "minLength": 1},
-                                            {
-                                                "type": "array",
-                                                "minItems": 1,
-                                                "items": {"type": "string", "minLength": 1}
-                                            }
-                                        ]
-                                    },
-                                    "wmts:dimensions": {
-                                        "type": "object",
-                                        "additionalProperties": {"type": "string"}
-                                    }
-                                }
-                            }
-                        },
-                        {
-                            "$comment": "Defines WMS links",
-                            "if": {
-                                "properties": {
-                                    "rel": {"const": "wms"}
-                                }
-                            },
-                            "then": {
-                                "required": ["wms:layers"],
-                                "properties": {
-                                    "wms:layers": {
-                                        "type": "array",
-                                        "minItems": 1,
-                                        "items": {"type": "string", "minLength": 1}
-                                    },
-                                    "wms:styles": {
-                                        "type": "array",
-                                        "items": {"type": "string", "minLength": 1}
-                                    },
-                                    "wms:dimensions": {
-                                        "type": "object",
-                                        "additionalProperties": {"type": "string"}
-                                    }
-                                }
-                            }
-                        }
-                    ]
-                }
-            }
-        }
-    }
-
-    try:
-        jsonschema.validate(instance=collection_config, schema=schema)
-        print("✓ Collection config is valid according to Web Map Links schema")
-        return collection_config
-    except jsonschema.exceptions.ValidationError as e:
-        raise ValueError(f"Collection config validation failed: {e.message}")
+    return validate_collection(collection_config)
 
 
 ## Task groups
@@ -329,8 +234,7 @@ VIIRS_SNPP_NRT_collection: WMTS2STACConfig = {
         "dashboard:is_periodic": True,
         "dashboard:time_density": "day",
         "dashboard:time_interval": "P1D",
-        "data_type": "cog",
-        "description": "The Black Marble Nighttime At Sensor Radiance (Day/Night Band) layer is created from NASA’s Black Marble daily at-sensor top-of-atmosphere nighttime radiance product (VNP46A1). It is displayed as a grayscale image. The layer is expressed in radiance units (nW/(cm2 sr)) with log10 conversion. It is stretched up to 38 nW/(cm2 sr) resulting in improvements in capturing city lights in greater spatial detail than traditional Nighttime Imagery resampled at 0-255 (e.g., Day/Night Band, Enhanced Near Constant Contrast).The ultra-sensitivity of the VIIRS Day/Night Band enables scientists to capture the Earth’s surface and atmosphere in low light conditions, allowing for better monitoring of nighttime phenomena. These images are also useful for assessing anthropogenic sources of light emissions under varying illumination conditions. For instance, during partial to full moon conditions, the layer can identify the location and features of clouds and other natural terrestrial features such as sea ice and snow cover, while enabling temporal observations in urban regions, regardless of moonlit conditions. As such, the layer is particularly useful for detecting city lights, lightning, auroras, fires, gas flares, and fishing fleets.The Black Marble Nighttime At Sensor Radiance (Day/Night Band) layer is available in near real-time from the Visible Infrared Imaging Radiometer Suite (VIIRS) aboard the joint NASA/NOAA Suomi National Polar orbiting Partnership (Suomi NPP) satellite. The sensor resolution is 750 m at nadir, imagery resolution is 500 m, and the temporal resolution is daily.",
+        "description": "The Black Marble Nighttime At Sensor Radiance (Day/Night Band) layer is created from NASA's Black Marble daily at-sensor top-of-atmosphere nighttime radiance product (VNP46A1). It is displayed as a grayscale image. The layer is expressed in radiance units (nW/(cm2 sr)) with log10 conversion. It is stretched up to 38 nW/(cm2 sr) resulting in improvements in capturing city lights in greater spatial detail than traditional Nighttime Imagery resampled at 0-255 (e.g., Day/Night Band, Enhanced Near Constant Contrast).The ultra-sensitivity of the VIIRS Day/Night Band enables scientists to capture the Earth's surface and atmosphere in low light conditions, allowing for better monitoring of nighttime phenomena. These images are also useful for assessing anthropogenic sources of light emissions under varying illumination conditions. For instance, during partial to full moon conditions, the layer can identify the location and features of clouds and other natural terrestrial features such as sea ice and snow cover, while enabling temporal observations in urban regions, regardless of moonlit conditions. As such, the layer is particularly useful for detecting city lights, lightning, auroras, fires, gas flares, and fishing fleets.The Black Marble Nighttime At Sensor Radiance (Day/Night Band) layer is available in near real-time from the Visible Infrared Imaging Radiometer Suite (VIIRS) aboard the joint NASA/NOAA Suomi National Polar orbiting Partnership (Suomi NPP) satellite. The sensor resolution is 750 m at nadir, imagery resolution is 500 m, and the temporal resolution is daily.",
         "extent": {
             "spatial": {
                 "bbox": [
@@ -366,18 +270,15 @@ VIIRS_SNPP_NRT_collection: WMTS2STACConfig = {
         "license": "MIT",
         "links": [
             {
-                "href": "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/wmts.cgi",
-                "href:servers": [
-                    "https://gibs-a.earthdata.nasa.gov/wmts/epsg3857/best/wmts.cgi",
-                    "https://gibs-b.earthdata.nasa.gov/wmts/epsg3857/best/wmts.cgi"
-                ],
+                "href": "https://gibs{s}.earthdata.nasa.gov/wmts/epsg3857/best/wmts.cgi",
+                "href:servers": ["-a", "-b"],
                 "rel": "wmts",
                 "title": "Visualized through a WMTS",
                 "type": "image/png",
                 "wmts:dimensions": {
-                    "default": "default"
+                    "STYLE": "default"
                 },
-                "wmts:layer": "VIIRS_SNPP_DayNightBand_At_Sensor_Radiance"
+                "wmts:layer": ["VIIRS_SNPP_DayNightBand_At_Sensor_Radiance"]
             }
         ],
         "product_level": "L2",

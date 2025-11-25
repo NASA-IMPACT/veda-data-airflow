@@ -4,6 +4,7 @@ from airflow.operators.empty import EmptyOperator
 from airflow.utils.trigger_rule import TriggerRule
 from airflow.decorators import dag, task
 from veda_data_pipeline.helpers.veda_wmts2stac_update_pipeline import gibs_wmts2stac_update_task_group, wmts2stac_task_group, validate_collection_task, VedaWMTS2STACConfig
+from slack_notifications import slack_fail_alert
 
 def get_ingest_wmts2stac_dag(id: str, event: VedaWMTS2STACConfig) -> DAG:
     """
@@ -36,6 +37,7 @@ def get_ingest_wmts2stac_dag(id: str, event: VedaWMTS2STACConfig) -> DAG:
         "start_date": pendulum.today("UTC").add(days=-1),
         "catchup": False,
         "doc_md": dag_doc_md,
+        "on_failure_callback": slack_fail_alert,
         "tags": ["collection", "WMTS", "GIBS", "STAC", "NRT", "worldview"],
         "max_active_runs": 1,
         "default_args": {

@@ -147,7 +147,8 @@ variable "custom_worker_policy_statement" {
         "kms:Decrypt"
       ]
       Resource = [
-        "arn:aws:kms:us-west-2:853558080719:key/360b41aa-0c14-4d64-a213-fb7c7ac83cd7"
+        "arn:aws:kms:us-west-2:853558080719:key/360b41aa-0c14-4d64-a213-fb7c7ac83cd7",
+        "arn:aws:kms:us-west-2:114506680961:key/22f8e453-b192-4e47-b657-14c0f2147a42"
       ]
     }
   ]

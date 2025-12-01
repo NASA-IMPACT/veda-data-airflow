@@ -65,20 +65,16 @@ def validate_collection(collection: Union[dict, pystac.Collection]) -> dict:
 
         try:
             collection_obj = pystac.Collection.from_dict(collection)
-            logger.debug(f"Successfully converted collection '{collection_id}' to pystac.Collection")
         except Exception as e:
             error_msg = f"Failed to convert collection dictionary to pystac.Collection: {str(e)}"
-            logger.error(error_msg)
             raise ValueError(error_msg) from e
 
     elif isinstance(collection, pystac.Collection):
         collection_obj = collection
         collection_id = collection.id
-        logger.info(f"Validating collection '{collection_id}' from pystac.Collection object")
 
     else:
         error_msg = f"Invalid input type: expected dict or pystac.Collection, got {type(collection).__name__}"
-        logger.error(error_msg)
         raise TypeError(error_msg)
 
     # Validate the collection using pystac's native validation
@@ -94,14 +90,11 @@ def validate_collection(collection: Union[dict, pystac.Collection]) -> dict:
             f"with {num_extensions} extension(s)"
         )
 
-        if collection_obj.stac_extensions:
-            logger.debug(f"Extensions to validate: {collection_obj.stac_extensions}")
-
         # Perform validation
         collection_obj.validate()
 
         logger.info(
-            f"✓ Collection '{collection_id}' is valid according to STAC {stac_version} "
+            f"Collection '{collection_id}' is valid according to STAC {stac_version} "
             f"specification" + (f" and {num_extensions} extension(s)" if num_extensions > 0 else "")
         )
 
@@ -118,6 +111,5 @@ def validate_collection(collection: Union[dict, pystac.Collection]) -> dict:
 
     # Return as dictionary for consistency with existing codebase patterns
     validated_dict = collection_obj.to_dict()
-    logger.debug(f"Returning validated collection '{collection_id}' as dictionary")
 
     return validated_dict

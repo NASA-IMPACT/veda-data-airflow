@@ -3,7 +3,7 @@ from typing import Any, Dict
 import fsspec
 import xarray as xr
 import xstac
-from veda_data_pipeline.utils.schemas import SpatioTemporalExtent
+from veda_data_pipeline.utils.schemas import SpatioTemporalExtent, normalize_datetime_to_iso8601
 from datetime import datetime, timezone
 
 
@@ -99,16 +99,15 @@ class GenerateCollection:
         # Override the extents if they exists
         if spatial_extent := dataset.get("spatial_extent"):
             collection_stac["extent"]["spatial"] = {"bbox": [list(spatial_extent.values())]}
-        
+
         if temporal_extent := dataset.get("temporal_extent"):
+            # Normalize temporal extent values to ISO 8601 format
+            normalized_values = [
+                normalize_datetime_to_iso8601(x) for x in list(temporal_extent.values())
+            ]
+
             collection_stac["extent"]["temporal"] = {
-                "interval": [
-                    [
-                        x
-                        if x else None
-                        for x in list(temporal_extent.values())
-                    ]
-                ]
+                "interval": [normalized_values]
             }
 
         collection_stac["item_assets"] = {

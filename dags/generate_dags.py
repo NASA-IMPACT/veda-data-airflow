@@ -66,7 +66,10 @@ def generate_dags():
             if c.get("schedule", None) and (dag := c.get("dag", "veda_discover")):
                 if id := c.get("id"):
                     file_name = id # use id for DAG name if provided, otherwise default to file name
-                dag_generators[dag](id=f"{dag_names[dag]}-{file_name}", event=c)
+                try:
+                    dag_generators[dag](id=f"{dag_names[dag]}-{file_name}", event=c)
+                except KeyError:
+                    continue # configured DAG not present in current environment
 
 generate_dags()
 # create default DAGs (no config or schedule)

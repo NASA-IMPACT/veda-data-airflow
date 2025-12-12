@@ -9,7 +9,7 @@ import requests
 from airflow.models.variable import Variable
 
 template_dag_run_conf = {
-    "collection": Param(default=None, type="string", description="Collection ID to tag"),
+    "collections": Param(default=None, type=["null", "array"], description="List of collection IDs to tag"),
     "tenant": Param(default=None, type="string", description="Tenant ID to tag the collection with (will be set as eic-tenant property)"),
     "properties": Param(
         default=None,
@@ -31,7 +31,7 @@ This pipeline:
 - This DAG can run with the following configuration <br>
 ```json
 {
-    "collection": "collection-id",
+    "collections": ["collection-id-1", "collection-id-2"],
     "tenant": "tenant-id"
 }
 ```
@@ -39,7 +39,7 @@ This pipeline:
 Or with additional properties:
 ```json
 {
-    "collection": "collection-id",
+    "collections": ["collection-id-1", "collection-id-2"],
     "tenant": "tenant-id",
     "properties": {
         "custom-property": "value"
@@ -58,15 +58,25 @@ dag_args = {
 }
 
 @task()
-def fetch_existing_collection(ti=None):
-    """ Fetch an existing collection from the STAC catalog"""
-    import json
+def get_collection_ids(ti=None):
+    """Extract and validate collection IDs from configuration"""
     config = ti.dag_run.conf
-    collection_id = config.get("collection")
+    collections = config.get("collections")
 
-    if not collection_id:
-        raise ValueError("Collection ID is required")
+    if not collections:
+        raise ValueError("Collections list is required")
 
+    if not isinstance(collections, list):
+        raise ValueError("Collections must be a list of collection IDs")
+
+    if len(collections) == 0:
+        raise ValueError("Collections list cannot be empty")
+
+    return collections
+
+@task()
+def fetch_existing_collection(collection_id: str):
+    """Fetch an existing collection from the STAC catalog"""
     airflow_vars_json = Variable.get("aws_dags_variables", deserialize_json=True)
     stac_url = airflow_vars_json.get("STAC_URL")
 
@@ -108,8 +118,9 @@ with DAG("veda_tenant_tagging_pipeline", params=template_dag_run_conf, **dag_arg
     start = EmptyOperator(task_id="start", dag=dag)
     end = EmptyOperator(task_id="end", dag=dag)
 
-    fetch_collection = fetch_existing_collection()
-    update_collection = update_collection_with_tenant_tags(existing_collection=fetch_collection)
-    ingest_collection = ingest_collection_task(collection=update_collection)
+    collection_ids = get_collection_ids()
+    fetch_collections = fetch_existing_collection.expand(collection_id=collection_ids)
+    update_collections = update_collection_with_tenant_tags.expand(existing_collection=fetch_collections)
+    ingest_collections = ingest_collection_task.expand(collection=update_collections)
 
-    start >> fetch_collection >> update_collection >> ingest_collection >> end
+    start >> collection_ids >> fetch_collections >> update_collections >> ingest_collections >> end

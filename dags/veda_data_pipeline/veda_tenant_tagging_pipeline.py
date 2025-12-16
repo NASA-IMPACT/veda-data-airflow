@@ -14,7 +14,16 @@ from airflow.models.variable import Variable
 logger = logging.getLogger(__name__)
 
 template_dag_run_conf = {
-    "collections": Param(default=None, type=["null", "array"], description="List of collection IDs to tag"),
+    "collections": Param(
+        default=None,
+        type=["null", "array"],
+        description="List of collection IDs to tag (optional if catalog_endpoint is provided)"
+    ),
+    "catalog_endpoint": Param(
+        default=None,
+        type=["null", "string"],
+        description="STAC catalog endpoint URL to fetch all collections from (optional if collections is provided)"
+    ),
     "tenant": Param(default=None, type="string", description="Tenant ID to tag the collection with (will be set as eic-tenant property)"),
     "properties": Param(
         default=None,
@@ -28,25 +37,36 @@ dag_doc_md = """
 Tags existing collections with tenant information by updating their properties field.
 
 This pipeline:
-1. Fetches existing collections from the STAC catalog
+1. Fetches existing collections from the STAC catalog (either from a list or from a catalog endpoint)
 2. Updates each collection's properties with tenant tags
 3. Re-ingests the updated collections
 
 #### Configuration
 
 **Required Parameters:**
-- `collections` (array of strings): List of collection IDs to tag
 - `tenant` (string): Tenant ID to tag collections with (will be set as `eic-tenant` property)
+
+**Collection Source (provide one of the following):**
+- `collections` (array of strings): List of collection IDs to tag
+- `catalog_endpoint` (string): STAC catalog endpoint URL (e.g., `https://dev.openveda.cloud/api/stac/collections`) to fetch all collections from
 
 **Optional Parameters:**
 - `properties` (object): Additional properties to add/update on collections
 
 #### Example Configurations
 
-**Basic usage - tag a list of collections:**
+**Tag specific collections:**
 ```json
 {
-    "collections": ["collection-id-1"],
+    "collections": ["collection-id-1", "collection-id-2"],
+    "tenant": "tenant-123"
+}
+```
+
+**Tag all collections from a catalog:**
+```json
+{
+    "catalog_endpoint": "https://dev.openveda.cloud/api/stac/collections",
     "tenant": "tenant-123"
 }
 ```
@@ -54,19 +74,13 @@ This pipeline:
 **With additional properties:**
 ```json
 {
-    "collections": ["collection-id-1", "collection-id-2"],
+    "collections": ["collection-id-1"],
     "tenant": "tenant-123",
     "properties": {
-        "custom-property": "value",
-        "another-property": "another-value"
+        "custom-property": "value"
     }
 }
 ```
-
-#### Input Format
-
-- `collections`: Must be an array of strings, where each string is a collection ID
-  - Valid: `collection-id-1, collection-id-2`
 """
 
 dag_args = {
@@ -80,16 +94,51 @@ dag_args = {
 
 @task()
 def get_collection_ids(ti=None):
-    """Extract and validate collection IDs from configuration"""
+    """Extract and validate collection IDs from configuration or fetch from catalog endpoint"""
     try:
         config = ti.dag_run.conf
         collections = config.get("collections")
+        catalog_endpoint = config.get("catalog_endpoint")
         tenant = config.get("tenant")
 
         logger.info(f"Starting collection ID validation. Tenant: {tenant}")
 
+        # If catalog_endpoint is provided, fetch all collections
+        if catalog_endpoint:
+            logger.info(f"Fetching all collections from catalog endpoint: {catalog_endpoint}")
+
+            try:
+                response = requests.get(catalog_endpoint, timeout=30)
+                response.raise_for_status()
+            except requests.exceptions.RequestException as e:
+                error_msg = f"Failed to fetch collections from catalog endpoint {catalog_endpoint}: {str(e)}"
+                logger.error(error_msg)
+                raise ValueError(error_msg) from e
+
+            try:
+                catalog_data = response.json()
+            except (ValueError, requests.exceptions.JSONDecodeError) as json_error:
+                error_msg = f"Failed to parse JSON response from catalog endpoint {catalog_endpoint}"
+                logger.error(error_msg)
+                raise ValueError(error_msg) from json_error
+
+            # Extract collection IDs
+            if "collections" in catalog_data:
+                collections = [coll.get("id") for coll in catalog_data["collections"] if coll.get("id")]
+            else:
+                error_msg = f"Unexpected response format from catalog endpoint {catalog_endpoint}"
+                logger.error(error_msg)
+                raise ValueError(error_msg)
+
+            if not collections:
+                error_msg = f"No collections found at catalog endpoint {catalog_endpoint}"
+                logger.error(error_msg)
+                raise ValueError(error_msg)
+
+            logger.info(f"Found {len(collections)} collections from catalog endpoint")
+
         if not collections:
-            error_msg = "Collections list is required in DAG configuration"
+            error_msg = "Either 'collections' list or 'catalog_endpoint' must be provided in DAG configuration"
             logger.error(error_msg)
             raise ValueError(error_msg)
 
@@ -110,6 +159,7 @@ def get_collection_ids(ti=None):
                 raise ValueError(f"Collections must be non-empty strings, got: {coll}")
             normalized_collections.append(coll.strip())
 
+        logger.info(f"Validated {len(normalized_collections)} collection IDs")
         return normalized_collections
 
     except Exception as e:

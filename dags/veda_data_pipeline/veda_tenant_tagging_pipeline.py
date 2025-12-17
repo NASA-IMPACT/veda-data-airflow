@@ -258,12 +258,16 @@ def ingest_collection(collection=None):
     app_secret = airflow_vars_json.get("INGEST_API_KEYCLOAK_APP_SECRET")
     stac_ingestor_api_url = airflow_vars_json.get("STAC_INGESTOR_API_URL")
 
-    return submission_handler(
-        event=collection,
-        endpoint="/collections",
-        app_secret=app_secret,
-        stac_ingestor_api_url=stac_ingestor_api_url
-    )
+    try:
+      submission_handler(
+          event=collection,
+          endpoint="/collections",
+          app_secret=app_secret,
+          stac_ingestor_api_url=stac_ingestor_api_url
+      )
+    except Exception as e:
+        logger.error(f"Error in ingesting collection {collection}")
+        raise
 
 with DAG("veda_tenant_tagging_pipeline", params=template_dag_run_conf, **dag_args) as dag:
     start = EmptyOperator(task_id="start", dag=dag)

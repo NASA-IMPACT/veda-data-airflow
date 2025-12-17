@@ -98,7 +98,7 @@ def get_collection_ids(ti=None):
     """Extract and validate collection IDs from configuration"""
     try:
         config = ti.dag_run.conf
-        collections_strings = config.get("collections")
+        collections_strings = config.get("collections")[0]
         collections = collections_strings.split(",")
         tenant = config.get("tenant")
 

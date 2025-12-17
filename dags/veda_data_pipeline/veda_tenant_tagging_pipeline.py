@@ -24,7 +24,12 @@ template_dag_run_conf = {
         type=["null", "string"],
         description="STAC catalog endpoint URL to fetch all collections from (optional if collections is provided)"
     ),
-    "tenant": Param(default=None, type="string", description="Tenant ID to tag the collection with (will be set as eic-tenant property)"),
+    "tenant": Param(default=None, type="string", description="Tenant ID to tag the collection with"),
+    "tenant_field": Param(
+        default="eic:tenant",
+        type="string",
+        description="Collection properties key to write the tenant into (e.g., 'eic-tenant' or 'eic:tenant')",
+    ),
     "properties": Param(
         default=None,
         type=["null", "object"],
@@ -44,13 +49,14 @@ This pipeline:
 #### Configuration
 
 **Required Parameters:**
-- `tenant` (string): Tenant ID to tag collections with (will be set as `eic-tenant` property)
+- `tenant` (string): Tenant ID to tag collections with
 
 **Collection Source (provide one of the following):**
 - `collections` (array of strings): List of collection IDs to tag
 - `catalog_endpoint` (string): STAC catalog endpoint URL (e.g., `https://dev.openveda.cloud/api/stac/collections`) to fetch all collections from
 
 **Optional Parameters:**
+- `tenant_field` (string): Properties key to write tenant into (default: `eic:tenant`)
 - `properties` (object): Additional properties to add/update on collections
 
 #### Example Configurations
@@ -60,6 +66,15 @@ This pipeline:
 {
     "collections": ["collection-id-1", "collection-id-2"],
     "tenant": "tenant-123"
+}
+```
+
+**Tag specific collections using a custom tenant field:**
+```json
+{
+    "collections": ["collection-id-1"],
+    "tenant": "tenant-123",
+    "tenant_field": "eic:tenant"
 }
 ```
 
@@ -221,6 +236,7 @@ def update_collection_with_tenant_tags(ti=None, existing_collection=None):
     try:
         config = ti.dag_run.conf
         tenant = config.get("tenant")
+        tenant_field = config.get("tenant_field") or "eic:tenant"
         additional_properties = config.get("properties", {})
 
         collection_id = existing_collection.get("id") if existing_collection else "unknown"
@@ -236,6 +252,15 @@ def update_collection_with_tenant_tags(ti=None, existing_collection=None):
             logger.error(error_msg)
             raise ValueError(error_msg)
 
+        if not isinstance(tenant_field, str) or not tenant_field.strip():
+            error_msg = (
+                "Tenant field is required and must be a non-empty string. "
+                "Please provide a 'tenant_field' parameter in the DAG configuration."
+            )
+            logger.error(error_msg)
+            raise ValueError(error_msg)
+        tenant_field = tenant_field.strip()
+
         logger.debug(f"Existing collection properties: {existing_collection.get('properties', {})}")
 
         updated_collection = existing_collection.copy()
@@ -244,17 +269,19 @@ def update_collection_with_tenant_tags(ti=None, existing_collection=None):
             logger.debug(f"Collection {collection_id} has no properties field, creating one")
             updated_collection["properties"] = {}
 
-        old_tenant = updated_collection["properties"].get("eic-tenant")
-        updated_collection["properties"]["eic-tenant"] = tenant
-
-        if old_tenant:
-            logger.info(f"Collection {collection_id}: Updated eic-tenant from '{old_tenant}' to '{tenant}'")
-        else:
-            logger.info(f"Collection {collection_id}: Added eic-tenant '{tenant}'")
-
         if additional_properties:
             logger.debug(f"Adding additional properties to collection {collection_id}: {additional_properties}")
             updated_collection["properties"].update(additional_properties)
+
+        old_tenant = updated_collection["properties"].get(tenant_field)
+        updated_collection["properties"][tenant_field] = tenant
+
+        if old_tenant:
+            logger.info(
+                f"Collection {collection_id}: Updated {tenant_field} from '{old_tenant}' to '{tenant}'"
+            )
+        else:
+            logger.info(f"Collection {collection_id}: Added {tenant_field} '{tenant}'")
 
         # Normalize temporal extent to ISO 8601 format
         updated_collection = normalize_temporal_extent(updated_collection)

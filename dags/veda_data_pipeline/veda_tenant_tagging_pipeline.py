@@ -98,7 +98,8 @@ def get_collection_ids(ti=None):
     """Extract and validate collection IDs from configuration"""
     try:
         config = ti.dag_run.conf
-        collections = config.get("collections")
+        collections_strings = config.get("collections")
+        collections = collections_strings.split(",")
         tenant = config.get("tenant")
 
         logger.info(f"Starting collection ID validation. Tenant: {tenant}")
@@ -121,6 +122,7 @@ def get_collection_ids(ti=None):
         # Validate and normalize collection IDs
         normalized_collections = []
         for coll in collections:
+            logger.info(f"Looking at collection {coll}")
             if not isinstance(coll, str) or not coll.strip():
                 raise ValueError(f"Collections must be non-empty strings, got: {coll}")
             normalized_collections.append(coll.strip())

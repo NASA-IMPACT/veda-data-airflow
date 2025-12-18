@@ -1,6 +1,7 @@
 import logging
 import pendulum
 import traceback
+import time
 from airflow import DAG
 from airflow.models.param import Param
 from airflow.decorators import task
@@ -249,25 +250,57 @@ def update_collection_with_tenant_tags(ti=None, existing_collection=None):
         raise
 
 @task()
-def ingest_collection(collection=None):
-    """Ingest collection"""
-    collection_id = collection.get("id") if collection else "unknown"
-    logger.info(f"Starting ingestion of collection {collection_id}")
+def ingest_all_collections(collections=None):
+    """Ingest all collections sequentially"""
+    if not collections:
+        logger.warning("No collections provided for ingestion")
+        return []
+
+    results = []
+    total = len(collections)
 
     airflow_vars_json = Variable.get("aws_dags_variables", deserialize_json=True)
     app_secret = airflow_vars_json.get("INGEST_API_KEYCLOAK_APP_SECRET")
     stac_ingestor_api_url = airflow_vars_json.get("STAC_INGESTOR_API_URL")
 
-    try:
-      submission_handler(
-          event=collection,
-          endpoint="/collections",
-          app_secret=app_secret,
-          stac_ingestor_api_url=stac_ingestor_api_url
-      )
-    except Exception as e:
-        logger.error(f"Error in ingesting collection {collection}")
-        raise
+    if not app_secret or not stac_ingestor_api_url:
+        error_msg = "INGEST_API_KEYCLOAK_APP_SECRET or STAC_INGESTOR_API_URL not found in Airflow variables"
+        logger.error(error_msg)
+        raise ValueError(error_msg)
+
+    for idx, collection in enumerate(collections, 1):
+        collection_id = collection.get("id") if collection else "unknown"
+        logger.info(f"Starting ingestion of collection {collection_id} ({idx}/{total})")
+
+        try:
+            submission_handler(
+                event=collection,
+                endpoint="/collections",
+                app_secret=app_secret,
+                stac_ingestor_api_url=stac_ingestor_api_url
+            )
+            logger.info(f"Successfully ingested collection {collection_id} ({idx}/{total})")
+            results.append({"collection_id": collection_id, "status": "success"})
+        except Exception as e:
+            logger.error(f"Error ingesting collection {collection_id}: {str(e)}")
+            results.append({"collection_id": collection_id, "status": "error", "error": str(e)})
+            # Continue processing other collections instead of failing immediately
+            continue
+
+        # I put this small delay between requests in case we need to avoid rate limiting
+        if idx < total:
+            time.sleep(0.5)
+
+    successful = sum(1 for r in results if r.get("status") == "success")
+    failed = sum(1 for r in results if r.get("status") == "error")
+    logger.info(f"Ingestion complete: {successful} successful, {failed} failed out of {total} total")
+
+    if failed > 0:
+        failed_collections = [r["collection_id"] for r in results if r.get("status") == "error"]
+        logger.warning(f"Failed collections: {failed_collections}")
+        raise ValueError(f"Failed to ingest {failed} collection(s): {failed_collections}")
+
+    return results
 
 with DAG("veda_tenant_tagging_pipeline", params=template_dag_run_conf, **dag_args) as dag:
     start = EmptyOperator(task_id="start", dag=dag)
@@ -276,6 +309,6 @@ with DAG("veda_tenant_tagging_pipeline", params=template_dag_run_conf, **dag_arg
     collection_ids = get_collection_ids()
     fetch_collections = fetch_existing_collection.expand(collection_id=collection_ids)
     update_collections = update_collection_with_tenant_tags.expand(existing_collection=fetch_collections)
-    ingest_collections = ingest_collection.expand(collection=update_collections)
+    ingest_collections = ingest_all_collections(collections=update_collections)
 
     start >> collection_ids >> fetch_collections >> update_collections >> ingest_collections >> end

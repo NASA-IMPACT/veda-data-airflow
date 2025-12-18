@@ -3,6 +3,7 @@ import pendulum
 import traceback
 import time
 from airflow import DAG
+from airflow.exceptions import AirflowException
 from airflow.models.param import Param
 from airflow.decorators import task
 from airflow.operators.empty import EmptyOperator
@@ -249,7 +250,7 @@ def update_collection_with_tenant_tags(ti=None, existing_collection=None):
         logger.error(f"Traceback: {traceback.format_exc()}")
         raise
 
-@task()
+@task(retries=0)
 def ingest_all_collections(collections=None):
     """Ingest all collections sequentially"""
     if not collections:
@@ -298,7 +299,7 @@ def ingest_all_collections(collections=None):
     if failed > 0:
         failed_collections = [r["collection_id"] for r in results if r.get("status") == "error"]
         logger.warning(f"Failed collections: {failed_collections}")
-        raise ValueError(f"Failed to ingest {failed} collection(s): {failed_collections}")
+        raise AirflowException(f"Failed to ingest {failed} collection(s): {failed_collections}")
 
     return results
 

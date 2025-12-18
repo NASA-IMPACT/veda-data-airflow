@@ -2,6 +2,7 @@ import logging
 import pendulum
 import traceback
 import time
+import json
 from airflow import DAG
 from airflow.exceptions import AirflowException
 from airflow.models.param import Param
@@ -289,7 +290,21 @@ def ingest_all_collections(collections=None):
             continue
 
         collection_id = collection.get("id") if collection else "unknown"
-        logger.info(f"Starting ingestion of collection {collection_id} ({idx}/{total})")
+
+        # Adding logging to calculate and log payload size before sending to be ingested
+        try:
+            payload_json = json.dumps(collection)
+            payload_size = len(payload_json.encode('utf-8'))
+            payload_size_kb = payload_size / 1024
+            logger.info(f"Starting ingestion of collection {collection_id} ({idx}/{total}) - payload size: {payload_size:,} bytes ({payload_size_kb:.2f} KB)")
+
+            if payload_size > 8192:
+                logger.warning(f"Collection {collection_id} payload size ({payload_size_kb:.2f} KB) exceeds 8KB - may trigger WAF SizeRestrictions_BODY rule")
+        except Exception as e:
+            logger.warning(f"Could not calculate payload size for {collection_id}: {str(e)}")
+            payload_size = None
+            payload_size_kb = None
+            logger.info(f"Starting ingestion of collection {collection_id} ({idx}/{total})")
 
         try:
             submission_handler(
@@ -299,10 +314,16 @@ def ingest_all_collections(collections=None):
                 stac_ingestor_api_url=stac_ingestor_api_url
             )
             logger.info(f"Successfully ingested collection {collection_id} ({idx}/{total})")
-            results.append({"collection_id": collection_id, "status": "success"})
+            results.append({"collection_id": collection_id, "status": "success", "payload_size_bytes": payload_size})
         except Exception as e:
-            logger.error(f"Error ingesting collection {collection_id}: {str(e)}")
-            results.append({"collection_id": collection_id, "status": "error", "error": str(e)})
+            error_msg = str(e)
+            if payload_size:
+                logger.error(f"Error ingesting collection {collection_id}: {error_msg} - payload size: {payload_size:,} bytes ({payload_size_kb:.2f} KB)")
+                if "403" in error_msg or "SizeRestrictions" in error_msg or "Request blocked" in error_msg:
+                    logger.error(f"Collection {collection_id} was likely blocked by WAF due to payload size ({payload_size_kb:.2f} KB)")
+            else:
+                logger.error(f"Error ingesting collection {collection_id}: {error_msg}")
+            results.append({"collection_id": collection_id, "status": "error", "error": error_msg, "payload_size_bytes": payload_size})
             # Continue processing other collections instead of failing immediately
             continue
 

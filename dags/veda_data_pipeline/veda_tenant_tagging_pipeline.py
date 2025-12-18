@@ -139,7 +139,7 @@ def get_collection_ids(ti=None):
 
 @task()
 def fetch_existing_collection(collection_id: str):
-    """Fetch an existing collection from the STAC catalog"""
+    """Fetch an existing collection from the STAC catalog. Returns None if collection doesn't exist or fetching returns error."""
     try:
         logger.info(f"Fetching collection: {collection_id}")
 
@@ -156,7 +156,20 @@ def fetch_existing_collection(collection_id: str):
 
         try:
             response = requests.get(collection_url, timeout=30)
+            # If collection doesn't exist (404), log and return None instead of failing
+            if response.status_code == 404:
+                logger.warning(f"Collection {collection_id} not found (404). Skipping...")
+                return None
+            if response.status_code == 500:
+                logger.warning(f"Collection {collection_id} returns an Internal Server Error. Skipping...")
             response.raise_for_status()
+        except requests.exceptions.HTTPError as e:
+            if e.response.status_code == 404:
+                logger.warning(f"Collection {collection_id} not found (404). Skipping...")
+                return None
+            error_msg = f"HTTP error while fetching collection {collection_id}: {str(e)}"
+            logger.error(error_msg)
+            raise
         except requests.exceptions.RequestException as e:
             error_msg = f"Request error while fetching collection {collection_id}: {str(e)}"
             logger.error(error_msg)
@@ -187,8 +200,13 @@ def fetch_existing_collection(collection_id: str):
 
 @task()
 def update_collection_with_tenant_tags(ti=None, existing_collection=None):
-    """Update collection with tenant tags at the top level"""
+    """Update collection with tenant tags at the top level. Returns None if collection is None (doesn't exist)."""
     try:
+        # Skip if collection doesn't exist (was None from fetch step)
+        if existing_collection is None:
+            logger.warning("Skipping update - collection does not exist")
+            return None
+
         config = ti.dag_run.conf
         tenant = config.get("tenant")
         tenant_field = config.get("tenant_field") or "eic:tenant"
@@ -196,11 +214,6 @@ def update_collection_with_tenant_tags(ti=None, existing_collection=None):
 
         collection_id = existing_collection.get("id") if existing_collection else "unknown"
         logger.info(f"Updating collection {collection_id} with tenant tags")
-
-        if not existing_collection:
-            error_msg = "Existing collection is required but was not provided"
-            logger.error(error_msg)
-            raise ValueError(error_msg)
 
         if not tenant:
             error_msg = "Tenant ID is required. Please provide a 'tenant' parameter in the DAG configuration."
@@ -270,6 +283,11 @@ def ingest_all_collections(collections=None):
         raise ValueError(error_msg)
 
     for idx, collection in enumerate(collections, 1):
+        # Skip None collections (collections that don't exist)
+        if collection is None:
+            logger.warning(f"Skipping ingestion - collection does not exist ({idx}/{total})")
+            continue
+
         collection_id = collection.get("id") if collection else "unknown"
         logger.info(f"Starting ingestion of collection {collection_id} ({idx}/{total})")
 

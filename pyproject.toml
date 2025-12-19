@@ -58,7 +58,7 @@ airflow-worker = [
     "xstac",
     "pystac",
     "rasterio",
-    "rio-stac",
+    "rio_stac",
     "GeoAlchemy2",
     "geopandas==0.14.4",
     "fiona==1.9.6",

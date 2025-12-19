@@ -3,6 +3,7 @@ import pendulum
 from importlib import import_module
 
 from airflow.decorators import task
+from slack_notifications import slack_fail_alert
 
 from airflow import DAG
 from airflow.operators.dummy_operator import DummyOperator
@@ -21,6 +22,7 @@ dag_args = {
     "start_date": pendulum.today("UTC").add(days=-1),
     "catchup": False,
     "doc_md": dag_doc_md,
+    "on_failure_callback": slack_fail_alert,
     "is_paused_upon_creation": False,
     "schedule_interval": None,
 }

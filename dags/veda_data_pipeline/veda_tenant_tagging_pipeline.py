@@ -28,11 +28,6 @@ template_dag_run_conf = {
         type="string",
         description="Top-level collection key to write the tenant into (e.g., 'eic-tenant' or 'eic:tenant')",
     ),
-    "properties": Param(
-        default=None,
-        type=["null", "object"],
-        description="Additional properties to add/update on the collection (optional, tenant can also be set directly via 'tenant' parameter)"
-    ),
 }
 
 dag_doc_md = """
@@ -53,7 +48,6 @@ This pipeline:
 - `collections` (array of strings): List of collection IDs to tag
 **Optional Parameters:**
 - `tenant_field` (string): Top-level collection key to write tenant into (default: `eic:tenant`)
-- `properties` (object): Additional properties to add/update on collections (nested in properties field)
 
 #### Example Configurations
 
@@ -71,18 +65,6 @@ This pipeline:
     "collections": ["collection-id-1"],
     "tenant": "tenant-123",
     "tenant_field": "eic:tenant"
-}
-```
-
-
-**With additional properties:**
-```json
-{
-    "collections": ["collection-id-1"],
-    "tenant": "tenant-123",
-    "properties": {
-        "custom-property": "value"
-    }
 }
 ```
 """
@@ -211,7 +193,6 @@ def update_collection_with_tenant_tags(ti=None, existing_collection=None):
         config = ti.dag_run.conf
         tenant = config.get("tenant")
         tenant_field = config.get("tenant_field") or "eic:tenant"
-        additional_properties = config.get("properties", {})
 
         collection_id = existing_collection.get("id") if existing_collection else "unknown"
         logger.info(f"Updating collection {collection_id} with tenant tags")
@@ -233,14 +214,6 @@ def update_collection_with_tenant_tags(ti=None, existing_collection=None):
         logger.debug(f"Existing collection keys: {list(existing_collection.keys())}")
 
         updated_collection = existing_collection.copy()
-
-        if "properties" not in updated_collection:
-            logger.debug(f"Collection {collection_id} has no properties field, creating one")
-            updated_collection["properties"] = {}
-
-        if additional_properties:
-            logger.debug(f"Adding additional properties to collection {collection_id}: {additional_properties}")
-            updated_collection["properties"].update(additional_properties)
 
         old_tenant = updated_collection.get(tenant_field)
         updated_collection[tenant_field] = tenant

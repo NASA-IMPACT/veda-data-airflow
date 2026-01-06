@@ -20,7 +20,7 @@ template_dag_run_conf = {
     "collections": Param(
         default=None,
         type=["null", "array"],
-        description="List of collection IDs to tag"
+        description="List of collection IDs to tag, ie: collection1, collection2, collection3"
     ),
     "tenant": Param(default=None, type="string", description="Tenant ID to tag the collection with"),
     "tenant_field": Param(
@@ -83,17 +83,12 @@ def get_collection_ids(ti=None):
     """Extract and validate collection IDs from configuration"""
     try:
         config = ti.dag_run.conf
-        collections_strings = config.get("collections")[0]
-        collections = collections_strings.split(",")
+        collections = config.get("collections")
         tenant = config.get("tenant")
 
         logger.info(f"Starting collection ID validation. Tenant: {tenant}")
 
-        if not collections:
-            error_msg = "The 'collections' list must be provided in DAG configuration"
-            logger.error(error_msg)
-            raise ValueError(error_msg)
-
+        # Validate collections is a list
         if not isinstance(collections, list):
             error_msg = f"Collections must be a list, but got type: {type(collections)}"
             logger.error(error_msg)
@@ -107,10 +102,18 @@ def get_collection_ids(ti=None):
         # Validate and normalize collection IDs
         normalized_collections = []
         for coll in collections:
-            logger.info(f"Looking at collection {coll}")
-            if not isinstance(coll, str) or not coll.strip():
-                raise ValueError(f"Collections must be non-empty strings, got: {coll}")
-            normalized_collections.append(coll.strip())
+            if not isinstance(coll, str):
+                error_msg = f"Collections must be a list of strings, but got element of type: {type(coll)}"
+                logger.error(error_msg)
+                raise ValueError(error_msg)
+
+            coll_stripped = coll.strip()
+            if not coll_stripped:
+                error_msg = "Collections must contain non-empty strings, got empty string"
+                logger.error(error_msg)
+                raise ValueError(error_msg)
+
+            normalized_collections.append(coll_stripped)
 
         logger.info(f"Validated {len(normalized_collections)} collection IDs")
         return normalized_collections

@@ -64,15 +64,11 @@ def normalize_temporal_extent(collection: Dict[str, Any]) -> Dict[str, Any]:
     if "extent" in collection and "temporal" in collection["extent"]:
         temporal = collection["extent"]["temporal"]
         if "interval" in temporal and isinstance(temporal["interval"], list):
-            normalized_intervals = []
-            for interval in temporal["interval"]:
-                if isinstance(interval, list):
-                    normalized_interval = [
-                        normalize_datetime_to_iso8601(dt) for dt in interval
-                    ]
-                    normalized_intervals.append(normalized_interval)
-                else:
-                    normalized_intervals.append(interval)
-            collection["extent"]["temporal"]["interval"] = normalized_intervals
+            collection["extent"]["temporal"]["interval"] = [
+                [normalize_datetime_to_iso8601(dt) for dt in interval]
+                if isinstance(interval, list)
+                else interval
+                for interval in temporal["interval"]
+            ]
 
     return collection

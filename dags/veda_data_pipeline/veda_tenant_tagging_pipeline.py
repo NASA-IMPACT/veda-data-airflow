@@ -20,7 +20,7 @@ template_dag_run_conf = {
     "collections": Param(
         default=None,
         type=["null", "array"],
-        description="List of collection IDs to tag, ie: collection1, collection2, collection3"
+        description="List of collection IDs to tag. In the UI form, enter one collection ID per line. When triggering via API or CLI, provide as a list: [\"collection1\", \"collection2\"] (JSON format will be converted to a Python list)"
     ),
     "tenant": Param(default=None, type="string", description="Tenant ID to tag the collection with"),
     "tenant_field": Param(
@@ -90,7 +90,7 @@ def get_collection_ids(ti=None):
 
         # Validate collections is a list
         if not isinstance(collections, list):
-            error_msg = f"Collections must be a list, but got type: {type(collections)}"
+            error_msg = f"Collections must be a list, but got type: {type(collections)}. For UI form: enter one collection ID per line. For API or CLI: provide as a list [\"col1\", \"col2\"]"
             logger.error(error_msg)
             raise ValueError(error_msg)
 
@@ -109,13 +109,31 @@ def get_collection_ids(ti=None):
 
             coll_stripped = coll.strip()
             if not coll_stripped:
-                error_msg = "Collections must contain non-empty strings, got empty string"
-                logger.error(error_msg)
-                raise ValueError(error_msg)
+                continue
 
-            normalized_collections.append(coll_stripped)
+            # Handle case where user entered multiple values in a single string (fallback)
+            if "\n" in coll_stripped or "," in coll_stripped:
+                logger.warning(f"Received string with separators: {coll_stripped}. Parsing as fallback. For UI form: enter one collection ID per line (should be parsed automatically). For API/CLI: provide as a list [\"col1\", \"col2\"]")
+                if "\n" in coll_stripped:
+                    # split on newlines (to handle UI form input)
+                    split_collections = [c.strip() for c in coll_stripped.split("\n") if c.strip()]
+                else:
+                    # split on commas (in case this is used in form)
+                    split_collections = [c.strip() for c in coll_stripped.split(",") if c.strip()]
+
+                # strip quotes from each
+                for split_coll in split_collections:
+                    cleaned = split_coll.strip('"').strip("'").strip()
+                    if cleaned:
+                        normalized_collections.append(cleaned)
+            else:
+                # basic case: single collection ID
+                cleaned = coll_stripped.strip('"').strip("'").strip()
+                if cleaned:
+                    normalized_collections.append(cleaned)
 
         logger.info(f"Validated {len(normalized_collections)} collection IDs")
+        logger.info(f"Returning collection IDs: {normalized_collections}")
         return normalized_collections
 
     except Exception as e:

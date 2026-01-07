@@ -33,7 +33,7 @@ def remove_thumbnail_asset(ti):
     return payload
 
 # with exponential backoff enabled, retry delay is converted to seconds
-@task(retries=1, retry_delay=60, retry_exponential_backoff=True, max_active_tis_per_dag=5)
+@task(retries=2, retry_delay=60, retry_exponential_backoff=True, max_active_tis_per_dag=5)
 def submit_to_stac_ingestor_task(built_stac: dict):
     """Submit STAC items to the STAC ingestor API."""
     event = built_stac.copy()

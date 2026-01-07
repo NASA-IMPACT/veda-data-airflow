@@ -101,7 +101,10 @@ def extract_event_name_from_filename(filename: str) -> dict:
 
 
 def group_by_item(discovered_files: List[str], id_regex: str, assets: dict, extract_event_name: bool = False) -> dict:
-    """Group assets by matching regex patterns against discovered files."""
+    """Group assets by matching regex patterns against discovered files.
+
+    If extract_event_name is True, extracts event name from filenames and adds to item metadata.
+    """
     grouped_files = []
     for uri in discovered_files:
         # Each file gets its matched asset type and id
@@ -117,16 +120,12 @@ def group_by_item(discovered_files: List[str], id_regex: str, assets: dict, extr
                     asset_type = asset_name
                     break
             if asset_type:
-                # Extract event name from filename if flag is enabled
-                extracted_metadata = extract_event_name_from_filename(filename) if extract_event_name else {}
-
                 grouped_files.append(
                     {
                         "prefix": prefix,
                         "filename": filename,
                         "asset_type": asset_type,
                         "item_id": item_id,
-                        "extracted_metadata": extracted_metadata,
                     }
                 )
         else:
@@ -141,8 +140,7 @@ def group_by_item(discovered_files: List[str], id_regex: str, assets: dict, extr
     # Produce a dictionary in which each record is keyed by an item ID and contains a list of associated asset hrefs
     for group in grouped_data:
         item = {"item_id": group["item_id"], "assets": {}}
-        # Merge all extracted metadata from files in this group (they should be the same for all files with same item_id)
-        merged_metadata = {}
+
         for file in group["data"]:
             asset_type = file["asset_type"]
             filename = file["filename"]
@@ -150,12 +148,11 @@ def group_by_item(discovered_files: List[str], id_regex: str, assets: dict, extr
             updated_asset = assets[file["asset_type"]].copy()
             updated_asset["href"] = f"{file['prefix']}/{file['filename']}"
             item["assets"][asset_type] = updated_asset
-            # Merge extracted metadata (prioritize first occurrence)
-            if file.get("extracted_metadata") and not merged_metadata:
-                merged_metadata = file["extracted_metadata"]
 
-        if merged_metadata:
-            item["extracted_metadata"] = merged_metadata
+            # Extract event name from first file if flag is enabled
+            if extract_event_name and "extracted_metadata" not in item:
+                item["extracted_metadata"] = extract_event_name_from_filename(filename)
+
         items_with_assets.append(item)
     return items_with_assets
 

@@ -118,9 +118,7 @@ def group_by_item(discovered_files: List[str], id_regex: str, assets: dict, extr
                     break
             if asset_type:
                 # Extract event name from filename if flag is enabled
-                extracted_metadata = {}
-                if extract_event_name:
-                    extracted_metadata = extract_event_name_from_filename(filename)
+                extracted_metadata = extract_event_name_from_filename(filename) if extract_event_name else {}
 
                 grouped_files.append(
                     {

@@ -152,7 +152,7 @@ def group_by_item(discovered_files: List[str], id_regex: str, assets: dict, extr
         # Extract event name from first file if flag is enabled
         if extract_event_name and group["data"]:
             first_filename = group["data"][0]["filename"]
-            item["extracted_metadata"] = extract_event_name_from_filename(first_filename)
+            item["extracted_event_name"] = extract_event_name_from_filename(first_filename)
 
         items_with_assets.append(item)
     return items_with_assets
@@ -303,16 +303,11 @@ def s3_discovery_handler(event, chunk_size=2800, role_arn=None, bucket_output=No
             ):  # Stop once we reach the end of the slice, while saving progress
                 break
 
-        # Merge extracted_metadata into properties for this item
-        item_properties = properties.copy()
-        if item.get("extracted_metadata"):
-            item_properties.update(item["extracted_metadata"])
-
         file_obj = {
             "collection": collection,
             "item_id": item["item_id"],
             "assets": item["assets"],
-            "properties": item_properties,
+            "properties": {**properties, **item.get("extracted_event_name", {})},
             **date_fields,
         }
 

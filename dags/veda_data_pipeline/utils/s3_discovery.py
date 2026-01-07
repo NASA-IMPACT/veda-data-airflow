@@ -75,8 +75,43 @@ def discover_from_s3(
                 yield s3_object
 
 
-def group_by_item(discovered_files: List[str], id_regex: str, assets: dict) -> dict:
-    """Group assets by matching regex patterns against discovered files."""
+def extract_event_name_from_filename(filename: str) -> dict:
+    """
+    Extract event name from filename using pattern YYYYMM_<something>_<something>.
+
+    Args:
+        filename: The filename to extract event name from
+
+    Returns:
+        Dict with event:name property or empty dict if no match
+
+    Example:
+        For filename "202501_Fire_CA_aria_disturbance_track64_share_2025-01-09_day.tif":
+        Returns: {"event:name": "202501_Fire_CA"}
+    """
+    # Pattern to match YYYYMM_<something>_<something> at the start of the filename
+    pattern = r"^(\d{6}_[^_]+_[^_]+)"
+    match = re.match(pattern, filename)
+
+    if match:
+        event_name = match.group(1)
+        return {"event:name": event_name}
+
+    return {}
+
+
+def group_by_item(discovered_files: List[str], id_regex: str, assets: dict, extract_event_name: bool = False) -> dict:
+    """Group assets by matching regex patterns against discovered files.
+
+    Args:
+        discovered_files: List of S3 URIs to discovered files
+        id_regex: Regex pattern to extract item ID from filename
+        assets: Dict of asset definitions with regex patterns
+        extract_event_name: If True, extract event name from filename pattern YYYYMM_<something>_<something>
+
+    Returns:
+        List of items with grouped assets and extracted metadata
+    """
     grouped_files = []
     for uri in discovered_files:
         # Each file gets its matched asset type and id
@@ -92,12 +127,18 @@ def group_by_item(discovered_files: List[str], id_regex: str, assets: dict) -> d
                     asset_type = asset_name
                     break
             if asset_type:
+                # Extract event name from filename if flag is enabled
+                extracted_metadata = {}
+                if extract_event_name:
+                    extracted_metadata = extract_event_name_from_filename(filename)
+
                 grouped_files.append(
                     {
                         "prefix": prefix,
                         "filename": filename,
                         "asset_type": asset_type,
                         "item_id": item_id,
+                        "extracted_metadata": extracted_metadata,
                     }
                 )
         else:
@@ -112,6 +153,8 @@ def group_by_item(discovered_files: List[str], id_regex: str, assets: dict) -> d
     # Produce a dictionary in which each record is keyed by an item ID and contains a list of associated asset hrefs
     for group in grouped_data:
         item = {"item_id": group["item_id"], "assets": {}}
+        # Merge all extracted metadata from files in this group (they should be the same for all files with same item_id)
+        merged_metadata = {}
         for file in group["data"]:
             asset_type = file["asset_type"]
             filename = file["filename"]
@@ -119,6 +162,12 @@ def group_by_item(discovered_files: List[str], id_regex: str, assets: dict) -> d
             updated_asset = assets[file["asset_type"]].copy()
             updated_asset["href"] = f"{file['prefix']}/{file['filename']}"
             item["assets"][asset_type] = updated_asset
+            # Merge extracted metadata (prioritize first occurrence)
+            if file.get("extracted_metadata") and not merged_metadata:
+                merged_metadata = file["extracted_metadata"]
+
+        if merged_metadata:
+            item["extracted_metadata"] = merged_metadata
         items_with_assets.append(item)
     return items_with_assets
 
@@ -200,6 +249,7 @@ def s3_discovery_handler(event, chunk_size=2800, role_arn=None, bucket_output=No
     id_template = event.get("id_template", "{}")
     date_fields = propagate_forward_datetime_args(event)
     dry_run = event.get("dry_run", False)
+    extract_event_name = event.get("disasters:extract_event_name", False)
     if process_from := event.get("process_from_yyyy_mm_dd"):
         process_from = datetime.strptime(process_from, "%Y-%m-%d").replace(
             tzinfo=tzlocal()
@@ -235,7 +285,12 @@ def s3_discovery_handler(event, chunk_size=2800, role_arn=None, bucket_output=No
 
     # group only if more than 1 assets
     if assets and len(assets.keys()) > 1:
-        items_with_assets = group_by_item(file_uris, id_regex, assets)
+        items_with_assets = group_by_item(
+            file_uris,
+            id_regex,
+            assets,
+            extract_event_name=extract_event_name
+        )
     else:
         # out of convenience, we might not always want to explicitly define assets
         # or if only a single asset is defined, follow default flow
@@ -261,11 +316,17 @@ def s3_discovery_handler(event, chunk_size=2800, role_arn=None, bucket_output=No
                     item_count >= slice[1]
             ):  # Stop once we reach the end of the slice, while saving progress
                 break
+
+        # Merge extracted_metadata into properties for this item
+        item_properties = properties.copy()
+        if item.get("extracted_metadata"):
+            item_properties.update(item["extracted_metadata"])
+
         file_obj = {
             "collection": collection,
             "item_id": item["item_id"],
             "assets": item["assets"],
-            "properties": properties,
+            "properties": item_properties,
             **date_fields,
         }
 

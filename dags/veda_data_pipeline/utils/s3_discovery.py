@@ -149,9 +149,10 @@ def group_by_item(discovered_files: List[str], id_regex: str, assets: dict, extr
             updated_asset["href"] = f"{file['prefix']}/{file['filename']}"
             item["assets"][asset_type] = updated_asset
 
-            # Extract event name from first file if flag is enabled
-            if extract_event_name and "extracted_metadata" not in item:
-                item["extracted_metadata"] = extract_event_name_from_filename(filename)
+        # Extract event name from first file if flag is enabled
+        if extract_event_name and group["data"]:
+            first_filename = group["data"][0]["filename"]
+            item["extracted_metadata"] = extract_event_name_from_filename(first_filename)
 
         items_with_assets.append(item)
     return items_with_assets

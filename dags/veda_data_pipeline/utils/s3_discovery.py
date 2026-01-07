@@ -101,17 +101,7 @@ def extract_event_name_from_filename(filename: str) -> dict:
 
 
 def group_by_item(discovered_files: List[str], id_regex: str, assets: dict, extract_event_name: bool = False) -> dict:
-    """Group assets by matching regex patterns against discovered files.
-
-    Args:
-        discovered_files: List of S3 URIs to discovered files
-        id_regex: Regex pattern to extract item ID from filename
-        assets: Dict of asset definitions with regex patterns
-        extract_event_name: If True, extract event name from filename pattern YYYYMM_<something>_<something>
-
-    Returns:
-        List of items with grouped assets and extracted metadata
-    """
+    """Group assets by matching regex patterns against discovered files."""
     grouped_files = []
     for uri in discovered_files:
         # Each file gets its matched asset type and id

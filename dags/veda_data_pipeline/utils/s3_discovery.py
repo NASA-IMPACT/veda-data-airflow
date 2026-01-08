@@ -77,11 +77,11 @@ def discover_from_s3(
                 yield s3_object
 
 
-def group_by_item(discovered_files: List[str], id_regex: str, assets: dict, extract_event_name: bool = False, extract_country_codes: bool = False) -> dict:
+def group_by_item(discovered_files: List[str], id_regex: str, assets: dict, extract_event_name: bool = False, extract_monty: bool = False) -> dict:
     """Group assets by matching regex patterns against discovered files.
 
     If extract_event_name is True, extracts event name from filenames and adds to item metadata.
-    If extract_country_codes is True, extracts country codes from filenames and adds to item metadata.
+    If extract_monty is True, extracts all monty metadata (country codes, hazard codes, corr_id) from filenames and adds to item metadata.
     """
     grouped_files = []
     for uri in discovered_files:
@@ -131,7 +131,7 @@ def group_by_item(discovered_files: List[str], id_regex: str, assets: dict, extr
         if group["data"]:
             first_filename = group["data"][0]["filename"]
 
-            if extract_country_codes:
+            if extract_monty:
                 # Extract all metadata (country codes, hazard codes, corr_id, and event name)
                 item["extracted_event_name"] = extract_all_metadata_from_filename(first_filename)
             elif extract_event_name:
@@ -261,7 +261,7 @@ def s3_discovery_handler(event, chunk_size=2800, role_arn=None, bucket_output=No
             id_regex,
             assets,
             extract_event_name=extract_event_name,
-            extract_country_codes=extract_monty
+            extract_monty=extract_monty
         )
     else:
         # out of convenience, we might not always want to explicitly define assets

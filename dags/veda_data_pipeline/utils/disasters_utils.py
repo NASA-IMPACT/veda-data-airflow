@@ -32,9 +32,25 @@ def _load_hazard_codes_mapping() -> Dict[str, Dict[str, str]]:
     }
 
 
-# Load mappings once when module is imported
-COUNTRY_CODES_MAPPING = _load_country_codes_mapping()
-HAZARD_CODES_MAPPING = _load_hazard_codes_mapping()
+# Lazy-load mappings on first access
+_COUNTRY_CODES_MAPPING = None
+_HAZARD_CODES_MAPPING = None
+
+
+def _get_country_codes_mapping() -> Dict[str, List[str]]:
+    """Get country codes mapping, loading from S3 on first access."""
+    global _COUNTRY_CODES_MAPPING
+    if _COUNTRY_CODES_MAPPING is None:
+        _COUNTRY_CODES_MAPPING = _load_country_codes_mapping()
+    return _COUNTRY_CODES_MAPPING
+
+
+def _get_hazard_codes_mapping() -> Dict[str, Dict[str, str]]:
+    """Get hazard codes mapping, loading from S3 on first access."""
+    global _HAZARD_CODES_MAPPING
+    if _HAZARD_CODES_MAPPING is None:
+        _HAZARD_CODES_MAPPING = _load_hazard_codes_mapping()
+    return _HAZARD_CODES_MAPPING
 
 
 def _parse_filename(filename: str) -> dict:
@@ -61,7 +77,7 @@ def extract_country_codes_from_filename(filename: str) -> dict:
     parsed = _parse_filename(filename)
     if not parsed:
         return {}
-    codes = COUNTRY_CODES_MAPPING.get(parsed["location"])
+    codes = _get_country_codes_mapping().get(parsed["location"])
     return {"monty:country_codes": codes} if codes else {}
 
 
@@ -70,7 +86,7 @@ def extract_hazard_codes_from_filename(filename: str) -> dict:
     parsed = _parse_filename(filename)
     if not parsed:
         return {}
-    hazard = HAZARD_CODES_MAPPING.get(parsed["hazard_type"])
+    hazard = _get_hazard_codes_mapping().get(parsed["hazard_type"])
     return {"monty:hazard_codes": [hazard["glide_code"], hazard["classification_code"]]} if hazard else {}
 
 
@@ -97,13 +113,15 @@ def extract_corr_id_from_filename(filename: str) -> dict:
     if not datetime_str:
         return {}
     location = parsed["location"]
-    if location not in COUNTRY_CODES_MAPPING:
+    country_mapping = _get_country_codes_mapping()
+    if location not in country_mapping:
         return {}
     hazard_type = parsed["hazard_type"]
-    if hazard_type not in HAZARD_CODES_MAPPING:
+    hazard_mapping = _get_hazard_codes_mapping()
+    if hazard_type not in hazard_mapping:
         return {}
-    country_code = COUNTRY_CODES_MAPPING[location][0]
-    glide_code = HAZARD_CODES_MAPPING[hazard_type]["glide_code"]
+    country_code = country_mapping[location][0]
+    glide_code = hazard_mapping[hazard_type]["glide_code"]
     return {"monty:corr_id": f"{datetime_str}-{country_code}-{glide_code}-1-GCDB"}
 
 
@@ -116,13 +134,15 @@ def extract_all_metadata_from_filename(filename: str) -> dict:
     if not datetime_str:
         return {}
     location = parsed["location"]
-    if location not in COUNTRY_CODES_MAPPING:
+    country_mapping = _get_country_codes_mapping()
+    if location not in country_mapping:
         return {}
     hazard_type = parsed["hazard_type"]
-    if hazard_type not in HAZARD_CODES_MAPPING:
+    hazard_mapping = _get_hazard_codes_mapping()
+    if hazard_type not in hazard_mapping:
         return {}
-    country_codes = COUNTRY_CODES_MAPPING[location]
-    hazard_info = HAZARD_CODES_MAPPING[hazard_type]
+    country_codes = country_mapping[location]
+    hazard_info = hazard_mapping[hazard_type]
     hazard_codes = [hazard_info["glide_code"], hazard_info["classification_code"]]
     corr_id = f"{datetime_str}-{country_codes[0]}-{hazard_info['glide_code']}-1-GCDB"
     return {

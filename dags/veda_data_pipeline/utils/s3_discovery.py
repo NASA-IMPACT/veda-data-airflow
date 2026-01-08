@@ -11,6 +11,8 @@ from dateutil.tz import tzlocal
 import boto3
 from smart_open import open as smrt_open
 
+from .disasters_utils import extract_event_name_from_filename, extract_all_metadata_from_filename
+
 
 # Adding a custom exception for empty list
 class EmptyFileListError(Exception):
@@ -75,35 +77,11 @@ def discover_from_s3(
                 yield s3_object
 
 
-def extract_event_name_from_filename(filename: str) -> dict:
-    """
-    Extract event name from filename using pattern YYYYMM_<something>_<something>.
-
-    Args:
-        filename: The filename to extract event name from
-
-    Returns:
-        Dict with event:name property or empty dict if no match
-
-    Example:
-        For filename "202501_Fire_CA_aria_disturbance_track64_share_2025-01-09_day.tif":
-        Returns: {"event:name": "202501_Fire_CA"}
-    """
-    # Pattern to match YYYYMM_<something>_<something> at the start of the filename
-    pattern = r"^(\d{6}_[^_]+_[^_]+)"
-    match = re.match(pattern, filename)
-
-    if match:
-        event_name = match.group(1)
-        return {"event:name": event_name}
-
-    return {}
-
-
-def group_by_item(discovered_files: List[str], id_regex: str, assets: dict, extract_event_name: bool = False) -> dict:
+def group_by_item(discovered_files: List[str], id_regex: str, assets: dict, extract_event_name: bool = False, extract_country_codes: bool = False) -> dict:
     """Group assets by matching regex patterns against discovered files.
 
     If extract_event_name is True, extracts event name from filenames and adds to item metadata.
+    If extract_country_codes is True, extracts country codes from filenames and adds to item metadata.
     """
     grouped_files = []
     for uri in discovered_files:
@@ -149,10 +127,16 @@ def group_by_item(discovered_files: List[str], id_regex: str, assets: dict, extr
             updated_asset["href"] = f"{file['prefix']}/{file['filename']}"
             item["assets"][asset_type] = updated_asset
 
-        # Extract event name from first file if flag is enabled
-        if extract_event_name and group["data"]:
+        # Extract metadata from first file if flags are enabled
+        if group["data"]:
             first_filename = group["data"][0]["filename"]
-            item["extracted_event_name"] = extract_event_name_from_filename(first_filename)
+
+            if extract_country_codes:
+                # Extract all metadata (country codes, hazard codes, corr_id, and event name)
+                item["extracted_event_name"] = extract_all_metadata_from_filename(first_filename)
+            elif extract_event_name:
+                # Extract only event name
+                item["extracted_event_name"] = extract_event_name_from_filename(first_filename)
 
         items_with_assets.append(item)
     return items_with_assets
@@ -236,6 +220,7 @@ def s3_discovery_handler(event, chunk_size=2800, role_arn=None, bucket_output=No
     date_fields = propagate_forward_datetime_args(event)
     dry_run = event.get("dry_run", False)
     extract_event_name = event.get("disasters:extract_event_name", False)
+    extract_monty = event.get("disasters:monty", False)
     if process_from := event.get("process_from_yyyy_mm_dd"):
         process_from = datetime.strptime(process_from, "%Y-%m-%d").replace(
             tzinfo=tzlocal()
@@ -275,7 +260,8 @@ def s3_discovery_handler(event, chunk_size=2800, role_arn=None, bucket_output=No
             file_uris,
             id_regex,
             assets,
-            extract_event_name=extract_event_name
+            extract_event_name=extract_event_name,
+            extract_country_codes=extract_monty
         )
     else:
         # out of convenience, we might not always want to explicitly define assets

@@ -1,6 +1,7 @@
 import re
 import json
 import boto3
+from functools import lru_cache
 from typing import Dict, List
 
 
@@ -13,14 +14,16 @@ def _load_from_s3(s3_key: str) -> dict:
     return json.loads(result["Body"].read().decode())
 
 
-def _load_country_codes_mapping() -> Dict[str, List[str]]:
-    """Load the monty country codes mapping from S3."""
+@lru_cache(maxsize=1)
+def _get_country_codes_mapping() -> Dict[str, List[str]]:
+    """Load and cache country codes mapping from S3."""
     data = _load_from_s3("disasters-monty/monty_country_codes.json")
     return {entry["name"].lower(): entry["code"] for entry in data["country_codes"]}
 
 
-def _load_hazard_codes_mapping() -> Dict[str, Dict[str, str]]:
-    """Load the monty hazard codes mapping from S3."""
+@lru_cache(maxsize=1)
+def _get_hazard_codes_mapping() -> Dict[str, Dict[str, str]]:
+    """Load and cache hazard codes mapping from S3."""
     data = _load_from_s3("disasters-monty/monty_hazard_codes.json")
     codes = data["classification_systems"]["undrr_isc_2025"]["codes"]
     return {
@@ -30,27 +33,6 @@ def _load_hazard_codes_mapping() -> Dict[str, Dict[str, str]]:
         }
         for entry in codes
     }
-
-
-# Lazy-load mappings on first access
-_COUNTRY_CODES_MAPPING = None
-_HAZARD_CODES_MAPPING = None
-
-
-def _get_country_codes_mapping() -> Dict[str, List[str]]:
-    """Get country codes mapping, loading from S3 on first access."""
-    global _COUNTRY_CODES_MAPPING
-    if _COUNTRY_CODES_MAPPING is None:
-        _COUNTRY_CODES_MAPPING = _load_country_codes_mapping()
-    return _COUNTRY_CODES_MAPPING
-
-
-def _get_hazard_codes_mapping() -> Dict[str, Dict[str, str]]:
-    """Get hazard codes mapping, loading from S3 on first access."""
-    global _HAZARD_CODES_MAPPING
-    if _HAZARD_CODES_MAPPING is None:
-        _HAZARD_CODES_MAPPING = _load_hazard_codes_mapping()
-    return _HAZARD_CODES_MAPPING
 
 
 def _parse_filename(filename: str) -> dict:

@@ -339,9 +339,7 @@ with DAG("veda_tenant_tagging_pipeline", params=template_dag_run_conf, **dag_arg
     start = EmptyOperator(task_id="start", dag=dag)
     end = EmptyOperator(task_id="end", dag=dag)
 
-    collection_ids = get_collection_ids()
+    collection_ids = start >> get_collection_ids()
     fetch_collections = fetch_existing_collection.expand(collection_id=collection_ids)
     update_collections = update_collection_with_tenant_tags.expand(existing_collection=fetch_collections)
-    ingest_collections = ingest_all_collections(collections=update_collections)
-
-    start >> collection_ids >> fetch_collections >> update_collections >> ingest_collections >> end
+    ingest_collections = ingest_all_collections(collections=update_collections) >> end

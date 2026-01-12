@@ -324,8 +324,8 @@ def ingest_all_collections(collections=None):
         if idx < total:
             time.sleep(0.5)
 
-    successful = sum(1 for r in results if r.get("status") == "success")
-    failed = sum(1 for r in results if r.get("status") == "error")
+    successful = sum(r.get("status") == "success" for r in results)
+    failed = sum(r.get("status") == "error" for r in results)
     logger.info(f"Ingestion complete: {successful} successful, {failed} failed out of {total} total")
 
     if failed > 0:

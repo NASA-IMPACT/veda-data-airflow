@@ -18,8 +18,7 @@ logger = logging.getLogger(__name__)
 
 template_dag_run_conf = {
     "collections": Param(
-        default=None,
-        type=["null", "array"],
+        type="array",
         description="List of collection IDs to tag. In the UI form, enter one collection ID per line. When triggering via API or CLI, provide as a list: [\"collection1\", \"collection2\"] (JSON format will be converted to a Python list)"
     ),
     "tenant": Param(default=None, type="string", description="Tenant ID to tag the collection with"),

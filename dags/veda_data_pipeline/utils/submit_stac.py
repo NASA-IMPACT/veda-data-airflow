@@ -91,14 +91,14 @@ class IngestionApi:
         }
 
         # Extract filename/item_id from the event for error reporting
-        item_id = event.get("id", "unknown")
-        filename = "unknown"
+        item_id = event.get("id", None)
+        filename = None
         if "assets" in event:
             assets = event.get("assets", {})
             if assets:
                 first_asset = next(iter(assets.values()), {})
                 href = first_asset.get("href", "")
-                filename = href.split("/")[-1] if href else "unknown"
+                filename = href.split("/")[-1] if href else None
 
         try:
             response = requests.post(

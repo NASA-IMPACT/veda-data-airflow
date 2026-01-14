@@ -64,13 +64,13 @@ def handler(event: Dict[str, Any]) -> Union[S3LinkOutput, StacItemOutput]:
         stac_item = stac.generate_stac(parsed_event).to_dict()
     except Exception as ex:
         # Extract filename from first asset for better error reporting
-        filename = "unknown"
+        filename = None
         if event.get("assets"):
             first_asset = next(iter(event["assets"].values()), {})
             href = first_asset.get("href", "")
-            filename = href.split("/")[-1] if href else "unknown"
+            filename = href.split("/")[-1] if href else None
 
-        item_id = event.get("item_id", "unknown")
+        item_id = event.get("item_id", None)
         logging.error(f"Failed to generate STAC for file: {filename} (item_id: {item_id}) - Error: {ex}")
 
         out_err: StacItemOutput = {

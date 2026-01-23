@@ -24,3 +24,4 @@ fsspec
 s3fs
 xarray
 xstac
+pyjwt

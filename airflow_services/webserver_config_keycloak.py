@@ -17,6 +17,7 @@
 # under the License.
 """Keycloak OAuth configuration for the Airflow webserver."""
 from __future__ import annotations
+from base64 import b64decode
 
 from flask_appbuilder.security.manager import AUTH_OAUTH
 
@@ -27,6 +28,8 @@ import logging
 from typing import Any, Union
 import os
 import jwt
+from cryptography.hazmat.primitives import serialization
+import requests
 
 basedir = os.path.abspath(os.path.dirname(__file__))
 
@@ -85,6 +88,11 @@ FAB_VIEWER_ROLE = "Viewer"
 FAB_DAG_LAUNCHER_ROLE = "Dag_Launcher"
 FAB_PUBLIC_ROLE = "Public"  # The "Public" role is given no permissions
 
+req = requests.get(f"{KEYCLOAK_BASE_URL}/realms/{KEYCLOAK_REALM}/")
+key_der_base64 = req.json()["public_key"]
+key_der = b64decode(key_der_base64.encode())
+public_key = serialization.load_der_public_key(key_der)
+
 
 def extract_roles_from_keycloak(userinfo: dict[str, Any], resp: dict[str, Any]) -> list[str]:
     """
@@ -103,7 +111,7 @@ def extract_roles_from_keycloak(userinfo: dict[str, Any], resp: dict[str, Any]) 
     access_token = resp.get("access_token", "")
     
     try:
-        decoded = jwt.decode(access_token, options={"verify_signature": False})
+        decoded = jwt.decode(access_token, public_key, algorithms=["RS256"], options={"verify_signature": False})
         if "resource_access" in decoded and KEYCLOAK_CLIENT_ID in decoded["resource_access"]:
             roles.extend(decoded["resource_access"][KEYCLOAK_CLIENT_ID].get("roles", []))
         log.info(f"Decoded roles from access_token: {roles}")
@@ -127,12 +135,8 @@ def map_keycloak_roles_to_fab(keycloak_roles: list[str]) -> list[str]:
     role_mapping = {
         # Keycloak role name : Airflow FAB role
         "airflow-admin": FAB_ADMIN_ROLE,
-        "admin": FAB_ADMIN_ROLE,
         "airflow-viewer": FAB_VIEWER_ROLE,
-        "viewer": FAB_VIEWER_ROLE,
         "airflow-dag-launcher": FAB_DAG_LAUNCHER_ROLE,
-        "dag-launcher": FAB_DAG_LAUNCHER_ROLE,
-        "dag_launcher": FAB_DAG_LAUNCHER_ROLE,
     }
     
     fab_roles = set()

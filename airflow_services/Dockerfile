@@ -29,7 +29,7 @@ COPY --chown=airflow:airflow dags "${AIRFLOW_HOME}/dags"
 COPY --chown=airflow:airflow plugins "${AIRFLOW_HOME}/plugins"
 COPY --chown=airflow:airflow infrastructure/configuration "${AIRFLOW_HOME}/configuration"
 COPY --chown=airflow:airflow scripts "${AIRFLOW_HOME}/scripts"
-COPY --chown=airflow:airflow airflow_services/webserver_config.py "${AIRFLOW_HOME}/webserver_config.py"
+COPY --chown=airflow:airflow airflow_services/webserver_config_keycloak.py "${AIRFLOW_HOME}/webserver_config.py"
 
 RUN cp ${AIRFLOW_HOME}/configuration/airflow.cfg* ${AIRFLOW_HOME}/.
 

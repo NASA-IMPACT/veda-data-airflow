@@ -66,31 +66,27 @@ module "sma-base" {
       value = var.workers_task_retries
     },
     {
-      name  = "GH_CLIENT_ID"
-      value = var.gh_app_client_id
+      name  = "KEYCLOAK_BASE_URL"
+      value = var.keycloak_base_url
     },
     {
-      name  = "GH_CLIENT_SECRET"
-      value = var.gh_app_client_secret
+      name  = "KEYCLOAK_REALM"
+      value = var.keycloak_realm
     },
     {
-      name  = "GH_ADMIN_TEAM_ID"
-      value = var.gh_team_name
+      name  = "KEYCLOAK_CLIENT_ID"
+      value = var.keycloak_client_id
     },
     {
-      name  = "GH_USER_TEAM_ID"
-      value = var.gh_user_team_id
-    },
-    {
-      name  = "GH_DAG_LAUNCHER_TEAM_ID"
-      value = var.gh_dag_launcher_team_id
+      name  = "KEYCLOAK_CLIENT_SECRET"
+      value = var.keycloak_client_secret
     }
-
   ]
   extra_airflow_configuration = {
-    gh_app_client_id     = var.gh_app_client_id
-    gh_app_client_secret = var.gh_app_client_secret
-    gh_team_id           = var.gh_team_name
+    keycloak_base_url    = var.keycloak_base_url
+    keycloak_realm       = var.keycloak_realm
+    keycloak_client_id.  = var.keycloak_client_id
+    keycloak_client_secret = var.keycloak_client_secret
     sm2a_base_url        = "https://${lower(var.subdomain)}.${var.domain_name}"
   }
   domain_name = var.domain_name

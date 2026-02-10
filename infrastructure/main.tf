@@ -85,7 +85,7 @@ module "sma-base" {
   extra_airflow_configuration = {
     keycloak_base_url    = var.keycloak_base_url
     keycloak_realm       = var.keycloak_realm
-    keycloak_client_id.  = var.keycloak_client_id
+    keycloak_client_id  = var.keycloak_client_id
     keycloak_client_secret = var.keycloak_client_secret
     sm2a_base_url        = "https://${lower(var.subdomain)}.${var.domain_name}"
   }

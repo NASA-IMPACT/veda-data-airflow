@@ -17,17 +17,8 @@ broker_url = sqs://
 celery_config_options = configuration.celery_config.CELERY_CONFIG
 
 
-[github_enterprise]
-api_rev = v3
-host = github.com
-client_id = ${gh_app_client_id}
-client_secret = ${gh_app_client_secret}
-oauth_callback_route = /home
-allowed_teams = ${gh_team_id}
-
 [webserver]
 authenticate = True
-auth_backends = airflow.contrib.auth.backends.github_enterprise_auth
 dag_default_view = grid
 expose_config = true
 dag_orientation = TB

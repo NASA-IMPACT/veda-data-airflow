@@ -69,15 +69,22 @@ variable "desired_max_workers_count" {
   default = "5"
 }
 
-variable "gh_app_client_id" {
+variable "keycloak_base_url" {
 
 }
-variable "gh_app_client_secret" {
+
+variable "keycloak_realm" {
+    
+}
+
+variable "keycloak_client_id" {
 
 }
-variable "gh_team_name" {
+variable "keycloak_client_secret" {
 
 }
+
+
 
 variable "custom_worker_policy_statement" {
   type = list(object({
@@ -160,10 +167,6 @@ variable "project_name" {
   default = "SM2A"
 }
 
-
-variable "gh_user_team_id" {
-  default = "csda-airflow-data-pipeline-users"
-}
 
 variable "workflows_client_secret" {
 }

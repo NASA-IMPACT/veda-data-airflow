@@ -134,7 +134,7 @@ class KeycloakAuthorizer(FabAirflowSecurityManagerOverride):
         """
         if provider != "keycloak":
             log.warning(f"Unexpected OAuth provider: {provider}")
-            return {"username": "unknown", "role_keys": [FAB_PUBLIC_ROLE]}
+            return {"username": "unknown", "role_keys": ["Public"]}
         
         remote_app = self.appbuilder.sm.oauth_remotes[provider]
         

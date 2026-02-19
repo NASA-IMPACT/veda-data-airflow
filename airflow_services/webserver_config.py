@@ -15,9 +15,9 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
-"""Default configuration for the Airflow webserver."""
+"""Keycloak OAuth configuration for the Airflow webserver."""
 from __future__ import annotations
-
+from base64 import b64decode
 
 from flask_appbuilder.security.manager import AUTH_OAUTH
 
@@ -27,6 +27,9 @@ from airflow.auth.managers.fab.security_manager.override import (
 import logging
 from typing import Any, Union
 import os
+import jwt
+from cryptography.hazmat.primitives import serialization
+import requests
 
 basedir = os.path.abspath(os.path.dirname(__file__))
 
@@ -37,151 +40,129 @@ WTF_CSRF_TIME_LIMIT = None
 # ----------------------------------------------------
 # AUTHENTICATION CONFIG
 # ----------------------------------------------------
-# For details on how to set up each of the following authentication, see
-# http://flask-appbuilder.readthedocs.io/en/latest/security.html# authentication-methods
-# for details.
-
-# The authentication type
-# AUTH_OID : Is for OpenID
-# AUTH_DB : Is for database
-# AUTH_LDAP : Is for LDAP
-# AUTH_REMOTE_USER : Is for using REMOTE_USER from web server
-# AUTH_OAUTH : Is for OAuth
 AUTH_TYPE = AUTH_OAUTH
-
-# Uncomment to setup Full admin role name
-# AUTH_ROLE_ADMIN = 'Admin'
-
-# Uncomment and set to desired role to enable access without authentication
-# AUTH_ROLE_PUBLIC = 'Viewer'
-
-# Will allow user self registration
-# AUTH_USER_REGISTRATION = True
-
-# The recaptcha it's automatically enabled for user self registration is active and the keys are necessary
-# RECAPTCHA_PRIVATE_KEY = PRIVATE_KEY
-# RECAPTCHA_PUBLIC_KEY = PUBLIC_KEY
-
-# Config for Flask-Mail necessary for user self registration
-# MAIL_SERVER = 'smtp.gmail.com'
-# MAIL_USE_TLS = True
-# MAIL_USERNAME = 'yourappemail@gmail.com'
-# MAIL_PASSWORD = 'passwordformail'
-# MAIL_DEFAULT_SENDER = 'sender@gmail.com'
 
 AUTH_ROLES_SYNC_AT_LOGIN = True  # Checks roles on every login
 AUTH_USER_REGISTRATION = (
     True  # allow users who are not already in the FAB DB to register
 )
-# Make sure to replace this with the path to your security manager class
-AUTH_ROLES_MAPPING = {
-    "Viewer": ["Viewer"],
-    "Admin": ["Admin"],
-    "Dag_Launcher": ["DAG Launcher"],
-}
-# If you wish, you can add multiple OAuth providers.
+
+# Keycloak OAuth Provider Configuration
+KEYCLOAK_BASE_URL = os.getenv("KEYCLOAK_BASE_URL")  # e.g., https://keycloak.example.com
+KEYCLOAK_REALM = os.getenv("KEYCLOAK_REALM")  # Your realm name
+KEYCLOAK_CLIENT_ID = os.getenv("KEYCLOAK_CLIENT_ID")
+KEYCLOAK_CLIENT_SECRET = os.getenv("KEYCLOAK_CLIENT_SECRET")
+
 OAUTH_PROVIDERS = [
     {
-        "name": "github",
-        "icon": "fa-github",
+        "name": "keycloak",
+        "icon": "fa-key",
         "token_key": "access_token",
         "remote_app": {
-            "client_id": os.getenv("GH_CLIENT_ID"),
-            "client_secret": os.getenv("GH_CLIENT_SECRET"),
-            "api_base_url": "https://api.github.com",
-            "client_kwargs": {"scope": "read:user, read:org"},
-            "access_token_url": "https://github.com/login/oauth/access_token",
-            "authorize_url": "https://github.com/login/oauth/authorize",
+            "client_id": KEYCLOAK_CLIENT_ID,
+            "client_secret": KEYCLOAK_CLIENT_SECRET,
+            "api_base_url": f"{KEYCLOAK_BASE_URL}/realms/{KEYCLOAK_REALM}/protocol/openid-connect",
+            "client_kwargs": {
+                "scope": "openid email profile"
+            },
+            "access_token_url": f"{KEYCLOAK_BASE_URL}/realms/{KEYCLOAK_REALM}/protocol/openid-connect/token",
+            "authorize_url": f"{KEYCLOAK_BASE_URL}/realms/{KEYCLOAK_REALM}/protocol/openid-connect/auth",
             "request_token_url": None,
+            "jwks_uri": f"{KEYCLOAK_BASE_URL}/realms/{KEYCLOAK_REALM}/protocol/openid-connect/certs",
         },
     },
 ]
 
-
 log = logging.getLogger(__name__)
 log.setLevel(os.getenv("AIRFLOW__LOGGING__FAB_LOGGING_LEVEL", "INFO"))
 
-FAB_ADMIN_ROLE = "Admin"
-FAB_VIEWER_ROLE = "Viewer"
-FAB_DAG_LAUNCHER_ROLE = "Dag_Launcher"
-FAB_PUBLIC_ROLE = "Public"  # The "Public" role is given no permissions
-TEAM_ID_A_FROM_GITHUB = os.getenv("GH_ADMIN_TEAM_ID")
-TEAM_ID_B_FROM_GITHUB = os.getenv("GH_USER_TEAM_ID")
-TEAM_ID_DAG_LAUNCHER_FROM_GITHUB = os.getenv("GH_DAG_LAUNCHER_TEAM_ID")
+req = requests.get(f"{KEYCLOAK_BASE_URL}/realms/{KEYCLOAK_REALM}/")
+key_der_base64 = req.json()["public_key"]
+key_der = b64decode(key_der_base64.encode())
+public_key = serialization.load_der_public_key(key_der)
 
 
-def team_parser(team_payload: dict[str, Any]) -> list[int]:
-    # Parse the team payload from GitHub however you want here.
-    return [team["name"] for team in team_payload]
+def extract_roles_from_keycloak(userinfo: dict[str, Any], resp: dict[str, Any]) -> list[str]:
+    """
+    Extract roles from Keycloak token. Possible roles: Admin, Viewer, Public, Dag_Launcher 
+    See Airflow default roles: https://airflow.apache.org/docs/apache-airflow-providers-fab/stable/auth-manager/access-control.html#default-roles 
+    
+    Keycloak can provide roles in multiple ways:
+    1. realm_access.roles - Realm-level roles
+    2. resource_access.{client_id}.roles - Client-specific roles
+    3. groups - User groups (if configured in Keycloak)
+    
+    Adjust this function based on your Keycloak configuration.
+    """
+    roles = []
+
+    log.info(f"Extracting roles from Keycloak response: {resp}")
+    access_token = resp.get("access_token", "")
+    
+    try:
+        decoded = jwt.decode(access_token, public_key, algorithms=["RS256"], options={"verify_signature": False})
+        if "resource_access" in decoded and KEYCLOAK_CLIENT_ID in decoded["resource_access"]:
+            roles.extend(decoded["resource_access"][KEYCLOAK_CLIENT_ID].get("roles", []))
+        log.info(f"Decoded roles from access_token: {roles}")
+    except Exception as e:
+        log.warning(f"Failed to decode access_token: {e}")
+    
+    log.info(f"Extracted roles from Keycloak: {roles}")
+    return roles
 
 
-def map_roles(team_list: list[int]) -> list[str]:
-    # Associate the team IDs with Roles here.
-    # The expected output is a list of roles that FAB will use to Authorize the user.
-
-    team_role_map = {
-        TEAM_ID_A_FROM_GITHUB: FAB_ADMIN_ROLE,
-        TEAM_ID_B_FROM_GITHUB: FAB_VIEWER_ROLE,
-        TEAM_ID_DAG_LAUNCHER_FROM_GITHUB: FAB_DAG_LAUNCHER_ROLE,
-    }
-    return list(set(team_role_map.get(team, FAB_PUBLIC_ROLE) for team in team_list))
-
-
-class GithubTeamAuthorizer(FabAirflowSecurityManagerOverride):
-    # In this example, the oauth provider == 'github'.
-    # If you ever want to support other providers, see how it is done here:
-    # https://github.com/dpgaspar/Flask-AppBuilder/blob/master/flask_appbuilder/security/manager.py#L550
+class KeycloakAuthorizer(FabAirflowSecurityManagerOverride):
+    """
+    Custom security manager for Keycloak OAuth integration.
+    
+    This class handles the OAuth flow with Keycloak and maps
+    Keycloak roles/groups to Airflow FAB roles.
+    """
+    
     def get_oauth_user_info(
         self, provider: str, resp: Any
     ) -> dict[str, Union[str, list[str]]]:
-        # Creates the user info payload from Github.
-        # The user previously allowed your app to act on their behalf,
-        #   so now we can query the user and teams endpoints for their data.
-        # Username and team membership are added to the payload and returned to FAB.
-
+        """
+        Get user info from Keycloak OAuth response.
+        
+        Args:
+            provider: OAuth provider name (should be "keycloak")
+            resp: OAuth response object
+            
+        Returns:
+            Dictionary containing username and role_keys for FAB
+        """
+        if provider != "keycloak":
+            log.warning(f"Unexpected OAuth provider: {provider}")
+            return {"username": "unknown", "role_keys": [FAB_PUBLIC_ROLE]}
+        
         remote_app = self.appbuilder.sm.oauth_remotes[provider]
-        me = remote_app.get("user")
-        user_data = me.json()
-        team_data = remote_app.get("user/teams")
-        teams = team_parser(team_data.json())
-        roles = map_roles(teams)
-        print(f"User info from Github: {user_data}\nTeam info from Github: {teams}")
-        return {"username": "github_" + user_data.get("login"), "role_keys": roles}
+        
+        # Get user info from Keycloak userinfo endpoint
+        endpoint = "openid-connect/userinfo"
+        log.info(f"Fetching user info from Keycloak endpoint: {endpoint}")
+        userinfo_response = remote_app.get(endpoint)
+        userinfo = userinfo_response.json()
+        log.info(f"Raw user info from Keycloak: {userinfo}")
+        
+        # Extract username (preferred_username is standard in Keycloak)
+        username = userinfo.get("preferred_username") or userinfo.get("email") or userinfo.get("sub")
+        
+        # Extract roles from Keycloak
+        keycloak_roles = extract_roles_from_keycloak(userinfo, resp)
+         
+        log.info(f"User info from Keycloak: username={username}, roles={keycloak_roles}")
+        
+        return {
+            "username": f"keycloak_{username}",
+            "first_name": userinfo.get("given_name", ""),
+            "last_name": userinfo.get("family_name", ""),
+            "email": userinfo.get("email", ""),
+            "role_keys": keycloak_roles,
+        }
 
 
-SECURITY_MANAGER_CLASS = GithubTeamAuthorizer
-# The default user self registration role
-# AUTH_USER_REGISTRATION_ROLE = "Public"
-
-# When using OAuth Auth, uncomment to setup provider(s) info
-# Google OAuth example:
-# OAUTH_PROVIDERS = [{
-#   'name':'google',
-#     'token_key':'access_token',
-#     'icon':'fa-google',
-#         'remote_app': {
-#             'api_base_url':'https://www.googleapis.com/oauth2/v2/',
-#             'client_kwargs':{
-#                 'scope': 'email profile'
-#             },
-#             'access_token_url':'https://accounts.google.com/o/oauth2/token',
-#             'authorize_url':'https://accounts.google.com/o/oauth2/auth',
-#             'request_token_url': None,
-#             'client_id': GOOGLE_KEY,
-#             'client_secret': GOOGLE_SECRET_KEY,
-#         }
-# }]
-
-# When using LDAP Auth, setup the ldap server
-# AUTH_LDAP_SERVER = "ldap://ldapserver.new"
-
-# When using OpenID Auth, uncomment to setup OpenID providers.
-# example for OpenID authentication
-# OPENID_PROVIDERS = [
-#    { 'name': 'Yahoo', 'url': 'https://me.yahoo.com' },
-#    { 'name': 'AOL', 'url': 'http://openid.aol.com/<username>' },
-#    { 'name': 'Flickr', 'url': 'http://www.flickr.com/<username>' },
-#    { 'name': 'MyOpenID', 'url': 'https://www.myopenid.com' }]
+SECURITY_MANAGER_CLASS = KeycloakAuthorizer
 
 # ----------------------------------------------------
 # Theme CONFIG
@@ -192,21 +173,3 @@ SECURITY_MANAGER_CLASS = GithubTeamAuthorizer
 # Please make sure to remove "navbar_color" configuration from airflow.cfg
 # in order to fully utilize the theme. (or use that property in conjunction with theme)
 # APP_THEME = "bootstrap-theme.css"  # default bootstrap
-# APP_THEME = "amelia.css"
-# APP_THEME = "cerulean.css"
-# APP_THEME = "cosmo.css"
-# APP_THEME = "cyborg.css"
-# APP_THEME = "darkly.css"
-# APP_THEME = "flatly.css"
-# APP_THEME = "journal.css"
-# APP_THEME = "lumen.css"
-# APP_THEME = "paper.css"
-# APP_THEME = "readable.css"
-# APP_THEME = "sandstone.css"
-# APP_THEME = "simplex.css"
-# APP_THEME = "slate.css"
-# APP_THEME = "solar.css"
-# APP_THEME = "spacelab.css"
-# APP_THEME = "superhero.css"
-# APP_THEME = "united.css"
-# APP_THEME = "yeti.css"

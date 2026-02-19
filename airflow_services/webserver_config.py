@@ -47,6 +47,16 @@ AUTH_USER_REGISTRATION = (
     True  # allow users who are not already in the FAB DB to register
 )
 
+# Make sure you create these role on Keycloak
+AUTH_ROLES_MAPPING = {
+    "Viewer": ["Viewer"],
+    "Admin": ["Admin"],
+    "User": ["User"],
+    "Public": ["Public"],
+    "Op": ["Op"],
+    "Dag_Launcher": ["DAG Launcher"],
+}
+
 # Keycloak OAuth Provider Configuration
 KEYCLOAK_BASE_URL = os.getenv("KEYCLOAK_BASE_URL")  # e.g., https://keycloak.example.com
 KEYCLOAK_REALM = os.getenv("KEYCLOAK_REALM")  # Your realm name

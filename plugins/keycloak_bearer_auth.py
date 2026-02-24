@@ -15,7 +15,8 @@ from typing import Any, Callable
 import jwt
 
 import requests
-from flask import Response, request
+from flask import Response, current_app, request
+from flask_login import login_user
 
 log = logging.getLogger(__name__)
 
@@ -43,6 +44,11 @@ def requires_authentication(fn: Callable) -> Callable:
         allowed_roles = ["Admin", "User", "Dag_Launcher"]
         if not any(role in token_roles for role in allowed_roles):
             return _forbidden("Token is valid but missing required role")
+
+        user = _get_or_create_fab_user(claims, token_roles)
+        if not user:
+            return _unauthorized("Could not find or create Airflow user")
+        login_user(user, remember=False, force=True)
 
         return fn(*args, **kwargs)
 
@@ -103,6 +109,35 @@ def _introspect_token(token: str) -> dict[str, Any]:
         raise RuntimeError(f"Keycloak introspection failed: {resp.status_code} {resp.text}")
     data = resp.json()
     return data
+
+
+def _get_or_create_fab_user(claims: dict[str, Any], token_roles: list[str]):
+    sm = current_app.appbuilder.sm
+    username = claims.get("preferred_username") or claims.get("username") or claims.get("sub", "")
+
+    user = sm.find_user(username=username)
+    if user is None:
+        user = sm.find_user(username=f"keycloak_{username}")
+
+    if user is None:
+        fab_roles = []
+        for role_name in token_roles:
+            role = sm.find_role(role_name)
+            if role:
+                fab_roles.append(role)
+        if not fab_roles:
+            fab_roles = [sm.find_role("Viewer")]
+
+        user = sm.add_user(
+            username=username,
+            first_name=claims.get("given_name", "Service"),
+            last_name=claims.get("family_name", "Account"),
+            email=claims.get("email", f"{username}@keycloak"),
+            role=fab_roles,
+        )
+        log.info("Auto-provisioned FAB user %r with roles %s", username, [r.name for r in fab_roles])
+
+    return user
 
 
 def _extract_roles(token: str) -> set[str]:

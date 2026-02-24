@@ -3,10 +3,6 @@ Custom Airflow API auth backend: Keycloak Bearer tokens.
 
 Configured via `[api] auth_backends = keycloak_bearer_auth` in `airflow.cfg`.
 
-This backend is intentionally minimal to "get started":
-- Requires `Authorization: Bearer <access_token>`
-- Validates tokens via Keycloak token introspection
-
 Docs: https://airflow.apache.org/docs/apache-airflow-providers-fab/1.5.4/auth-manager/api-authentication.html#roll-your-own-api-authentication
 """
 
@@ -23,22 +19,10 @@ from flask import Response, request
 
 log = logging.getLogger(__name__)
 
-DEFAULT_ALLOWED_ROLES = {"admin", "user", "dag_launcher"}
-
-
 def init_app(app) -> None:
-    """
-    Called by Airflow when initializing the Flask app.
-
-    You can register additional views/blueprints here if you want.
-    """
+    pass
 
 def requires_authentication(fn: Callable) -> Callable:
-    """
-    Decorator applied by Airflow to API endpoints.
-
-    Return a Flask Response (401/403) to deny access, otherwise call through.
-    """
 
     @functools.wraps(fn)
     def wrapper(*args: Any, **kwargs: Any):
@@ -92,10 +76,6 @@ def _forbidden(message: str) -> Response:
 
 
 def _keycloak_config() -> tuple[str, str, str, str]:
-    """
-    Returns:
-      (base_url, realm, client_id, client_secret)
-    """
     base_url = os.getenv("KEYCLOAK_BASE_URL", "").rstrip("/")
     realm = os.getenv("KEYCLOAK_REALM", "")
     client_id = os.getenv("KEYCLOAK_CLIENT_ID", "")
@@ -126,9 +106,6 @@ def _introspect_token(token: str) -> dict[str, Any]:
 
 
 def _extract_roles(token: str) -> set[str]:
-    """
-    Extract client-level roles from the Keycloak JWT.
-    """
     client_id = os.getenv("KEYCLOAK_CLIENT_ID", "")
     decoded = jwt.decode(token, options={"verify_signature": False, "verify_aud": False})
     roles = decoded.get("resource_access").get(client_id, {}).get("roles", [])

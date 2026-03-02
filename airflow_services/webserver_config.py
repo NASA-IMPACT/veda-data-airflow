@@ -127,8 +127,53 @@ class KeycloakAuthorizer(FabAirflowSecurityManagerOverride):
     
     This class handles the OAuth flow with Keycloak and maps
     Keycloak roles/groups to Airflow FAB roles.
+
+    On initialization, ensures the DAG Launcher role exists with the correct permissions.
     """
-    
+
+    role_name = "DAG Launcher"
+    permissions = [
+        ("can_read", "My Profile"),
+        ("can_create", "DAG Runs"),
+        ("can_read", "DAG Runs"),
+        ("can_edit", "DAG Runs"),
+        ("menu_access", "DAG Runs"),
+        ("menu_access", "Browse"),
+        ("can_read", "Jobs"),
+        ("menu_access", "Jobs"),
+        ("can_read", "Task Instances"),
+        ("menu_access", "Task Instances"),
+        ("can_read", "XComs"),
+        ("menu_access", "DAGs"),
+        ("menu_access", "Documentation"),
+        ("menu_access", "Docs"),
+        ("can_read", "DAG Dependencies"),
+        ("can_read", "Task Logs"),
+        ("can_read", "Website"),
+        ("can_edit", "DAG:veda_discover"),
+        ("can_read", "DAG:veda_discover"),
+        ("can_edit", "DAG:veda_dataset_pipeline"),
+        ("can_read", "DAG:veda_dataset_pipeline"),
+        ("can_edit", "DAG:veda_collection_pipeline"),
+        ("can_read", "DAG:veda_collection_pipeline"),
+    ]
+
+    def __init__(self, appbuilder):
+        super().__init__(appbuilder)
+        
+        role = self.find_role(self.role_name)
+        if not role:
+            role = self.add_role(self.role_name)
+
+        for perm_name, view_menu_name in self.permissions:
+            self.add_permissions_menu(view_menu_name)
+            permission = self.get_permission(perm_name, view_menu_name)
+            if permission and permission not in role.permissions:
+                self.add_permission_to_role(role, permission)
+
+        log.info(f"Role '{self.role_name}' created with specified permissions.")
+
+
     def get_oauth_user_info(
         self, provider: str, resp: Any
     ) -> dict[str, Union[str, list[str]]]:

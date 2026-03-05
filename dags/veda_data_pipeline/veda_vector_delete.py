@@ -31,16 +31,14 @@ dag_doc_md = """
 Provides basic `DELETE /collection` behavior not yet supported in API layer. If more 
 sophisticated TiPg handling is required, recommend contributing upstream.
 
-This DAG validates that the provided collection is a candidate for programmatic deletion and 
-drops the table + dependent objects. Cache invalidation can be configured per-run and is enabled by default.
+This DAG validates that the provided input is not a known PostGIS reference table and drops the
+input table + dependent objects. Only TiPg database objects are deleted, corresponding S3 files or
+other source data associated with the records are not destroyed.
 
-To modify existing collections, see guidance in vector_ingest on using `append` and `overwrite` fields. Delete logic should only be used for complete erasure.
+Cache invalidation can be configured per-run and is enabled by default.
 
-Users should note:
-
-1. The DAG only deletes TiPg database objects, it does not destroy S3 files or other source data associated with the records.
-1. Collection inputs must pass a safety check, whereby tables may be programmtically deleted if 'tagged' with a specific SQL comment during initial ingest. 
-    1. Collections not added through the ingest pipeline will be flagged as unavailable for delete.
+To modify existing collections, see guidance in vector_ingest on using `append` and `overwrite` fields.
+Delete logic should only be used for complete erasure.
 
 #### Configuration Parameters
 
@@ -52,7 +50,7 @@ Users should note:
 
 @task
 def delete_from_featuresdb(**kwargs):
-    from veda_data_pipeline.utils.vector_ingest.handler import COLLECTION_TABLE_COMMENT, get_secret
+    from veda_data_pipeline.utils.vector_ingest.handler import get_secret
     import psycopg2
 
     config = kwargs.get("dag_run").conf.copy()
@@ -73,17 +71,10 @@ def delete_from_featuresdb(**kwargs):
         password=conn_secrets["password"],
     )
 
-    with conn.cursor() as cur:
-        cur.execute(
-            f"SELECT obj_description({schema}.{collection}, 'pg_class')",
-        )
-        comment = cur.fetchone()[0]
-
-    if comment != COLLECTION_TABLE_COMMENT:
+    if collection in ["spatial_ref_sys","geometry_columns","geography_columns"]:
         raise ValueError(
-            f"Programmatic deletion is only allowed for collection tables, ",
-            "which should be identified with a specific comment during initial ingestion. ",
-            "`{collection}` does not have the expected safety marker, terminating operation."
+            f"Programmatic deletion should only be used for collection tables. ",
+            "`{collection}` is a PostGIS reference table, terminating operation."
         )
 
     try:

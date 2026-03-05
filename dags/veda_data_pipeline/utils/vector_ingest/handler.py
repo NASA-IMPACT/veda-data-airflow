@@ -17,9 +17,6 @@ import concurrent.futures
 from sqlalchemy.dialects.postgresql import DOUBLE_PRECISION, INTEGER, VARCHAR, TIMESTAMP
 
 
-COLLECTION_TABLE_COMMENT = "veda_tipg_collection"
-
-
 def download_file(file_uri: str, role_arn:[str, None]):
     session = boto3.Session()
     if role_arn:
@@ -204,31 +201,6 @@ def upsert_to_postgis(
         executor.map(upsert_batch, batches)
 
 
-def add_table_comment(
-    engine,
-    target_table_name: str,
-    schema: str = "public",
-):
-    """add a comment to input database object
-    for use as deletion guardrail
-
-    :param engine: instance of sqlalchemy.Engine
-    :param target_table_name: name of the collection table
-    :param schema: name of the table schema, default to `public`
-    :return:
-    """
-
-
-    with engine.connect() as conn:
-        with conn.begin():
-            comment_sql = sqlalchemy.text(
-                f"""
-                COMMENT ON TABLE {schema}.{target_table_name} IS {COLLECTION_TABLE_COMMENT}
-                """
-            )
-            conn.execute(comment_sql)
-
-
 def get_secret(secret_name: str, region_name: str = "us-west-2") -> None:
     """Retrieve secrets from AWS Secrets Manager
 
@@ -284,7 +256,6 @@ def load_to_featuresdb(
         "-t_srs",
         target_projection,
         *extra_flags
-        # TODO: table comment in ogr2ogr or similar cxn ?
     ]
     out = subprocess.run(
         options,
@@ -336,7 +307,6 @@ def load_to_featuresdb_eis(
     ensure_table_exists(metadata, filename, target_projection, target_table_name)
     delete_region(engine, filename, target_table_name)
     upsert_to_postgis(engine, filename, target_projection, target_table_name)
-    add_table_comment(engine, target_table_name)
     return {"status": "success"}
 
 

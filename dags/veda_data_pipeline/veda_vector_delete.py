@@ -1,4 +1,4 @@
-from dags.veda_data_pipeline.veda_vector_pipeline import invalidate_cloudfront
+from veda_data_pipeline.veda_vector_pipeline import invalidate_cloudfront
 import pendulum
 from airflow import DAG
 from airflow.decorators import task
@@ -52,7 +52,7 @@ Users should note:
 
 @task
 def delete_from_featuresdb(**kwargs):
-    from dags.veda_data_pipeline.utils.vector_ingest.handler import COLLECTION_TABLE_COMMENT, get_secret
+    from veda_data_pipeline.utils.vector_ingest.handler import COLLECTION_TABLE_COMMENT, get_secret
     import psycopg2
 
     config = kwargs.get("dag_run").conf.copy()

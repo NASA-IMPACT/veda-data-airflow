@@ -48,7 +48,7 @@ Delete logic should only be used for complete erasure.
 """
 
 
-@task
+@task(retries=0)
 def delete_from_featuresdb(**kwargs):
     from veda_data_pipeline.utils.vector_ingest.handler import get_secret
     import psycopg2

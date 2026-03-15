@@ -110,13 +110,3 @@ module "sma-base" {
   }, var.snapshot_bucket_name != "" ? module.rds_backups[0].rds_backup_environment : {}
   )
 }
-
-resource "aws_vpc_security_group_ingress_rule" "vector_rds_ingress" {
-  count             = var.vector_security_group == "null" ? 0 : 1
-  security_group_id = var.vector_security_group
-
-  from_port                    = 5432
-  to_port                      = 5432
-  ip_protocol                  = "tcp"
-  referenced_security_group_id = module.sma-base.worker_security_group_id
-}

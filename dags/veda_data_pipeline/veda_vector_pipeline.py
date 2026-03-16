@@ -30,7 +30,7 @@ This DAG is supposed to be triggered by `veda_discover`. But you still can trigg
     "vector": true,
     "source_projection": "EPSG:4326",
     "target_projection": "EPSG:4326",
-    "extra_flags": ["-overwrite", "-lco", "OVERWRITE=YES", "-oo", "X_POSSIBLE_NAMES=latitude", "-oo", "Y_POSSIBLE_NAMES=lomgitude"]
+    "extra_flags": ["-overwrite", "-lco", "OVERWRITE=YES", "-oo", "X_POSSIBLE_NAMES=latitude", "-oo", "Y_POSSIBLE_NAMES=longitude"]
     "discovered": 33,
     "payload": "s3://data-pipeline-ghgc-dev-mwaa-597746869805/events/test_layer_name2/s3_discover_output_f88257e8-ee50-4a14-ace4-5612ae6ebf38.jsonn"
     "invalidate_cloudfront": true

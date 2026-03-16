@@ -22,7 +22,6 @@ inputs:
   auth_stack_name:
     type: string
   run_command:
-    required: true
     default: 'apply'
     type: choice
     options:

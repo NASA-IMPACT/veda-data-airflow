@@ -17,6 +17,7 @@ variable "prefix" {
 }
 
 variable "fernet_key" {
+  sensitive = true
 }
 
 
@@ -73,7 +74,7 @@ variable "gh_app_client_id" {
 
 }
 variable "gh_app_client_secret" {
-
+  sensitive = true
 }
 variable "gh_team_name" {
 
@@ -166,6 +167,7 @@ variable "gh_user_team_id" {
 }
 
 variable "workflows_client_secret" {
+  sensitive = true
 }
 variable "stac_ingestor_api_url" {
 }
@@ -254,7 +256,8 @@ variable "lambda_dag_trigger_function_name" {
 }
 
 variable ingest_api_keycloak_client_secret {
- type = string
+  type      = string
+  sensitive = true
 }
 
 variable "airflow_version" {

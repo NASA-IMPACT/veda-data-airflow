@@ -99,7 +99,7 @@ variable "custom_worker_policy_statement" {
       ]
 
     },
-        {
+    {
       Sid    = "VEDA-RDS-Disaster-Recovery"
       Effect = "Allow"
       Action = [
@@ -128,9 +128,9 @@ variable "custom_worker_policy_statement" {
       ]
     },
     {
-            "Effect": "Allow",
-            "Action": ["cloudfront:CreateInvalidation"],
-            "Resource": ["arn:aws:cloudfront::*:distribution/*"]
+      "Effect" : "Allow",
+      "Action" : ["cloudfront:CreateInvalidation"],
+      "Resource" : ["arn:aws:cloudfront::*:distribution/*"]
     },
     {
       Effect = "Allow"
@@ -181,7 +181,7 @@ variable "vector_secret_name" {
 }
 
 variable "vector_security_group" {
-  type = string
+  type    = string
   default = "null"
 }
 
@@ -255,7 +255,7 @@ variable "lambda_dag_trigger_function_name" {
   default = "trigger-sm2a-dag"
 }
 
-variable ingest_api_keycloak_client_secret {
+variable "ingest_api_keycloak_client_secret" {
   type      = string
   sensitive = true
 }

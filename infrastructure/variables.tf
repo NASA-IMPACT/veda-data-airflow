@@ -17,6 +17,7 @@ variable "prefix" {
 }
 
 variable "fernet_key" {
+  sensitive = true
 }
 
 
@@ -81,7 +82,7 @@ variable "keycloak_client_id" {
 
 }
 variable "keycloak_client_secret" {
-
+  sensitive = true
 }
 
 
@@ -105,7 +106,7 @@ variable "custom_worker_policy_statement" {
       ]
 
     },
-        {
+    {
       Sid    = "VEDA-RDS-Disaster-Recovery"
       Effect = "Allow"
       Action = [
@@ -134,9 +135,9 @@ variable "custom_worker_policy_statement" {
       ]
     },
     {
-            "Effect": "Allow",
-            "Action": ["cloudfront:CreateInvalidation"],
-            "Resource": ["arn:aws:cloudfront::*:distribution/*"]
+      "Effect" : "Allow",
+      "Action" : ["cloudfront:CreateInvalidation"],
+      "Resource" : ["arn:aws:cloudfront::*:distribution/*"]
     },
     {
       Effect = "Allow"
@@ -169,6 +170,7 @@ variable "project_name" {
 
 
 variable "workflows_client_secret" {
+  sensitive = true
 }
 variable "stac_ingestor_api_url" {
 }
@@ -182,7 +184,7 @@ variable "vector_secret_name" {
 }
 
 variable "vector_security_group" {
-  type = string
+  type    = string
   default = "null"
 }
 
@@ -256,8 +258,9 @@ variable "lambda_dag_trigger_function_name" {
   default = "trigger-sm2a-dag"
 }
 
-variable ingest_api_keycloak_client_secret {
- type = string
+variable "ingest_api_keycloak_client_secret" {
+  type      = string
+  sensitive = true
 }
 
 variable "airflow_version" {

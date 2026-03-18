@@ -65,7 +65,7 @@ jobs:
       env_name: ${{ steps.define_environment.outputs.env_name }}
 
   plan:
-    name: '`terraform plan` against development environment'
+    name: 'Run `terraform plan` against development environment'
     runs-on: ubuntu-latest
     if: ${{ !needs.define-environment.outputs.env_name }}
     needs: [gitflow-enforcer, define-environment]

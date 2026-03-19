@@ -28,6 +28,7 @@ inputs:
     - plan
     - apply
 
+concurrency: ${{ inputs.env_aws_secret_name }}
 
 runs:
   using: "composite"

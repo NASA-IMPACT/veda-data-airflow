@@ -70,6 +70,7 @@ jobs:
     if: ${{ !needs.define-environment.outputs.env_name }}
     needs: [gitflow-enforcer, define-environment]
     environment: development
+    concurrency: development
 
     steps:
       - name: Checkout

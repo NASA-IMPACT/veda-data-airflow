@@ -75,7 +75,7 @@ variable "keycloak_base_url" {
 }
 
 variable "keycloak_realm" {
-    
+
 }
 
 variable "keycloak_client_id" {
@@ -281,5 +281,11 @@ variable "rds_storage_encrypted" {
 
 variable "rds_snapshot_identifier" {
   description = "Snapshot from which to create Airflow RDS instance"
+  default     = null
+}
+
+variable "customdomain" {
+  description = "Optional custom domain for ALB host header and certificate. If provided, overrides default subdomain.domain_name logic"
+  type        = string
   default     = null
 }

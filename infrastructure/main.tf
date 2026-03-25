@@ -26,7 +26,7 @@ module "rds_backups" {
 
 
 module "sma-base" {
-  source                         = "https://github.com/NASA-IMPACT/self-managed-apache-airflow/releases/download/v1.1.13/self-managed-apache-airflow.zip"
+  source                         = "https://github.com/NASA-IMPACT/self-managed-apache-airflow/releases/download/v1.1.14/self-managed-apache-airflow.zip"
   project                        = var.project_name
   airflow_db                     = var.airflow_db
   fernet_key                     = var.fernet_key
@@ -83,16 +83,17 @@ module "sma-base" {
     }
   ]
   extra_airflow_configuration = {
-    keycloak_base_url    = var.keycloak_base_url
-    keycloak_realm       = var.keycloak_realm
-    keycloak_client_id  = var.keycloak_client_id
+    keycloak_base_url      = var.keycloak_base_url
+    keycloak_realm         = var.keycloak_realm
+    keycloak_client_id     = var.keycloak_client_id
     keycloak_client_secret = var.keycloak_client_secret
-    sm2a_base_url        = "https://${lower(var.subdomain)}.${var.domain_name}"
+    sm2a_base_url          = "https://${lower(var.subdomain)}.${var.domain_name}"
   }
-  domain_name = var.domain_name
-  stage       = var.stage
-  subdomain   = var.subdomain
-  worker_cmd  = ["airflow", "celery", "worker"]
+  domain_name  = var.domain_name
+  stage        = var.stage
+  subdomain    = var.subdomain
+  customdomain = var.customdomain
+  worker_cmd   = ["airflow", "celery", "worker"]
 
   # add custom env, with conditional rds backup env vars
   airflow_custom_variables = merge({

@@ -55,6 +55,8 @@ module "sma-base" {
   rds_storage_encrypted          = var.rds_storage_encrypted
   rds_snapshot_identifier        = var.rds_snapshot_identifier
   airflow_version                = var.airflow_version
+  alb_access_logs_bucket         = var.alb_access_logs_bucket
+  alb_access_logs_prefix         = var.alb_access_logs_prefix
 
   extra_airflow_task_common_environment = [
     {

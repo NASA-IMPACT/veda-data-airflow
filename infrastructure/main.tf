@@ -26,7 +26,7 @@ module "rds_backups" {
 
 
 module "sma-base" {
-  source                         = "https://github.com/NASA-IMPACT/self-managed-apache-airflow/releases/download/v1.1.14/self-managed-apache-airflow.zip"
+  source                         = "https://github.com/NASA-IMPACT/self-managed-apache-airflow/releases/download/v1.1.15/self-managed-apache-airflow.zip"
   project                        = var.project_name
   airflow_db                     = var.airflow_db
   fernet_key                     = var.fernet_key
@@ -55,6 +55,8 @@ module "sma-base" {
   rds_storage_encrypted          = var.rds_storage_encrypted
   rds_snapshot_identifier        = var.rds_snapshot_identifier
   airflow_version                = var.airflow_version
+  alb_access_logs_bucket         = var.alb_access_logs_bucket
+  alb_access_logs_prefix         = var.alb_access_logs_prefix
 
   extra_airflow_task_common_environment = [
     {

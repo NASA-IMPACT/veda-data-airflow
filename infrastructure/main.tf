@@ -17,16 +17,16 @@ resource "random_password" "password" {
 }
 
 module "rds_backups" {
-  source = "./rds_backups"
-  count = var.snapshot_bucket_name != "" ? 1 : 0
-  prefix = var.prefix
+  source                    = "./rds_backups"
+  count                     = var.snapshot_bucket_name != "" ? 1 : 0
+  prefix                    = var.prefix
   permission_boundaries_arn = var.permission_boundaries_arn
-  snapshot_bucket_name = var.snapshot_bucket_name
+  snapshot_bucket_name      = var.snapshot_bucket_name
 }
 
 
 module "sma-base" {
-  source                         = "https://github.com/NASA-IMPACT/self-managed-apache-airflow/releases/download/v1.1.13/self-managed-apache-airflow.zip"
+  source                         = "https://github.com/NASA-IMPACT/self-managed-apache-airflow/releases/download/v1.1.15/self-managed-apache-airflow.zip"
   project                        = var.project_name
   airflow_db                     = var.airflow_db
   fernet_key                     = var.fernet_key
@@ -55,6 +55,8 @@ module "sma-base" {
   rds_storage_encrypted          = var.rds_storage_encrypted
   rds_snapshot_identifier        = var.rds_snapshot_identifier
   airflow_version                = var.airflow_version
+  alb_access_logs_bucket         = var.alb_access_logs_bucket
+  alb_access_logs_prefix         = var.alb_access_logs_prefix
 
   extra_airflow_task_common_environment = [
     {
@@ -66,52 +68,49 @@ module "sma-base" {
       value = var.workers_task_retries
     },
     {
-      name  = "GH_CLIENT_ID"
-      value = var.gh_app_client_id
+      name  = "KEYCLOAK_BASE_URL"
+      value = var.keycloak_base_url
     },
     {
-      name  = "GH_CLIENT_SECRET"
-      value = var.gh_app_client_secret
+      name  = "KEYCLOAK_REALM"
+      value = var.keycloak_realm
     },
     {
-      name  = "GH_ADMIN_TEAM_ID"
-      value = var.gh_team_name
+      name  = "KEYCLOAK_CLIENT_ID"
+      value = var.keycloak_client_id
     },
     {
-      name  = "GH_USER_TEAM_ID"
-      value = var.gh_user_team_id
-    },
-    {
-      name  = "GH_DAG_LAUNCHER_TEAM_ID"
-      value = var.gh_dag_launcher_team_id
+      name  = "KEYCLOAK_CLIENT_SECRET"
+      value = var.keycloak_client_secret
     }
-
   ]
   extra_airflow_configuration = {
-    gh_app_client_id     = var.gh_app_client_id
-    gh_app_client_secret = var.gh_app_client_secret
-    gh_team_id           = var.gh_team_name
-    sm2a_base_url        = "https://${lower(var.subdomain)}.${var.domain_name}"
+    keycloak_base_url      = var.keycloak_base_url
+    keycloak_realm         = var.keycloak_realm
+    keycloak_client_id     = var.keycloak_client_id
+    keycloak_client_secret = var.keycloak_client_secret
+    sm2a_base_url          = "https://${lower(var.subdomain)}.${var.domain_name}"
   }
-  domain_name = var.domain_name
-  stage       = var.stage
-  subdomain   = var.subdomain
-  worker_cmd  = ["airflow", "celery", "worker"]
+  domain_name  = var.domain_name
+  stage        = var.stage
+  subdomain    = var.subdomain
+  customdomain = var.customdomain
+  worker_cmd   = ["airflow", "celery", "worker"]
 
   # add custom env, with conditional rds backup env vars
   airflow_custom_variables = merge({
-    EVENT_BUCKET          = var.state_bucketname,
-    COGNITO_APP_SECRET    = var.workflows_client_secret,
-    STAC_INGESTOR_API_URL = var.stac_ingestor_api_url,
-    STAC_URL              = var.stac_url,
-    VECTOR_SECRET_NAME    = var.vector_secret_name,
-    ASSUME_ROLE_READ_ARN  = var.assume_role_read_arn,
-    ASSUME_ROLE_WRITE_ARN = var.assume_role_write_arn,
-    SM2A_BASE_URL         = "https://${lower(var.subdomain)}.${var.domain_name}",
-    CLOUDFRONT_TO_INVALIDATE = var.cloudfront_to_invalidate,
-    CLOUDFRONT_PATH_TO_INVALIDATE = var.cloudfront_path_to_invalidate,
-    INGEST_API_KEYCLOAK_APP_SECRET=var.ingest_api_keycloak_client_secret
-  }, var.snapshot_bucket_name != "" ? module.rds_backups[0].rds_backup_environment : {}
+    EVENT_BUCKET                   = var.state_bucketname,
+    COGNITO_APP_SECRET             = var.workflows_client_secret,
+    STAC_INGESTOR_API_URL          = var.stac_ingestor_api_url,
+    STAC_URL                       = var.stac_url,
+    VECTOR_SECRET_NAME             = var.vector_secret_name,
+    ASSUME_ROLE_READ_ARN           = var.assume_role_read_arn,
+    ASSUME_ROLE_WRITE_ARN          = var.assume_role_write_arn,
+    SM2A_BASE_URL                  = "https://${lower(var.subdomain)}.${var.domain_name}",
+    CLOUDFRONT_TO_INVALIDATE       = var.cloudfront_to_invalidate,
+    CLOUDFRONT_PATH_TO_INVALIDATE  = var.cloudfront_path_to_invalidate,
+    INGEST_API_KEYCLOAK_APP_SECRET = var.ingest_api_keycloak_client_secret
+    }, var.snapshot_bucket_name != "" ? module.rds_backups[0].rds_backup_environment : {}
   )
 }
 

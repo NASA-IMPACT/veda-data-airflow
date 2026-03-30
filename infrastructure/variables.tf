@@ -17,6 +17,7 @@ variable "prefix" {
 }
 
 variable "fernet_key" {
+  sensitive = true
 }
 
 
@@ -69,15 +70,22 @@ variable "desired_max_workers_count" {
   default = "5"
 }
 
-variable "gh_app_client_id" {
+variable "keycloak_base_url" {
 
 }
-variable "gh_app_client_secret" {
+
+variable "keycloak_realm" {
 
 }
-variable "gh_team_name" {
+
+variable "keycloak_client_id" {
 
 }
+variable "keycloak_client_secret" {
+  sensitive = true
+}
+
+
 
 variable "custom_worker_policy_statement" {
   type = list(object({
@@ -98,7 +106,7 @@ variable "custom_worker_policy_statement" {
       ]
 
     },
-        {
+    {
       Sid    = "VEDA-RDS-Disaster-Recovery"
       Effect = "Allow"
       Action = [
@@ -127,9 +135,9 @@ variable "custom_worker_policy_statement" {
       ]
     },
     {
-            "Effect": "Allow",
-            "Action": ["cloudfront:CreateInvalidation"],
-            "Resource": ["arn:aws:cloudfront::*:distribution/*"]
+      "Effect" : "Allow",
+      "Action" : ["cloudfront:CreateInvalidation"],
+      "Resource" : ["arn:aws:cloudfront::*:distribution/*"]
     },
     {
       Effect = "Allow"
@@ -161,11 +169,8 @@ variable "project_name" {
 }
 
 
-variable "gh_user_team_id" {
-  default = "csda-airflow-data-pipeline-users"
-}
-
 variable "workflows_client_secret" {
+  sensitive = true
 }
 variable "stac_ingestor_api_url" {
 }
@@ -179,7 +184,7 @@ variable "vector_secret_name" {
 }
 
 variable "vector_security_group" {
-  type = string
+  type    = string
   default = "null"
 }
 
@@ -253,8 +258,9 @@ variable "lambda_dag_trigger_function_name" {
   default = "trigger-sm2a-dag"
 }
 
-variable ingest_api_keycloak_client_secret {
- type = string
+variable "ingest_api_keycloak_client_secret" {
+  type      = string
+  sensitive = true
 }
 
 variable "airflow_version" {
@@ -275,5 +281,23 @@ variable "rds_storage_encrypted" {
 
 variable "rds_snapshot_identifier" {
   description = "Snapshot from which to create Airflow RDS instance"
+  default     = null
+}
+
+variable "customdomain" {
+  description = "Optional custom domain for ALB host header and certificate. If provided, overrides default subdomain.domain_name logic"
+  type        = string
+  default     = null
+}
+
+variable "alb_access_logs_bucket" {
+  description = "S3 bucket name for ALB access logs"
+  type        = string
+  default     = null
+}
+
+variable "alb_access_logs_prefix" {
+  description = "S3 key prefix for ALB access logs"
+  type        = string
   default     = null
 }

@@ -64,6 +64,37 @@ jobs:
     outputs:
       env_name: ${{ steps.define_environment.outputs.env_name }}
 
+  plan:
+    name: 'Run `terraform plan` against development environment'
+    runs-on: ubuntu-latest
+    if: ${{ !needs.define-environment.outputs.env_name }}
+    needs: [gitflow-enforcer, define-environment]
+    environment: development
+    concurrency: development
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 #v3.6.0
+        with:
+          lfs: "true"
+          submodules: "recursive"
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@5fd3084fc36e372ff1fff382a39b10d03659f355 #v2.2.0
+        with:
+          role-to-assume: ${{ secrets.DEPLOYMENT_ROLE_ARN }}
+          role-session-name: "veda-airflow-github-development-planner"
+          aws-region: us-west-2
+
+      - name: Plan Changes
+        uses: "./.github/actions/terraform-deploy-sm2a"
+        with:
+          dir: .
+          env_aws_secret_name: ${{ vars.SM2A_ENVS_DEPLOYMENT_SECRET_NAME }}
+          env-file: .env
+          aws-region: us-west-2
+          run_command: plan
+
   deploy:
     name: Deploy to ${{ needs.define-environment.outputs.env_name }} 🚀
     runs-on: ubuntu-latest

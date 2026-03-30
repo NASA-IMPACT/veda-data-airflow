@@ -99,7 +99,7 @@ class GenerateCollection:
         # Override the extents if they exists
         if spatial_extent := dataset.get("spatial_extent"):
             collection_stac["extent"]["spatial"] = {"bbox": [list(spatial_extent.values())]}
-        
+
         if temporal_extent := dataset.get("temporal_extent"):
             collection_stac["extent"]["temporal"] = {
                 "interval": [

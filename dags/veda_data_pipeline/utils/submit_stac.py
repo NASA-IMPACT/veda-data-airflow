@@ -1,4 +1,6 @@
 import json
+import logging
+import math
 import os
 import sys
 from dataclasses import dataclass
@@ -39,6 +41,7 @@ class Creds(TypedDict):
     expires_in: int
     token_type: str
     scope: str
+
 
 @dataclass
 class IngestionApi:
@@ -86,16 +89,32 @@ class IngestionApi:
             "Authorization": f"Bearer {self.token}",
             "Content-Type": "application/json",
         }
-        response = requests.post(
-            f"{self.base_url.rstrip('/')}{endpoint}",
-            json=event,
-            headers=headers,
-        )
+
+        # Extract filename/item_id from the event for error reporting
+        item_id = event.get("id", None)
+        filename = None
+        if "assets" in event:
+            assets = event.get("assets", {})
+            if assets:
+                first_asset = next(iter(assets.values()), {})
+                href = first_asset.get("href", "")
+                filename = href.split("/")[-1] if href else None
+
         try:
+            response = requests.post(
+                f"{self.base_url.rstrip('/')}{endpoint}",
+                json=event,
+                headers=headers,
+            )
             response.raise_for_status()
         except Exception as e:
-            print(response.text)
-            raise e
+            logging.error(f"Failed to submit STAC item. Item ID: {item_id}, Filename: {filename}, Error: {type(e).__name__}: {e}")
+            # Log response text if it's an HTTP error
+            if hasattr(e, 'response'):
+                resp = getattr(e, 'response')
+                if hasattr(resp, 'text'):
+                    logging.error(f"Response: {resp.text}")
+            raise
         return response.json()
 
 

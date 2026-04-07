@@ -1,31 +1,30 @@
 import re
 import json
-import boto3
+import os
 import rasterio
 from functools import lru_cache
 from typing import Dict, List, Optional, Any
 
+_LUT_DIR = os.path.join(os.path.dirname(__file__), "LUT")
 
-def _load_from_s3(s3_key: str) -> dict:
-    """Load JSON data from S3 using Airflow variables."""
-    from airflow.models.variable import Variable
-    bucket = Variable.get("aws_dags_variables", deserialize_json=True).get("EVENT_BUCKET")
-    client = boto3.client("s3")
-    result = client.get_object(Bucket=bucket, Key=s3_key)
-    return json.loads(result["Body"].read().decode())
+
+def _load_lut(filename: str) -> dict:
+    """Load JSON data from the local LUT directory."""
+    with open(os.path.join(_LUT_DIR, filename)) as f:
+        return json.load(f)
 
 
 @lru_cache(maxsize=1)
 def _get_country_codes_mapping() -> Dict[str, List[str]]:
     """Load and cache country codes mapping from S3."""
-    data = _load_from_s3("monty/monty_country_codes.json")
+    data = _load_lut("monty_country_codes.json")
     return {entry["name"].lower(): entry["code"] for entry in data["country_codes"]}
 
 
 @lru_cache(maxsize=1)
 def _get_hazard_codes_mapping() -> Dict[str, Dict[str, str]]:
     """Load and cache hazard codes mapping from S3."""
-    data = _load_from_s3("monty/monty_hazard_codes.json")
+    data = _load_lut("monty_hazard_codes.json")
     codes = data["classification_systems"]["undrr_isc_2025"]["codes"]
     return {
         entry["event_name"].lower(): {
@@ -39,7 +38,7 @@ def _get_hazard_codes_mapping() -> Dict[str, Dict[str, str]]:
 @lru_cache(maxsize=1)
 def _get_event_hazard_location_mapping() -> Dict[str, Dict[str, List[str]]]:
     """Load and cache event-hazard-location mapping from S3."""
-    data = _load_from_s3("events/event-hazard-location.json")
+    data = _load_lut("event-hazard-location.json")
     return data
 
 

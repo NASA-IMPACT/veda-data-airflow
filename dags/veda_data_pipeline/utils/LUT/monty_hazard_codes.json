@@ -1,0 +1,131 @@
+{
+  "schema_version": "1.0",
+  "last_updated": "2026-01-07",
+  "description": "Complete mapping of hazard classification codes for use in monty:hazard_codes field. This REQUIRED field must be an array containing hazard codes from supported classification systems.",
+  "reference_urls": [
+    "https://ifrcgo.org/monty-stac-extension/model/taxonomy/",
+    "https://undrr.org/media/107380"
+  ],
+  "field_name": "monty:hazard_codes",
+  "field_type": "array of strings",
+  "max_items": 3,
+  "pattern": "^([A-Z]{2}(?:\\\\d{4}$){0,1})|([a-z]{3}-[a-z]{3}-[a-z]{3}-[a-z]{3})|([A-Z]{2})$",
+  "composition_requirements": {
+    "description": "For hazard role items, the array must contain specific combinations of codes",
+    "required": [
+      "Exactly one UNDRR-ISC 2025 code (format: [A-Z]{2}\\d{4})"
+    ],
+    "optional": [
+      "At most one GLIDE code (format: [A-Z]{2})",
+      "DO NOT USE FOR DISASTERS PORTAL --- At most one EM-DAT code (format: [a-z]{3}-[a-z]{3}-[a-z]{3}-[a-z]{3})"
+    ],
+    "examples_valid": [
+      ["MH0600"],
+      ["FL", "MH0600"]
+    ],
+    "examples_invalid": [
+      ["FL"],
+      ["FL", "MH0600", "MH0601"],
+      ["nat-hyd-flo-flo"]
+    ]
+  },
+  "sources": [
+    "https://github.com/IFRCGo/monty-stac-extension",
+    "https://www.preventionweb.net/drr-glossary/hips",
+    "https://www.undrr.org/publication/documents-and-publications/hazard-information-profiles-hips-2025-version",
+    "https://doc.emdat.be/docs/data-structure-and-content/disaster-classification-system/"
+  ],
+  "classification_systems": {
+    "undrr_isc_2025": {
+      "name": "UNDRR-ISC 2025 Hazard Information Profiles",
+      "description": "Primary hazard classification system, glide classification, and cluster ID.",
+      "official_resources": [
+        "https://www.preventionweb.net/drr-glossary/hips",
+        "https://www.undrr.org/publication/documents-and-publications/hazard-information-profiles-hips-2025-version",
+        "https://docs.riskdatalibrary.org/en/0__2__0/guides/mappings/undrr_isc_hip/"
+      ],
+      "codes": [
+        {"event_name": "Tornado", "classification_code": "MH0305", "glide_code": "TO", "cluster-ID": "MH-WIND"},
+        {"event_name": "Hurricane", "classification_code": "MH0306", "glide_code": "TC", "cluster-ID": "MH-WIND"},
+        {"event_name": "Typhoon", "classification_code": "MH0306", "glide_code": "TC", "cluster-ID": "MH-WIND"},
+        {"event_name": "TropicalStorm", "classification_code": "MH0309", "glide_code": "TC", "cluster-ID": "MH-WIND"},
+        {"event_name": "SevereWx", "classification_code": "MH0405", "glide_code": "ST", "cluster-ID": "MH-PRECIP"},
+        {"event_name": "Heat", "classification_code": "MH0501", "glide_code": "HT", "cluster-ID": "MH-TEMP"},
+        {"event_name": "Flood", "classification_code": "MH0600", "glide_code": "FL", "cluster-ID": "MH-WATER"},
+        {"event_name": "Tsunami", "classification_code": "MH0705", "glide_code": "TS", "cluster-ID": "MH-MARINE"},
+        {"event_name": "Earthquake", "classification_code": "GH0101", "glide_code": "EQ", "cluster-ID": "GEO-SEIS"},
+        {"event_name": "Volcano", "classification_code": "GH0200", "glide_code": "VO", "cluster-ID": "GEO-VOLC"},
+        {"event_name": "Landslide", "classification_code": "GH0300", "glide_code": "LS", "cluster-ID": "GEO-GFAIL"},
+        {"event_name": "Fire", "classification_code": "EN0205", "glide_code": "FR", "cluster-ID": "ENV-FOREST"}
+
+      ],
+      "notes": [
+        "For monty:corr_id, use this set of information.",
+        "description: Correlation identifier follows a structured convention to uniquely identify and correlate disaster events",
+        "pattern: {datetime}-{country_code}-{hazard_type}-{hazard_name}-{episode_number}-GCDB",
+        "alternative_pattern: {YYYYMMDD|YYYYMMDDThhmmssZ}-{ISO3}-{HAZARD}-{EPISODE}-GCDB"
+      ]
+    }
+  },
+  "usage_examples": [
+    {
+      "description": "Flood event with UNDRR code only (minimum required)",
+      "hazard_codes": ["MH0600"],
+      "valid": true
+    },
+    {
+      "description": "Flood with GLIDE and UNDRR codes",
+      "hazard_codes": ["FL", "MH0600"],
+      "valid": true
+    },
+    {
+      "description": "Flood with all three systems",
+      "hazard_codes": ["FL", "nat-hyd-flo-flo", "MH0600"],
+      "valid": true
+    },
+    {
+      "description": "Earthquake with all three systems",
+      "hazard_codes": ["EQ", "nat-geo-ear-gro", "GH0101"],
+      "valid": true
+    },
+    {
+      "description": "Tropical cyclone with all three systems",
+      "hazard_codes": ["TC", "nat-met-sto-tro", "MH0309"],
+      "valid": true
+    },
+    {
+      "description": "Invalid - missing required UNDRR code",
+      "hazard_codes": ["FL"],
+      "valid": false,
+      "error": "Missing required UNDRR-ISC 2025 code"
+    },
+    {
+      "description": "Invalid - multiple UNDRR codes not allowed",
+      "hazard_codes": ["FL", "MH0600", "MH0601"],
+      "valid": false,
+      "error": "Maximum one UNDRR code allowed"
+    }
+  ],
+  "validation_rules": [
+    "Array must contain at least one element (the UNDRR-ISC 2025 code)",
+    "Array must contain at most 3 elements total",
+    "Exactly one UNDRR-ISC 2025 code is REQUIRED (format: [A-Z]{2}\\d{4})",
+    "At most one GLIDE code is allowed (format: [A-Z]{2})",
+    "At most one EM-DAT code is allowed (format: [a-z]{3}-[a-z]{3}-[a-z]{3}-[a-z]{3})",
+    "Each code must match its respective classification system pattern"
+  ],
+  "implementation_notes": [
+    "UNDRR-ISC 2025 is the primary and required classification system",
+    "GLIDE and EM-DAT codes provide additional context and interoperability",
+    "When possible, include codes from all three systems for maximum interoperability",
+    "The complete UNDRR-ISC 2025 code list (281 codes) is available in the repository schema",
+    "Chapeau codes in UNDRR-ISC 2025 provide general information applicable to similar hazards"
+  ],
+  "repository_sources": [
+    "/docs/model/taxonomy.md - Complete hazard taxonomy (148 KB)",
+    "/docs/model/Montandon_Schema_V1-00.json - Schema with complete enumerations",
+    "/json-schema/schema.json - Validation patterns",
+    "/README.md - Field specifications",
+    "/examples/ - Real-world usage examples"
+  ]
+}

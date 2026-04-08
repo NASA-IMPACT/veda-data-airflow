@@ -18,7 +18,7 @@
     "202510_Flood_AK": {
         "hazard": ["Flood"], 
         "location": ["Alaska"]
-    }
+    },
     "202507_Flood_TX": {
         "hazard": ["Flood"], 
         "location": ["Texas"]
@@ -38,7 +38,7 @@
     "202502_Flood_OhioValley": {
         "hazard": ["Flood", "Landslide"], 
         "location": ["Kentucky", "Tennessee", "Virginia", "West Virginia"]
-    }
+    },
     "202501_Fire_CA": {
         "hazard": ["Fire"], 
         "location": ["California"]

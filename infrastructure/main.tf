@@ -97,21 +97,23 @@ module "sma-base" {
   customdomain = var.customdomain
   worker_cmd   = ["airflow", "celery", "worker"]
 
-  # add custom env, with conditional rds backup env vars
-  airflow_custom_variables = merge({
-    EVENT_BUCKET                   = var.state_bucketname,
-    COGNITO_APP_SECRET             = var.workflows_client_secret,
-    STAC_INGESTOR_API_URL          = var.stac_ingestor_api_url,
-    STAC_URL                       = var.stac_url,
-    VECTOR_SECRET_NAME             = var.vector_secret_name,
-    ASSUME_ROLE_READ_ARN           = var.assume_role_read_arn,
-    ASSUME_ROLE_WRITE_ARN          = var.assume_role_write_arn,
-    SM2A_BASE_URL                  = "https://${lower(var.subdomain)}.${var.domain_name}",
-    CLOUDFRONT_TO_INVALIDATE       = var.cloudfront_to_invalidate,
-    CLOUDFRONT_PATH_TO_INVALIDATE  = var.cloudfront_path_to_invalidate,
+  # Sensitive values - stored in Secrets Manager JSON blob, accessed via Variable.get("aws_dags_variables", deserialize_json=True)
+  airflow_dag_secrets = {
     INGEST_API_KEYCLOAK_APP_SECRET = var.ingest_api_keycloak_client_secret
-    }, var.snapshot_bucket_name != "" ? module.rds_backups[0].rds_backup_environment : {}
-  )
+  }
+
+  # Non-sensitive values - set as AIRFLOW_VAR_* ECS env vars, accessed via Variable.get("KEY")
+  airflow_dag_variables = merge({
+    EVENT_BUCKET                  = var.state_bucketname
+    STAC_INGESTOR_API_URL         = var.stac_ingestor_api_url
+    STAC_URL                      = var.stac_url
+    VECTOR_SECRET_NAME            = var.vector_secret_name
+    ASSUME_ROLE_READ_ARN          = var.assume_role_read_arn
+    ASSUME_ROLE_WRITE_ARN         = var.assume_role_write_arn
+    SM2A_BASE_URL                 = "https://${lower(var.subdomain)}.${var.domain_name}"
+    CLOUDFRONT_TO_INVALIDATE      = var.cloudfront_to_invalidate
+    CLOUDFRONT_PATH_TO_INVALIDATE = var.cloudfront_path_to_invalidate
+  }, var.snapshot_bucket_name != "" ? module.rds_backups[0].rds_backup_environment : {})
 }
 
 resource "aws_vpc_security_group_ingress_rule" "vector_rds_ingress" {

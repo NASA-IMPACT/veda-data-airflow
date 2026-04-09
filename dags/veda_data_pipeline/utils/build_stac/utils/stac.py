@@ -1,5 +1,3 @@
-import json
-
 import pystac
 import rasterio
 from pystac.utils import datetime_to_str
@@ -12,9 +10,7 @@ from veda_data_pipeline.utils.build_stac.utils import events, regex, role
 
 
 def get_sts_session():
-    airflow_vars = Variable.get("aws_dags_variables")
-    airflow_vars_json = json.loads(airflow_vars)
-    if external_role_arn := airflow_vars_json.get("ASSUME_ROLE_READ_ARN"):
+    if external_role_arn := Variable.get("ASSUME_ROLE_READ_ARN", default_var=""):
         creds = role.assume_role(external_role_arn, "veda-data-pipelines_build-stac")
         return AWSSession(
             aws_access_key_id=creds["AccessKeyId"],

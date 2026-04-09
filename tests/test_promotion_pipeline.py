@@ -1,5 +1,4 @@
 import boto3
-import json
 import os
 import pytest
 
@@ -21,10 +20,16 @@ def mock_task_instance():
     return ti
 
 @pytest.fixture
-def mock_aws_vars():
-    return {
-        "ASSUME_ROLE_WRITE_ARN": "arn:aws:iam::123456789012:role/test-role"
-    }
+def mock_variable_get():
+    """Mock Variable.get to return individual variable values."""
+    def _get(key, **kwargs):
+        variables = {
+            "ASSUME_ROLE_WRITE_ARN": "arn:aws:iam::123456789012:role/test-role",
+        }
+        if key == "aws_dags_variables" and kwargs.get("deserialize_json"):
+            return {}
+        return variables.get(key, "")
+    return _get
 
 @pytest.fixture
 def aws_credentials():
@@ -54,11 +59,11 @@ def s3():
         )
         yield s3
 
-def test_transfer_assets_to_production_bucket_transfer_false(mock_task_instance, mock_aws_vars, s3):
+def test_transfer_assets_to_production_bucket_transfer_false(mock_task_instance, mock_variable_get, s3):
     """Test that when transfer is False, payload is updated but no transfer occurs"""
     mock_task_instance.dag_run.conf["transfer"] = False
 
-    with patch("airflow.models.variable.Variable.get", return_value=json.dumps(mock_aws_vars)):
+    with patch("airflow.models.variable.Variable.get", side_effect=mock_variable_get):
         payload = {
             "bucket": "test-origin-bucket",
             "prefix": "test-prefix/",
@@ -74,11 +79,11 @@ def test_transfer_assets_to_production_bucket_transfer_false(mock_task_instance,
         assert result["bucket"] == "test-origin-bucket"
         assert result["prefix"] == "test-prefix/"
 
-def test_transfer_assets_to_production_bucket_transfer_true(mock_task_instance, mock_aws_vars, s3):
+def test_transfer_assets_to_production_bucket_transfer_true(mock_task_instance, mock_variable_get, s3):
     """Test that when transfer is True, payload is updated and transfer occurs"""
     mock_task_instance.dag_run.conf["transfer"] = True
 
-    with patch("airflow.models.variable.Variable.get", return_value=json.dumps(mock_aws_vars)):
+    with patch("airflow.models.variable.Variable.get", side_effect=mock_variable_get):
         payload = {
             "bucket": "test-origin-bucket",
             "prefix": "test-prefix/",
@@ -95,7 +100,7 @@ def test_transfer_assets_to_production_bucket_transfer_true(mock_task_instance, 
         assert result["bucket"] == "veda-data-store"
         assert result["prefix"] == "test-collection/"
 
-def test_transfer_assets_to_production_bucket_412_error(mock_task_instance, mock_aws_vars, s3):
+def test_transfer_assets_to_production_bucket_412_error(mock_task_instance, mock_variable_get, s3):
     """Test that when a file already exists with the same ETag (412 error), no error is raised"""
     mock_task_instance.dag_run.conf["transfer"] = True
 
@@ -105,7 +110,7 @@ def test_transfer_assets_to_production_bucket_412_error(mock_task_instance, mock
         Key="test-collection/file1.tif"
     )
 
-    with patch("airflow.models.variable.Variable.get", return_value=json.dumps(mock_aws_vars)):
+    with patch("airflow.models.variable.Variable.get", side_effect=mock_variable_get):
         payload = {
             "bucket": "test-origin-bucket",
             "prefix": "test-prefix/",

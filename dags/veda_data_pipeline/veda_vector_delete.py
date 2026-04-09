@@ -58,8 +58,7 @@ def delete_from_featuresdb(**kwargs):
     collection = config.get("collection")
     schema = config.get("schema")
 
-    airflow_vars_json = Variable.get("aws_dags_variables", deserialize_json=True)
-    vector_secret_name = airflow_vars_json.get("VECTOR_SECRET_NAME")
+    vector_secret_name = Variable.get("VECTOR_SECRET_NAME")
 
     if not vector_secret_name:
         raise ValueError("Missing required variable VECTOR_SECRET_NAME")

@@ -169,9 +169,6 @@ variable "project_name" {
 }
 
 
-variable "workflows_client_secret" {
-  sensitive = true
-}
 variable "stac_ingestor_api_url" {
 }
 

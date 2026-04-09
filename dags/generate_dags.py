@@ -34,8 +34,7 @@ def generate_dags():
     from pathlib import Path
 
     try:
-        airflow_vars_json = Variable.get("aws_dags_variables", deserialize_json=True)
-        bucket = airflow_vars_json.get("EVENT_BUCKET")
+        bucket = Variable.get("EVENT_BUCKET")
         client = boto3.client("s3")
         response = client.list_objects_v2(Bucket=bucket, Prefix="collections/")
     except ClientError as e:

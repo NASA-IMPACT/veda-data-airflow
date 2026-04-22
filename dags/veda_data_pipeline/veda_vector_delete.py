@@ -72,7 +72,7 @@ def delete_from_featuresdb(**kwargs):
         password=conn_secrets["password"],
     )
 
-    if collection in ["spatial_ref_sys","geometry_columns","geography_columns"]:
+    if collection in ["spatial_ref_sys","geometry_columns","geography_columns", "admin_table", "user"]:
         raise ValueError(
             f"Programmatic deletion should only be used for collection tables. ",
             "`{collection}` is a PostGIS reference table, terminating operation."

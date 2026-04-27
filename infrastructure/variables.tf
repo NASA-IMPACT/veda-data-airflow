@@ -301,3 +301,7 @@ variable "alb_access_logs_prefix" {
   type        = string
   default     = null
 }
+
+variable "new_required_variable" {
+  type = string
+}

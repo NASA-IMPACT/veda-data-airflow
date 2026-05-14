@@ -21,7 +21,7 @@ from base64 import b64decode
 
 from flask_appbuilder.security.manager import AUTH_OAUTH
 
-from airflow.auth.managers.fab.security_manager.override import (
+from airflow.providers.fab.auth_manager.security_manager.override import (
     FabAirflowSecurityManagerOverride,
 )
 import logging
@@ -86,10 +86,18 @@ OAUTH_PROVIDERS = [
 log = logging.getLogger(__name__)
 log.setLevel(os.getenv("AIRFLOW__LOGGING__FAB_LOGGING_LEVEL", "INFO"))
 
-req = requests.get(f"{KEYCLOAK_BASE_URL}/realms/{KEYCLOAK_REALM}/")
-key_der_base64 = req.json()["public_key"]
-key_der = b64decode(key_der_base64.encode())
-public_key = serialization.load_der_public_key(key_der)
+
+_keycloak_public_key = None
+
+
+def _get_keycloak_public_key():
+    global _keycloak_public_key
+    if _keycloak_public_key is None:
+        req = requests.get(f"{KEYCLOAK_BASE_URL}/realms/{KEYCLOAK_REALM}/")
+        key_der_base64 = req.json()["public_key"]
+        key_der = b64decode(key_der_base64.encode())
+        _keycloak_public_key = serialization.load_der_public_key(key_der)
+    return _keycloak_public_key
 
 
 def extract_roles_from_keycloak(userinfo: dict[str, Any], resp: dict[str, Any]) -> list[str]:
@@ -110,7 +118,7 @@ def extract_roles_from_keycloak(userinfo: dict[str, Any], resp: dict[str, Any]) 
     access_token = resp.get("access_token", "")
     
     try:
-        decoded = jwt.decode(access_token, public_key, algorithms=["RS256"], options={"verify_signature": False})
+        decoded = jwt.decode(access_token, _get_keycloak_public_key(), algorithms=["RS256"], options={"verify_signature": False})
         if "resource_access" in decoded and KEYCLOAK_CLIENT_ID in decoded["resource_access"]:
             roles.extend(decoded["resource_access"][KEYCLOAK_CLIENT_ID].get("roles", []))
         log.info(f"Decoded roles from access_token: {roles}")

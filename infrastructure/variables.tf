@@ -243,7 +243,7 @@ variable "ingest_api_keycloak_client_secret" {
 
 variable "airflow_version" {
   type    = string
-  default = "2.10.5"
+  default = "3.0.2"
 }
 
 variable "rds_deletion_protection" {

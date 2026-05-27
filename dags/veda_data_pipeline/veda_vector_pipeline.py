@@ -68,9 +68,8 @@ dag_args = {
 def ingest_vector_task(payload):
     from veda_data_pipeline.utils.vector_ingest.handler import handler
 
-    airflow_vars_json = Variable.get("aws_dags_variables", deserialize_json=True)
-    read_role_arn = airflow_vars_json.get("ASSUME_ROLE_READ_ARN")
-    vector_secret_name = airflow_vars_json.get("VECTOR_SECRET_NAME")
+    read_role_arn = Variable.get("ASSUME_ROLE_READ_ARN")
+    vector_secret_name = Variable.get("VECTOR_SECRET_NAME")
     return handler(payload_src=payload, vector_secret_name=vector_secret_name,
                    assume_role_arn=read_role_arn)
 
@@ -84,9 +83,8 @@ def invalidate_cloudfront(ti):
 
     import boto3
     try:
-        airflow_vars_json = Variable.get("aws_dags_variables", deserialize_json=True)
-        cloudfront_to_invalidate_id = airflow_vars_json.get("CLOUDFRONT_TO_INVALIDATE")
-        cloudfront_path_to_invalidate = airflow_vars_json.get("CLOUDFRONT_PATH_TO_INVALIDATE")
+        cloudfront_to_invalidate_id = Variable.get("CLOUDFRONT_TO_INVALIDATE", default_var=None)
+        cloudfront_path_to_invalidate = Variable.get("CLOUDFRONT_PATH_TO_INVALIDATE", default_var=None)
 
         if cloudfront_to_invalidate_id and cloudfront_path_to_invalidate:
             client = boto3.client('cloudfront')

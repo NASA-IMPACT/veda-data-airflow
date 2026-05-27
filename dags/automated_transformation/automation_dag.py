@@ -128,8 +128,7 @@ with DAG(
         print(f"[ FILTERED BY PATTERN {pattern} : {len(filtered_files)}]")
 
         # Write this to s3
-        airflow_vars_json = Variable.get("aws_dags_variables", deserialize_json=True)
-        bucket_output = airflow_vars_json.get("EVENT_BUCKET")
+        bucket_output = Variable.get("EVENT_BUCKET")
         key = f"s3://{bucket_output}/events/{collection_name}"
         chunks_xcom = []
         chunk_limit = min(int(config.get("chunk_limit", 100)), 900)

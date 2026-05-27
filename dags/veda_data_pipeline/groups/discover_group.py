@@ -1,5 +1,4 @@
 from datetime import timedelta
-import json
 import uuid
 
 from airflow.models.variable import Variable
@@ -33,10 +32,8 @@ def discover_from_s3_task(event: dict={}, ti=None, payload: dict={}, prev_start_
         config["last_successful_execution"] = prev_start_date_success.isoformat()
     # (event, chunk_size=2800, role_arn=None, bucket_output=None):
 
-    airflow_vars = Variable.get("aws_dags_variables")
-    airflow_vars_json = json.loads(airflow_vars)
-    event_bucket = airflow_vars_json.get("EVENT_BUCKET")
-    read_assume_arn = airflow_vars_json.get("ASSUME_ROLE_READ_ARN")
+    event_bucket = Variable.get("EVENT_BUCKET")
+    read_assume_arn = Variable.get("ASSUME_ROLE_READ_ARN")
     # Making the chunk size small, this helped us process large data faster than
     # passing a large chunk of 500
     chunk_size = config.get("chunk_size", 500)

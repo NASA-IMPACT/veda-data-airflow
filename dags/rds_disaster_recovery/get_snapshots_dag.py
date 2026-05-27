@@ -230,7 +230,10 @@ def trigger_s3_export_dag_task(**kwargs) -> dict:
     """
     ti = kwargs["ti"]
     conf = ti.dag_run.conf
-    var_json = Variable.get("aws_dags_variables", deserialize_json=True)
+    export_role_arn = Variable.get("S3_EXPORT_ROLE_ARN")
+    glue_role_arn = Variable.get("GLUE_ROLE_ARN")
+    bucket_name = Variable.get("SNAPSHOT_BUCKET_NAME")
+    kms_key_id = Variable.get("S3_EXPORT_KMS_KEY_ID")
     get_rds_snapshots_xcom = ti.xcom_pull("get_rds_snapshots")
     snapshots = get_rds_snapshots_xcom.get("existing_snapshots", [])
     for snapshot in snapshots:
@@ -243,11 +246,11 @@ def trigger_s3_export_dag_task(**kwargs) -> dict:
             ),
             "export_task_identifier": generate_hash(snapshot["db_snapshot_id"]),
             "snapshot_arn": snapshot["snapshot_arn"],
-            "export_role_arn": var_json["S3_EXPORT_ROLE_ARN"],
-            "glue_role_arn": var_json["GLUE_ROLE_ARN"],
-            "bucket_name": var_json["SNAPSHOT_BUCKET_NAME"],
+            "export_role_arn": export_role_arn,
+            "glue_role_arn": glue_role_arn,
+            "bucket_name": bucket_name,
             "s3_prefix": f"rds-snapshots/{snapshot['db_id']}",
-            "kms_key_id": var_json["S3_EXPORT_KMS_KEY_ID"],
+            "kms_key_id": kms_key_id,
             "paths_excluded": snapshot["paths_excluded"],
             "export_only": snapshot["export_only"].get(snapshot["db_id"], []),
             "delete_glue_database": conf.get("delete_catalog_db"),

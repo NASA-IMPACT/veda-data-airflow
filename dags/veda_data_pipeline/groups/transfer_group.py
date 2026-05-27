@@ -1,6 +1,5 @@
 from airflow.models.variable import Variable
 from airflow.operators.python import BranchPythonOperator, PythonOperator
-import json
 from airflow.utils.task_group import TaskGroup
 from airflow.utils.trigger_rule import TriggerRule
 from airflow.decorators import task
@@ -21,9 +20,7 @@ def cogify_choice(ti):
 def cogify_copy_task(ti):
     from veda_data_pipeline.utils.cogify_transfer.handler import cogify_transfer_handler
     config = ti.dag_run.conf
-    airflow_vars = Variable.get("aws_dags_variables")
-    airflow_vars_json = json.loads(airflow_vars)
-    external_role_arn = airflow_vars_json.get("ASSUME_ROLE_WRITE_ARN")
+    external_role_arn = Variable.get("ASSUME_ROLE_WRITE_ARN")
     return cogify_transfer_handler(event_src=config, external_role_arn=external_role_arn)
 
 @task
@@ -47,9 +44,7 @@ def transfer_data(ti=None, payload={}):
     from veda_data_pipeline.utils.transfer import (
         data_transfer_handler,
     )
-    airflow_vars = Variable.get("aws_dags_variables")
-    airflow_vars_json = json.loads(airflow_vars)
-    external_role_arn = airflow_vars_json.get("ASSUME_ROLE_WRITE_ARN")
+    external_role_arn = Variable.get("ASSUME_ROLE_WRITE_ARN")
     # (event, chunk_size=2800, role_arn=None, bucket_output=None):
     if payload == {}:
         payload = ti.dag_run.conf

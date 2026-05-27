@@ -24,6 +24,29 @@ module "rds_backups" {
   snapshot_bucket_name      = var.snapshot_bucket_name
 }
 
+locals {
+  airflow_dag_variables_map = merge(
+    {
+      EVENT_BUCKET                  = var.state_bucketname
+      STAC_INGESTOR_API_URL         = var.stac_ingestor_api_url
+      STAC_URL                      = var.stac_url
+      VECTOR_SECRET_NAME            = var.vector_secret_name
+      ASSUME_ROLE_READ_ARN          = var.assume_role_read_arn
+      ASSUME_ROLE_WRITE_ARN         = var.assume_role_write_arn
+      SM2A_BASE_URL                 = "https://${lower(var.subdomain)}.${var.domain_name}"
+      CLOUDFRONT_TO_INVALIDATE      = var.cloudfront_to_invalidate
+      CLOUDFRONT_PATH_TO_INVALIDATE = var.cloudfront_path_to_invalidate
+    },
+    var.snapshot_bucket_name != "" ? module.rds_backups[0].rds_backup_environment : {}
+  )
+
+  airflow_dag_variable_env_entries = [
+    for k, v in local.airflow_dag_variables_map : {
+      name  = "AIRFLOW_VAR_${k}"
+      value = try(tostring(v), jsonencode(v))
+    }
+  ]
+}
 
 module "sma-base" {
   source                         = "https://github.com/NASA-IMPACT/self-managed-apache-airflow/releases/download/v1.1.15/self-managed-apache-airflow.zip"
@@ -58,32 +81,35 @@ module "sma-base" {
   alb_access_logs_bucket         = var.alb_access_logs_bucket
   alb_access_logs_prefix         = var.alb_access_logs_prefix
 
-  extra_airflow_task_common_environment = [
-    {
-      name  = "AIRFLOW__CORE__DAGBAG_IMPORT_TIMEOUT"
-      value = "100"
-    },
-    {
-      name  = "AIRFLOW__CORE__DEFAULT_TASK_RETRIES"
-      value = var.workers_task_retries
-    },
-    {
-      name  = "KEYCLOAK_BASE_URL"
-      value = var.keycloak_base_url
-    },
-    {
-      name  = "KEYCLOAK_REALM"
-      value = var.keycloak_realm
-    },
-    {
-      name  = "KEYCLOAK_CLIENT_ID"
-      value = var.keycloak_client_id
-    },
-    {
-      name  = "KEYCLOAK_CLIENT_SECRET"
-      value = var.keycloak_client_secret
-    }
-  ]
+  extra_airflow_task_common_environment = concat(
+    [
+      {
+        name  = "AIRFLOW__CORE__DAGBAG_IMPORT_TIMEOUT"
+        value = "100"
+      },
+      {
+        name  = "AIRFLOW__CORE__DEFAULT_TASK_RETRIES"
+        value = var.workers_task_retries
+      },
+      {
+        name  = "KEYCLOAK_BASE_URL"
+        value = var.keycloak_base_url
+      },
+      {
+        name  = "KEYCLOAK_REALM"
+        value = var.keycloak_realm
+      },
+      {
+        name  = "KEYCLOAK_CLIENT_ID"
+        value = var.keycloak_client_id
+      },
+      {
+        name  = "KEYCLOAK_CLIENT_SECRET"
+        value = var.keycloak_client_secret
+      }
+    ],
+    local.airflow_dag_variable_env_entries
+  )
   extra_airflow_configuration = {
     keycloak_base_url      = var.keycloak_base_url
     keycloak_realm         = var.keycloak_realm
@@ -97,21 +123,12 @@ module "sma-base" {
   customdomain = var.customdomain
   worker_cmd   = ["airflow", "celery", "worker"]
 
-  # add custom env, with conditional rds backup env vars
-  airflow_custom_variables = merge({
-    EVENT_BUCKET                   = var.state_bucketname,
-    COGNITO_APP_SECRET             = var.workflows_client_secret,
-    STAC_INGESTOR_API_URL          = var.stac_ingestor_api_url,
-    STAC_URL                       = var.stac_url,
-    VECTOR_SECRET_NAME             = var.vector_secret_name,
-    ASSUME_ROLE_READ_ARN           = var.assume_role_read_arn,
-    ASSUME_ROLE_WRITE_ARN          = var.assume_role_write_arn,
-    SM2A_BASE_URL                  = "https://${lower(var.subdomain)}.${var.domain_name}",
-    CLOUDFRONT_TO_INVALIDATE       = var.cloudfront_to_invalidate,
-    CLOUDFRONT_PATH_TO_INVALIDATE  = var.cloudfront_path_to_invalidate,
+  # Sensitive values - stored in Secrets Manager JSON blob, accessed via Variable.get("aws_dags_variables", deserialize_json=True)
+  airflow_dag_secrets = {
     INGEST_API_KEYCLOAK_APP_SECRET = var.ingest_api_keycloak_client_secret
-    }, var.snapshot_bucket_name != "" ? module.rds_backups[0].rds_backup_environment : {}
-  )
+  }
+
+  airflow_dag_variables = {}
 }
 
 resource "aws_vpc_security_group_ingress_rule" "vector_rds_ingress" {

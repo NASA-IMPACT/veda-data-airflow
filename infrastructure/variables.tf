@@ -169,9 +169,6 @@ variable "project_name" {
 }
 
 
-variable "workflows_client_secret" {
-  sensitive = true
-}
 variable "stac_ingestor_api_url" {
 }
 
@@ -188,10 +185,6 @@ variable "vector_security_group" {
   default = "null"
 }
 
-variable "sm2a_secret_manager_name" {
-  type    = string
-  default = "null"
-}
 
 variable "workers_cpu" {
   default = 2048
@@ -230,20 +223,8 @@ variable "assume_role_write_arn" {
   default = ""
 }
 
-variable "gh_dag_launcher_team_id" {
-  default = "VEDA-DAG-Launcher"
-}
 
 variable "snapshot_bucket_name" {
-  default = ""
-}
-variable "snapshot_export_role" {
-  default = ""
-}
-variable "glue_role_arn" {
-  default = ""
-}
-variable "s3_export_kms_key_id" {
   default = ""
 }
 
@@ -253,9 +234,6 @@ variable "cloudfront_to_invalidate" {
 variable "cloudfront_path_to_invalidate" {
   default = null
 
-}
-variable "lambda_dag_trigger_function_name" {
-  default = "trigger-sm2a-dag"
 }
 
 variable "ingest_api_keycloak_client_secret" {

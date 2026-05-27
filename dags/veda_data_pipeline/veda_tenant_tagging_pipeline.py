@@ -146,8 +146,7 @@ def fetch_existing_collection(collection_id: str):
     try:
         logger.info(f"Fetching collection: {collection_id}")
 
-        airflow_vars_json = Variable.get("aws_dags_variables", deserialize_json=True)
-        stac_url = airflow_vars_json.get("STAC_URL")
+        stac_url = Variable.get("STAC_URL")
 
         if not stac_url:
             error_msg = "STAC_URL not found in Airflow variables"
@@ -267,9 +266,8 @@ def ingest_all_collections(collections=None):
     results = []
     total = len(collections)
 
-    airflow_vars_json = Variable.get("aws_dags_variables", deserialize_json=True)
-    app_secret = airflow_vars_json.get("INGEST_API_KEYCLOAK_APP_SECRET")
-    stac_ingestor_api_url = airflow_vars_json.get("STAC_INGESTOR_API_URL")
+    app_secret = Variable.get("aws_dags_variables", deserialize_json=True).get("INGEST_API_KEYCLOAK_APP_SECRET")
+    stac_ingestor_api_url = Variable.get("STAC_INGESTOR_API_URL")
 
     if not app_secret or not stac_ingestor_api_url:
         error_msg = "INGEST_API_KEYCLOAK_APP_SECRET or STAC_INGESTOR_API_URL not found in Airflow variables"

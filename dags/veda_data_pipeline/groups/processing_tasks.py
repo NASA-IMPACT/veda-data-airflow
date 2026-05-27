@@ -39,10 +39,8 @@ def submit_to_stac_ingestor_task(built_stac: dict):
     event = built_stac.copy()
     success_file = event["payload"]["success_event_key"]
 
-    airflow_vars = Variable.get("aws_dags_variables")
-    airflow_vars_json = json.loads(airflow_vars)
-    app_secret = airflow_vars_json.get("INGEST_API_KEYCLOAK_APP_SECRET")
-    stac_ingestor_api_url = airflow_vars_json.get("STAC_INGESTOR_API_URL")
+    app_secret = Variable.get("aws_dags_variables", deserialize_json=True).get("INGEST_API_KEYCLOAK_APP_SECRET")
+    stac_ingestor_api_url = Variable.get("STAC_INGESTOR_API_URL")
     try:
         success_file = event["payload"]["success_event_key"]
         with smart_open.open(success_file, "r") as _file:
@@ -63,10 +61,8 @@ def submit_to_stac_ingestor_task(built_stac: dict):
 @task(retries=2, retry_delay=60, retry_exponential_backoff=True, max_active_tis_per_dag=5)
 def submit_to_stac_ingestor_task_direct(stac_items: dict):
     # to submit items without a success file
-    airflow_vars = Variable.get("aws_dags_variables")
-    airflow_vars_json = json.loads(airflow_vars)
-    app_secret = airflow_vars_json.get("INGEST_API_KEYCLOAK_APP_SECRET")
-    stac_ingestor_api_url = airflow_vars_json.get("STAC_INGESTOR_API_URL")
+    app_secret = Variable.get("aws_dags_variables", deserialize_json=True).get("INGEST_API_KEYCLOAK_APP_SECRET")
+    stac_ingestor_api_url = Variable.get("STAC_INGESTOR_API_URL")
 
     submission_handler(
         event=stac_items,
@@ -80,8 +76,7 @@ def submit_to_stac_ingestor_task_direct(stac_items: dict):
 @task(max_active_tis_per_dag=5)
 def build_stac_task(payload, ti=None):
     from veda_data_pipeline.utils.build_stac.handler import stac_handler
-    airflow_vars_json = Variable.get("aws_dags_variables", deserialize_json=True)
-    event_bucket = airflow_vars_json.get("EVENT_BUCKET")
+    event_bucket = Variable.get("EVENT_BUCKET")
     return stac_handler(payload_src=payload, bucket_output=event_bucket, ti=ti)
 
 @task(
@@ -103,7 +98,7 @@ def post_ingest_dataset_event(ti, logical_date, built_items = {}):  # params are
         Yields a Metadata object that Airflow uses to register the Dataset event.
     """
     payload = ti.dag_run.conf
-    event_bucket_name = Variable.get("aws_dags_variables", deserialize_json=True).get("EVENT_BUCKET")
+    event_bucket_name = Variable.get("EVENT_BUCKET")
     collection = payload.get("collection", None)
     if not collection:
         raise ValueError("Collection ID is required in the payload to create a report.")

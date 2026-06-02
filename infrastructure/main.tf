@@ -92,6 +92,13 @@ module "sma-base" {
         value = var.workers_task_retries
       },
       {
+        # Limit api-server uvicorn workers (default 4) to avoid OOM on the
+        # 2GB api-server task. Only the api-server reads [api] workers; other
+        # tasks share this common env but ignore it.
+        name  = "AIRFLOW__API__WORKERS"
+        value = "2"
+      },
+      {
         name  = "KEYCLOAK_BASE_URL"
         value = var.keycloak_base_url
       },

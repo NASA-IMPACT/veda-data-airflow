@@ -6,6 +6,7 @@ cryptography
 pycurl
 psycopg2-binary
 apache-airflow-providers-celery
+apache-airflow-providers-fab
 airflow_multi_dagrun
 apache-airflow-providers-postgres
 apache-airflow-providers-slack

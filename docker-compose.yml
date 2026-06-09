@@ -38,7 +38,7 @@ x-airflow-common:
 
 x-airflow-worker:
   &airflow-worker
-  platform: linux/arm64
+  platform: linux/amd64
   env_file:
     - ./sm2a-local-config/.env
   build:
@@ -85,7 +85,7 @@ services:
 
   airflow-webserver:
     <<: *airflow-common
-    command: webserver
+    command: api-server
     ports:
       - 8080:8080
     healthcheck:

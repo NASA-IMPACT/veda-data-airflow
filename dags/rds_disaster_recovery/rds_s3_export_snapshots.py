@@ -2,15 +2,16 @@ from datetime import timedelta
 from slack_notifications import slack_fail_alert
 
 import boto3
+import pendulum
+
 from airflow import DAG
 from airflow.exceptions import AirflowException
 from airflow.models.param import Param
-from airflow.operators.empty import EmptyOperator
-from airflow.operators.python import PythonOperator
+from airflow.providers.standard.operators.empty import EmptyOperator
+from airflow.providers.standard.operators.python import PythonOperator
 from airflow.providers.amazon.aws.operators.glue_crawler import GlueCrawlerOperator
 from airflow.providers.amazon.aws.operators.rds import RdsStartExportTaskOperator
 from airflow.providers.amazon.aws.sensors.rds import RdsExportTaskExistenceSensor
-from airflow.utils.dates import days_ago
 from botocore.exceptions import BotoCoreError, ClientError
 
 # Define default arguments
@@ -96,7 +97,7 @@ with DAG(
     default_args=default_args,
     tags=["RDS", "Operations", "Disaster Recovery", "Long Term"],
     schedule=None,
-    start_date=days_ago(1),
+    start_date=pendulum.today("UTC").add(days=-1),
     max_active_runs=4,  # Only 5 parallel exports are allowed
     catchup=False,
     params=default_params,

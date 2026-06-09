@@ -1,5 +1,7 @@
 import hashlib
 import json
+import pendulum
+
 from datetime import datetime, timedelta, timezone
 from typing import Dict, List, Optional
 
@@ -8,9 +10,8 @@ from airflow import DAG
 from airflow.exceptions import AirflowException
 from airflow.models import Variable
 from airflow.models.param import Param
-from airflow.operators.empty import EmptyOperator
-from airflow.operators.python import PythonOperator
-from airflow.utils.dates import days_ago
+from airflow.providers.standard.operators.empty import EmptyOperator
+from airflow.providers.standard.operators.python import PythonOperator
 from airflow_multi_dagrun.operators import TriggerMultiDagRunOperator
 from botocore.exceptions import BotoCoreError, ClientError
 from slack_notifications import slack_fail_alert
@@ -44,8 +45,8 @@ def notify_missing_snapshots_task(ti):
 doc_get_snapshots_dag_md_DAG = """
 ### RDS Snapshot Retrieval and Export
 #### Overview
-This DAG retrieves the most recent automated snapshots for specified Amazon RDS databases, including both instances and 
-clusters. For each snapshot found, the DAG prepares necessary metadata and configuration for exporting the snapshot to 
+This DAG retrieves the most recent automated snapshots for specified Amazon RDS databases, including both instances and
+clusters. For each snapshot found, the DAG prepares necessary metadata and configuration for exporting the snapshot to
 an S3 bucket. This process supports disaster recovery and backup requirements.
 
 #### Workflow
@@ -65,7 +66,7 @@ an S3 bucket. This process supports disaster recovery and backup requirements.
  "paths_excluded": ["**/_SUCCESS"], "export_only": ["database.schema.table"]}
 ```
 
-This DAG is intended to be used as part of a disaster recovery strategy to ensure regular backups of key RDS 
+This DAG is intended to be used as part of a disaster recovery strategy to ensure regular backups of key RDS
 databases are available in S3."""
 
 dag_params = {
@@ -258,7 +259,8 @@ def trigger_s3_export_dag_task(**kwargs) -> dict:
 
 
 # Define default arguments
-default_args = {"retries": 0, "start_date": days_ago(1), "catchup": False}
+default_args = {"retries": 0, "start_date": pendulum.today("UTC").add(days=-1), "catchup": False}
+
 
 
 def delete_glue_database_task(ti):

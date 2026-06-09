@@ -2,7 +2,7 @@
 import pendulum
 from airflow.models.param import Param
 from airflow import DAG
-from airflow.operators.empty import EmptyOperator
+from airflow.providers.standard.operators.empty import EmptyOperator
 from airflow.utils.trigger_rule import TriggerRule
 from airflow.operators.python import PythonVirtualenvOperator
 from veda_data_pipeline.groups.collection_group import ingest_collection_task
@@ -21,7 +21,7 @@ This DAG is supposed to be triggered by `veda_discover`. But you still can trigg
     "title": "NRT LIS Alaska Green Vegetation Fraction",
     "stac_version": "1.0.0",
     "description": "Insert description here",
-    "license": "CC1.0 Universal", 
+    "license": "CC1.0 Universal",
     "dashboard:is_periodic": true,
     "dashboard:time_density": "day",
     "temporal": {"interval": [["2025-01-12T00:00:00+00:00", "2025-01-12T23:59:59+00:00"]]}
@@ -72,7 +72,7 @@ def read_url_pyarc2stac_callable(event: dict, template_conf: dict) -> dict:
     -------
     dict
         A STAC collection dictionary with merged and sanitized configuration.
-    
+
     Raises
     ------
     ValueError
@@ -95,22 +95,22 @@ def read_url_pyarc2stac_callable(event: dict, template_conf: dict) -> dict:
     # Filter out None and empty string values from configs
     filtered_template = {k: v for k, v in template_conf.items() if v not in (None, "")}
     filtered_event = {k: v for k, v in event.items() if v not in (None, "")}
-    
+
     # Merge with precedence: template_conf > event > pyarc2stac defaults
     # Start with collection (pyarc2stac defaults), update with event, then template
     merged = collection.copy()
-    
+
     # Handle temporal extent separately if it exists in configs.
     # This is useful for items with no temporal extent in the initial pyarc2stac item creation
     if "temporal" in filtered_event:
         merged["extent"]["temporal"] = filtered_event["temporal"]
     if "temporal" in filtered_template:
         merged["extent"]["temporal"] = filtered_template["temporal"]
-    
+
     # Update with event and template configs
     merged.update(filtered_event)
     merged.update(filtered_template)
-    merged.pop("dashboard:is_timeless", None) #we do not want dashboard:is_timeless. Temporal extent should be specified.         
+    merged.pop("dashboard:is_timeless", None) #we do not want dashboard:is_timeless. Temporal extent should be specified.
 
     return merged
 

@@ -3,7 +3,7 @@ from __future__ import annotations
 from airflow import DAG
 from airflow.decorators import task
 from airflow.models.param import Param
-from airflow.operators.empty import EmptyOperator
+from airflow.providers.standard.operators.empty import EmptyOperator
 from slack_notifications import slack_fail_alert
 from airflow.models.variable import Variable
 from veda_data_pipeline.utils.xcom_to_s3 import write_xcom_to_s3,read_xcom_from_s3

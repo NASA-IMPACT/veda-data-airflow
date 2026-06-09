@@ -12,7 +12,7 @@ from airflow.models import Variable
 from airflow.models.param import Param
 from airflow.providers.standard.operators.empty import EmptyOperator
 from airflow.providers.standard.operators.python import PythonOperator
-from airflow_multi_dagrun.operators import TriggerMultiDagRunOperator
+from airflow.api.common.trigger_dag import trigger_dag
 from botocore.exceptions import BotoCoreError, ClientError
 from slack_notifications import slack_fail_alert
 
@@ -222,12 +222,11 @@ def get_snapshots_task(ti):
     return {"existing_snapshots": snapshots, "missing_snapshots": missing_snapshots}
 
 
-def trigger_s3_export_dag_task(**kwargs) -> dict:
+def trigger_s3_export_dag_task(**kwargs) -> list:
     """
     Retrieves RDS snapshots information for clusters and instances as configured.
 
-    Returns:
-        dict: Snapshot configuration with relevant metadata and AWS resource identifiers.
+    Returns: list of triggered child DAG run IDs
     """
     ti = kwargs["ti"]
     conf = ti.dag_run.conf
@@ -237,8 +236,10 @@ def trigger_s3_export_dag_task(**kwargs) -> dict:
     kms_key_id = Variable.get("S3_EXPORT_KMS_KEY_ID")
     get_rds_snapshots_xcom = ti.xcom_pull("get_rds_snapshots")
     snapshots = get_rds_snapshots_xcom.get("existing_snapshots", [])
+    triggered = []
+
     for snapshot in snapshots:
-        yield {
+        run_conf = {
             "run_id": f"{ti.dag_run.run_id}-{snapshot['db_id']}",
             "db_id": (
                 conf.get("catalog_db_name")
@@ -256,6 +257,14 @@ def trigger_s3_export_dag_task(**kwargs) -> dict:
             "export_only": snapshot["export_only"].get(snapshot["db_id"], []),
             "delete_glue_database": conf.get("delete_catalog_db"),
         }
+
+        dag_run = trigger_dag(
+            dag_id="rds_s3_export_snapshots",
+            run_id=run_conf["run_id"],
+            conf=run_conf,
+        )
+        triggered.append(dag_run.run_id)
+    return triggered
 
 
 # Define default arguments
@@ -314,11 +323,15 @@ with DAG(
         task_id="get_rds_snapshots", python_callable=get_snapshots_task
     )
 
-    rds_snapshots_dag_run = TriggerMultiDagRunOperator(
-        task_id="trigger_multi_s3_export_dag",
-        dag=dag,
-        trigger_dag_id="rds_s3_export_snapshots",
-        python_callable=trigger_s3_export_dag_task,
+    # rds_snapshots_dag_run = TriggerMultiDagRunOperator(
+    #     task_id="trigger_multi_s3_export_dag",
+    #     dag=dag,
+    #     trigger_dag_id="rds_s3_export_snapshots",
+    #     python_callable=trigger_s3_export_dag_task,
+    # )
+    trigger_s3_export_dags = PythonOperator(
+      task_id="trigger_multi_s3_export_dag",
+      python_callable=trigger_s3_export_dag_task,
     )
 
     # Task to eagerly delete Glue database
@@ -336,7 +349,7 @@ with DAG(
         start
         >> get_rds_snapshots
         >> eager_delete_glue_database
-        >> rds_snapshots_dag_run
+        >> trigger_s3_export_dags
         >> notify_missing_snapshots
         >> end
     )

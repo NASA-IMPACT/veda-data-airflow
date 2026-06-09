@@ -12,7 +12,6 @@ netCDF4
 requests
 rio-cogeo
 smart-open
-airflow_multi_dagrun
 apache-airflow-providers-postgres
 apache-airflow-providers-common-sql
 apache-airflow-providers-http

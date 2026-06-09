@@ -21,6 +21,7 @@ x-airflow-common:
     AIRFLOW__LOGGING__LOGGING_LEVEL: DEBUG
     # Gotcha: Even though we set this to "True" in airflow.cfg, an environment variable overrides it
     AIRFLOW__CORE__LOAD_EXAMPLES: false
+    AIRFLOW__SCHEDULER__STANDALONE_DAG_PROCESSOR: "true"
   volumes:
     - ./dags:/opt/airflow/dags
     - ./plugins:/opt/airflow/plugins
@@ -103,6 +104,22 @@ services:
     depends_on:
       <<: *airflow-common-depends-on
 
+  airflow-dag-processor:
+    <<: *airflow-common
+    command: dag-processor
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          'airflow jobs check --job-type DagProcessorJob --hostname "$${HOSTNAME}"'
+        ]
+      interval: 35s
+      timeout: 30s
+      retries: 5
+    restart: always
+    depends_on:
+      <<: *airflow-common-depends-on
+
   airflow-scheduler:
     <<: *airflow-common
     command: scheduler
@@ -118,7 +135,8 @@ services:
     restart: always
     depends_on:
       <<: *airflow-common-depends-on
-
+      airflow-dag-processor:
+        condition: service_healthy
 
   airflow-worker:
     <<: *airflow-worker

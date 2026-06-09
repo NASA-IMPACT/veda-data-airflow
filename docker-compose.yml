@@ -1,7 +1,7 @@
 ---
 x-airflow-common:
   &airflow-common
-  platform: linux/arm64
+  platform: linux/amd64
   build:
     context: .
     dockerfile: ./airflow_services/Dockerfile
@@ -51,7 +51,7 @@ x-airflow-worker:
     - ./plugins:/opt/airflow/plugins
     - ./sm2a-local-config/local_airflow.cfg:/opt/airflow/airflow.cfg
     - ./infrastructure/configuration:/opt/airflow/configuration
-    - ./scripts:/opt/airflow/scripts 
+    - ./scripts:/opt/airflow/scripts
   user: "50000:0"
   depends_on:
     <<: *airflow-common-depends-on
@@ -178,4 +178,4 @@ services:
 
 volumes:
   airflow-db-volume:
-  
+

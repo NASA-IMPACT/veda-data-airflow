@@ -11,6 +11,8 @@ apache-airflow-providers-postgres
 apache-airflow-providers-slack
 apache-airflow-providers-slack[http]
 apache-airflow[github_enterprise]
+# Explicit: FabAuthManager is our auth manager (Airflow 3 no longer installs FAB by default)
+apache-airflow-providers-fab
 affine
 netCDF4
 requests

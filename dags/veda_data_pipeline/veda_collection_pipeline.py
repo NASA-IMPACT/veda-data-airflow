@@ -5,7 +5,7 @@ from airflow.utils.trigger_rule import TriggerRule
 from veda_data_pipeline.groups.collection_group import collection_task_group
 from slack_notifications import slack_fail_alert
 
-"""
+IMPORTANT = """
 This is a change to show the new versioned DAG feature. This comment is only on the new version!
 """
 

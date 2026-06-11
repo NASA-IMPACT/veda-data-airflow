@@ -2,7 +2,7 @@ import requests
 import datetime
 from dataclasses import dataclass
 from typing import Optional
-from airflow.operators.empty import EmptyOperator
+from airflow.providers.standard.operators.empty import EmptyOperator
 from airflow.decorators import dag, task, task_group
 from veda_data_pipeline.groups.collection_group import ingest_collection_task
 from veda_data_pipeline.utils.validate import validate_collection

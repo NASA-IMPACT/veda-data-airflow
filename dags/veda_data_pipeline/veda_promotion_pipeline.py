@@ -1,7 +1,7 @@
 import pendulum
 from airflow import DAG
 from airflow.decorators import task
-from airflow.operators.empty import EmptyOperator
+from airflow.providers.standard.operators.empty import EmptyOperator
 from airflow.models.param import Param
 from veda_data_pipeline.groups.collection_group import collection_task_group
 from veda_data_pipeline.groups.discover_group import discover_from_s3_task, get_dataset_files_to_process

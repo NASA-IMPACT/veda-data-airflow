@@ -1,7 +1,7 @@
 ---
 x-airflow-common:
   &airflow-common
-  platform: linux/arm64
+  platform: linux/amd64
   build:
     context: .
     dockerfile: ./airflow_services/Dockerfile
@@ -21,6 +21,7 @@ x-airflow-common:
     AIRFLOW__LOGGING__LOGGING_LEVEL: DEBUG
     # Gotcha: Even though we set this to "True" in airflow.cfg, an environment variable overrides it
     AIRFLOW__CORE__LOAD_EXAMPLES: false
+    AIRFLOW__SCHEDULER__STANDALONE_DAG_PROCESSOR: "true"
   volumes:
     - ./dags:/opt/airflow/dags
     - ./plugins:/opt/airflow/plugins
@@ -38,7 +39,7 @@ x-airflow-common:
 
 x-airflow-worker:
   &airflow-worker
-  platform: linux/arm64
+  platform: linux/amd64
   env_file:
     - ./sm2a-local-config/.env
   build:
@@ -51,7 +52,7 @@ x-airflow-worker:
     - ./plugins:/opt/airflow/plugins
     - ./sm2a-local-config/local_airflow.cfg:/opt/airflow/airflow.cfg
     - ./infrastructure/configuration:/opt/airflow/configuration
-    - ./scripts:/opt/airflow/scripts 
+    - ./scripts:/opt/airflow/scripts
   user: "50000:0"
   depends_on:
     <<: *airflow-common-depends-on
@@ -85,7 +86,7 @@ services:
 
   airflow-webserver:
     <<: *airflow-common
-    command: webserver
+    command: api-server
     ports:
       - 8080:8080
     healthcheck:
@@ -95,6 +96,22 @@ services:
           "curl",
           "--fail",
           "http://localhost:8080/health"
+        ]
+      interval: 35s
+      timeout: 30s
+      retries: 5
+    restart: always
+    depends_on:
+      <<: *airflow-common-depends-on
+
+  airflow-dag-processor:
+    <<: *airflow-common
+    command: dag-processor
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          'airflow jobs check --job-type DagProcessorJob --hostname "$${HOSTNAME}"'
         ]
       interval: 35s
       timeout: 30s
@@ -118,7 +135,8 @@ services:
     restart: always
     depends_on:
       <<: *airflow-common-depends-on
-
+      airflow-dag-processor:
+        condition: service_healthy
 
   airflow-worker:
     <<: *airflow-worker
@@ -178,4 +196,4 @@ services:
 
 volumes:
   airflow-db-volume:
-  
+

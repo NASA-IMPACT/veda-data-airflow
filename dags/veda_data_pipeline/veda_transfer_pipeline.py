@@ -1,6 +1,6 @@
 import pendulum
 from airflow import DAG
-from airflow.operators.empty import EmptyOperator
+from airflow.providers.standard.operators.empty import EmptyOperator
 from airflow.models.param import Param
 from airflow.utils.trigger_rule import TriggerRule
 from veda_data_pipeline.groups.transfer_group import subdag_transfer

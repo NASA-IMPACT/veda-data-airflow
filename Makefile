@@ -40,7 +40,7 @@ sm2a-local-run: sm2a-local-stop
 	@echo "To use local SM2A with AWS update ${SM2A_FOLDER}/sm2a-local-config/.env AWS credentials"
 
 sm2a-local-init:
-	docker compose run --rm airflow-cli db init
+	docker compose run --rm airflow-cli db migrate
 	docker compose run --rm airflow-cli users create --email airflow@example.com --firstname airflow --lastname airflow --password airflow --username airflow --role Admin
 
 sm2a-local-stop:

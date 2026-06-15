@@ -49,7 +49,7 @@ locals {
 }
 
 module "sma-base" {
-  source                         = "https://github.com/NASA-IMPACT/self-managed-apache-airflow/releases/download/v1.2.0-rc3/self-managed-apache-airflow.zip"
+  source                         = "https://github.com/NASA-IMPACT/self-managed-apache-airflow/releases/download/v1.2.0-rc4/self-managed-apache-airflow.zip"
   project                        = var.project_name
   airflow_db                     = var.airflow_db
   fernet_key                     = var.fernet_key

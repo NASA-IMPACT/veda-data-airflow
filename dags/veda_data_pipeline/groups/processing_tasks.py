@@ -16,13 +16,13 @@ def log_task(text: str):
     logging.info(text)
 
 @task
-def extract_discovery_items_from_payload(ti, payload=None, **kwargs):
-    discovery_items = ti.dag_run.conf.get("discovery_items") if not payload else payload.get("discovery_items")
+def extract_discovery_items_from_payload(payload=None, dag_run=None, **kwargs):
+    discovery_items = dag_run.conf.get("discovery_items") if not payload else payload.get("discovery_items")
     return discovery_items
 
 @task
-def remove_thumbnail_asset(ti):
-    payload = deepcopy(ti.dag_run.conf)
+def remove_thumbnail_asset(dag_run=None):
+    payload = deepcopy(dag_run.conf)
     assets = payload.get("assets", {})
     if assets.get("thumbnail"):
         assets.pop("thumbnail")
@@ -84,20 +84,20 @@ def build_stac_task(payload, ti=None):
             DatasetAlias("VEDA-Datasets")
         ],
 )
-def post_ingest_dataset_event(ti, logical_date, built_items = {}):  # params are Airflow kwargs - use this task without input
+def post_ingest_dataset_event(logical_date, built_items = {}, dag_run=None):  # params are Airflow kwargs - use this task without input
     """
     Logs a Dataset event, saving the config used as a versioned object in s3, and creating a Metadata object visible in Airflow.
-    
+
     Datasets are per-collection, with an alias of "VEDA-Datasets" for additional DAG triggers.
 
     Args:
         (Automatically populated by airflow when invoked)
-        ti: Airflow TaskInstance, used to access the DAG run configuration.
+        dag_run: Airflow DagRun, used to access the DAG run configuration.
         logical_date: The logical date of the DAG run, used for versioning.
     Returns:
         Yields a Metadata object that Airflow uses to register the Dataset event.
     """
-    payload = ti.dag_run.conf
+    payload = dag_run.conf
     event_bucket_name = Variable.get("EVENT_BUCKET")
     collection = payload.get("collection", None)
     if not collection:

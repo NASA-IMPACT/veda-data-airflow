@@ -47,8 +47,8 @@ def ingest_collection_task(ti=None, collection=None):
 
 
 # NOTE unused, but useful for item ingests, since collections are a dependency for items
-def check_collection_exists_task(ti=None):
-    config = ti.dag_run.conf
+def check_collection_exists_task(dag_run=None):
+    config = dag_run.conf
     stac_url = Variable.get("STAC_URL")
     return check_collection_exists(
         endpoint=stac_url,
@@ -57,8 +57,8 @@ def check_collection_exists_task(ti=None):
 
 
 @task()
-def generate_collection_task(ti=None):
-    config = ti.dag_run.conf
+def generate_collection_task(dag_run=None):
+    config = dag_run.conf
 
     # If a STAC Collection is provided, we don't need to generate generate a collection from the dataset config.
     # We assume the collection being passed is a valid STAC Collection and the config is validated upstream (i.e. Ingest UI)

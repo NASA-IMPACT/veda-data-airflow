@@ -1,7 +1,8 @@
 def slack_alert(context, circle, status):
     slack_conn_id = "slack_connection_id"
     ti = context.get("task_instance")
-    pocs = ti.dag_run.conf.get("pocs", [])
+    dag_run = context.get("dag_run")
+    pocs = (dag_run.conf or {}).get("pocs", []) if dag_run else []
     slack_msg = """
             :{circle}: Task {status}. 
             *Task*: {task}

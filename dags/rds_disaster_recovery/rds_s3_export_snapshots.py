@@ -32,12 +32,12 @@ default_params = {
 }
 
 
-def generate_crawl_config(ti):
+def generate_crawl_config(dag_run=None):
     """
     This task is created in case we need
     to perform any business logic on the configuration before submitting the configuration to AWS Crawler.
     """
-    config = ti.dag_run.conf
+    config = dag_run.conf
     s3_path = f"{config['bucket_name']}/{config['s3_prefix']}/{config['export_task_identifier']}"
     return {
         "Name": config["export_task_identifier"],
@@ -49,9 +49,9 @@ def generate_crawl_config(ti):
     }
 
 
-def delete_glue_database_task(ti):
+def delete_glue_database_task(dag_run=None):
     client = boto3.client("glue")
-    conf = ti.dag_run.conf
+    conf = dag_run.conf
     database_id = conf.get("db_id")
     # If the user didn't want to delete Glue database
     # Default to True
@@ -84,8 +84,8 @@ def delete_glue_database_task(ti):
         raise AirflowException(f"Unexpected error: {e}")
 
 
-def get_export_only_list_task(ti):
-    conf = ti.dag_run.conf
+def get_export_only_list_task(dag_run=None):
+    conf = dag_run.conf
     export_only = conf["export_only"]
     export_only = export_only if export_only != ["null"] else []
     return export_only

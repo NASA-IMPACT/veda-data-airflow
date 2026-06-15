@@ -70,17 +70,17 @@ template_dag_run_conf = {
 }
 
 @task(max_active_tis_per_dag=3)
-def transfer_assets_to_production_bucket(ti=None, payload={}):
+def transfer_assets_to_production_bucket(dag_run=None, payload={}):
     # merge collection id into payload, then transfer data
-    payload["collection"] = ti.dag_run.conf.get("collection")
-    transfer = payload.get("transfer", ti.dag_run.conf.get("transfer", True))
+    payload["collection"] = dag_run.conf.get("collection")
+    transfer = payload.get("transfer", dag_run.conf.get("transfer", True))
 
     config = {
         **payload,
-        "origin_bucket": payload.get("bucket", ti.dag_run.conf.get("origin_bucket", "veda-data-store")),
-        "origin_prefix": payload.get("prefix", ti.dag_run.conf.get("origin_prefix", "s3-prefix/")),
-        "target_bucket": payload.get("target_bucket", ti.dag_run.conf.get("target_bucket", "veda-data-store")),
-        "dry_run": payload.get("dry_run", ti.dag_run.conf.get("dry_run", False)),
+        "origin_bucket": payload.get("bucket", dag_run.conf.get("origin_bucket", "veda-data-store")),
+        "origin_prefix": payload.get("prefix", dag_run.conf.get("origin_prefix", "s3-prefix/")),
+        "target_bucket": payload.get("target_bucket", dag_run.conf.get("target_bucket", "veda-data-store")),
+        "dry_run": payload.get("dry_run", dag_run.conf.get("dry_run", False)),
     }
 
     if not transfer:

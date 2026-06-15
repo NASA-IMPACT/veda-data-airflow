@@ -154,14 +154,14 @@ def get_snapshots(
     return {"existing_snapshots": snapshots, "missing_snapshots": missing_snapshots}
 
 
-def get_snapshots_task(ti):
+def get_snapshots_task(ti=None, dag_run=None):
     """
     Retrieves RDS snapshots information for clusters and instances as configured.
 
     Returns:
         dict: Snapshot configuration with relevant metadata and AWS resource identifiers.
     """
-    config = ti.dag_run.conf
+    config = dag_run.conf
 
     try:
         rds_client = boto3.client("rds")
@@ -169,8 +169,9 @@ def get_snapshots_task(ti):
         ti.log.error("Error creating RDS client: %s", e)
         return {"existing_snapshots": [], "missing_snapshots": []}
 
-    # Retrieve database names depending on how the DAG was triggered
-    if ti.dag_run.external_trigger:
+    # Retrieve database names depending on how the DAG was triggered.
+    # Airflow 3 removed DagRun.external_trigger; a manual/API trigger is run_type "manual".
+    if dag_run.run_type == "manual":
         snapshots_age_in_hours = int(config.get("snapshots_age_in_hours", 24))
         cluster_databases = config.get("cluster_databases", [])
         instance_databases = config.get("instance_databases", [])
@@ -229,7 +230,8 @@ def trigger_s3_export_dag_task(**kwargs) -> list:
     Returns: list of triggered child DAG run IDs
     """
     ti = kwargs["ti"]
-    conf = ti.dag_run.conf
+    triggering_run = kwargs["dag_run"]
+    conf = triggering_run.conf
     export_role_arn = Variable.get("S3_EXPORT_ROLE_ARN")
     glue_role_arn = Variable.get("GLUE_ROLE_ARN")
     bucket_name = Variable.get("SNAPSHOT_BUCKET_NAME")
@@ -240,7 +242,7 @@ def trigger_s3_export_dag_task(**kwargs) -> list:
 
     for snapshot in snapshots:
         run_conf = {
-            "run_id": f"{ti.dag_run.run_id}-{snapshot['db_id']}",
+            "run_id": f"{triggering_run.run_id}-{snapshot['db_id']}",
             "db_id": (
                 conf.get("catalog_db_name")
                 if conf.get("catalog_db_name") != "null"
@@ -272,9 +274,9 @@ default_args = {"retries": 0, "start_date": pendulum.today("UTC").add(days=-1), 
 
 
 
-def delete_glue_database_task(ti):
+def delete_glue_database_task(dag_run=None):
     client = boto3.client("glue")
-    conf = ti.dag_run.conf
+    conf = dag_run.conf
     database_id = conf.get("catalog_db_name")
     # If the user didn't want to delete Glue database
     # Default to True

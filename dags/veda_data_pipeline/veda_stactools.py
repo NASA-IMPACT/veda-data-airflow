@@ -42,9 +42,9 @@ template_dag_run_conf = {
 }
 
 @task
-def upsert_stactools_collection(ti=None):
+def upsert_stactools_collection(dag_run=None):
     body = {
-        **ti.dag_run.conf,
+        **dag_run.conf,
     }
     stactools_package_name = body.get("stactools_package_name")
     stactools = import_module(f".{stactools_package_name}.stac", "stactools")
@@ -63,9 +63,9 @@ def upsert_stactools_collection(ti=None):
     return coll_dict
 
 @task
-def build_items_from_granules(ti=None) -> List[str]:
+def build_items_from_granules(dag_run=None) -> List[str]:
     body = {
-        **ti.dag_run.conf,
+        **dag_run.conf,
     }
     use_fsspec()
 

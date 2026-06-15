@@ -77,12 +77,12 @@ with DAG(
 
 
     @task
-    def check_function_exists(ti):
+    def check_function_exists(dag_run=None):
         from dags.automated_transformation.transformation_pipeline import (
             check_file_exists,
         )
 
-        config = ti.dag_run.conf
+        config = dag_run.conf
         folder_name = "data_transformation_plugins"
         file_name = f'{config.get("collection_name")}_transformation.py'
         try:
@@ -106,12 +106,12 @@ with DAG(
         return max_parallel_value_configured
 
     @task
-    def discover_files(ti):
+    def discover_files(dag_run=None):
         from dags.automated_transformation.transformation_pipeline import (
             get_all_s3_keys,
         )
 
-        config = ti.dag_run.conf.copy()
+        config = dag_run.conf.copy()
         bucket = config.get("raw_data_bucket")
         raw_data_prefix = config.get("raw_data_prefix")
         raw_data_regex = config.get("raw_data_filter_regex")

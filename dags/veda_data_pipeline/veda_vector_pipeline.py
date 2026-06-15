@@ -75,9 +75,9 @@ def ingest_vector_task(payload):
 
 
 @task
-def invalidate_cloudfront(ti):
+def invalidate_cloudfront(dag_run=None):
 
-    if not ti.dag_run.conf.get('invalidate_cloudfront'):
+    if not dag_run.conf.get('invalidate_cloudfront'):
         logging.info("Skipping cloudfront invalidation")
         return
 

@@ -37,9 +37,9 @@ template_dag_run_conf = {
 
 
 @task
-def build_items_from_granules(ti=None) -> List[dict]:
+def build_items_from_granules(dag_run=None) -> List[dict]:
     body = {
-        **ti.dag_run.conf,
+        **dag_run.conf,
     }
     use_fsspec()
     print(f'body: {body}')
@@ -53,9 +53,9 @@ def build_items_from_granules(ti=None) -> List[dict]:
     return output
 
 @task
-def upsert_stactools_collection(ti=None):
+def upsert_stactools_collection(dag_run=None):
     body = {
-        **ti.dag_run.conf,
+        **dag_run.conf,
     }
     region = body.get("region")
     product = body.get("product")

@@ -97,6 +97,18 @@ module "sma-base" {
         value = "1"
       },
       {
+        # Externally reachable URL of the api-server. REQUIRED on Airflow 3: when
+        # unset, [core] execution_api_server_url defaults to
+        # http://localhost:8080/execution/, so Celery workers (which run as
+        # separate ECS tasks) dial their own localhost for the Task Execution API
+        # and every workload fails at startup with "[Errno 111] Connection
+        # refused" before any task code runs. Workers reach the api-server via the
+        # public ALB (same host already used for the task execution token URL).
+        # Airflow derives execution_api_server_url as "<base_url>/execution/".
+        name  = "AIRFLOW__API__BASE_URL"
+        value = "https://${lower(var.subdomain)}.${var.domain_name}"
+      },
+      {
         # Re-parse each DAG file at most every 5 min instead of the 30s default.
         # The dags-folder bundle is baked into the image and immutable between
         # deploys, so frequent re-parsing is pure waste: it burns dag-processor

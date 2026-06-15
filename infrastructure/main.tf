@@ -97,6 +97,21 @@ module "sma-base" {
         value = "1"
       },
       {
+        # Re-parse each DAG file at most every 5 min instead of the 30s default.
+        # The dags-folder bundle is baked into the image and immutable between
+        # deploys, so frequent re-parsing is pure waste: it burns dag-processor
+        # CPU (generate_dags.py does S3 list + per-collection get_object + STS on
+        # every parse), churns DAG versions, and adds DB/serialization load that
+        # competes with the single api-server worker.
+        name  = "AIRFLOW__DAG_PROCESSOR__MIN_FILE_PROCESS_INTERVAL"
+        value = "300"
+      },
+      {
+        # Check whether bundles need refreshing every 30s instead of every 5s.
+        name  = "AIRFLOW__DAG_PROCESSOR__BUNDLE_REFRESH_CHECK_INTERVAL"
+        value = "30"
+      },
+      {
         name  = "KEYCLOAK_BASE_URL"
         value = var.keycloak_base_url
       },

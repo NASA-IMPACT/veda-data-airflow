@@ -3,7 +3,6 @@ import uuid
 
 from airflow.models.variable import Variable
 from airflow.decorators import task
-from airflow.models.xcom import LazyXComSelectSequence
 from veda_data_pipeline.utils.s3_discovery import (
     s3_discovery_handler, EmptyFileListError
 )
@@ -59,12 +58,11 @@ def get_files_task(payload, dag_run=None):
     payloads = payload if isinstance(payload, list) else [payload]
 
     for item in payloads:
-        if isinstance(item, LazyXComSelectSequence):  # Dynamic task mapping case
-            payloads_xcom = item[0].pop("payload", [])
-            base_payload = item[0]
-        else:
-            payloads_xcom = item.pop("payload", [])
-            base_payload = item
+        # A dynamically-mapped upstream returns a lazy XCom sequence, not a dict
+        if not isinstance(item, dict):
+            item = item[0]
+        payloads_xcom = item.pop("payload", [])
+        base_payload = item
 
         for indx, payload_xcom in enumerate(payloads_xcom):
             results.append({
@@ -81,11 +79,9 @@ def get_files_to_process(payload, dag_run=None):
     """Get files from S3 produced by the discovery task.
     Used as part of both the parallel_run_process_rasters and parallel_run_process_vectors tasks.
     """
-    if isinstance(payload, LazyXComSelectSequence):  # if used as part of a dynamic task mapping
-        payloads_xcom = payload[0].pop("payload", [])
+    if not isinstance(payload, dict):  # dynamic task mapping returns a lazy XCom sequence
         payload = payload[0]
-    else:
-        payloads_xcom = payload.pop("payload", [])
+    payloads_xcom = payload.pop("payload", [])
     dag_run_id = dag_run.run_id
     return [{
         "run_id": f"{dag_run_id}_{uuid.uuid4()}_{indx}",
@@ -104,12 +100,10 @@ def get_dataset_files_to_process(payload, dag_run=None):
 
     result = []
     for x in payload:
-        if isinstance(x, LazyXComSelectSequence):  # if used as part of a dynamic task mapping
-            payloads_xcom = x[0].pop("payload", [])
-            payload_0 = x[0]
-        else:
-            payloads_xcom = x.pop("payload", [])
-            payload_0 = x
+        if not isinstance(x, dict):  # dynamic task mapping returns a lazy XCom sequence
+            x = x[0]
+        payloads_xcom = x.pop("payload", [])
+        payload_0 = x
         for indx, payload_xcom in enumerate(payloads_xcom):
             result.append({
                 "run_id": f"{dag_run_id}_{uuid.uuid4()}_{indx}",

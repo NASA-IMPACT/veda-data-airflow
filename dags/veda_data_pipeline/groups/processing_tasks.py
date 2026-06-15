@@ -4,7 +4,6 @@ import logging
 from copy import deepcopy
 import smart_open
 from airflow.models.variable import Variable
-from airflow.models.xcom import LazyXComSelectSequence
 from airflow.decorators import task
 from airflow.datasets import Dataset, DatasetAlias
 from airflow.datasets.metadata import Metadata
@@ -114,10 +113,10 @@ def post_ingest_dataset_event(logical_date, built_items = {}, dag_run=None):  # 
     log_task(f"Payload written to {key}")
 
     # built items can be either a dict or a list of dicts
-    if isinstance(built_items, LazyXComSelectSequence):
-        built_items = list(built_items)
-    elif not isinstance(built_items, list):
+    if isinstance(built_items, dict):
         built_items = [built_items]
+    elif not isinstance(built_items, list):
+        built_items = list(built_items)
     print(f"Built items: {built_items}")
     success_count = sum(item.get("payload", {}).get("status", {}).get("successes", 0) for item in built_items)
     failure_count = sum(item.get("payload", {}).get("status", {}).get("failures", 0) for item in built_items)

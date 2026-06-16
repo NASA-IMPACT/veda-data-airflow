@@ -5,8 +5,7 @@ from copy import deepcopy
 import smart_open
 from airflow.models.variable import Variable
 from airflow.decorators import task
-from airflow.datasets import Dataset, DatasetAlias
-from airflow.datasets.metadata import Metadata
+from airflow.sdk import Asset, AssetAlias, Metadata
 from veda_data_pipeline.utils.submit_stac import submission_handler
 
 group_kwgs = {"group_id": "Process", "tooltip": "Process"}
@@ -80,7 +79,7 @@ def build_stac_task(payload, ti=None):
 
 @task(
         outlets=[
-            DatasetAlias("VEDA-Datasets")
+            AssetAlias("VEDA-Datasets")
         ],
 )
 def post_ingest_dataset_event(logical_date, built_items = {}, dag_run=None):  # params are Airflow kwargs - use this task without input
@@ -122,12 +121,12 @@ def post_ingest_dataset_event(logical_date, built_items = {}, dag_run=None):  # 
     failure_count = sum(item.get("payload", {}).get("status", {}).get("failures", 0) for item in built_items)
 
     yield Metadata(
-        Dataset(f"{collection}"),
+        Asset(f"{collection}"),
         extra={
             "ingest_datetime": str(logical_date),
             "ingest_configuration": key,
             "successful_items": success_count,
             "failed_items": failure_count,
         },  # extra has to be provided, can be {}
-        alias="VEDA-Datasets",
+        alias=AssetAlias("VEDA-Datasets"),
     )

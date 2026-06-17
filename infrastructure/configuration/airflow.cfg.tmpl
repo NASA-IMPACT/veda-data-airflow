@@ -1,5 +1,5 @@
 [api]
-auth_backends = airflow.api.auth.backend.basic_auth
+auth_backends = configuration.keycloak_bearer_auth, airflow.api.auth.backend.basic_auth
 
 [core]
 executor = CeleryExecutor
@@ -15,7 +15,6 @@ parallelism = 10000
 [celery]
 broker_url = sqs://
 celery_config_options = configuration.celery_config.CELERY_CONFIG
-
 
 [webserver]
 authenticate = True

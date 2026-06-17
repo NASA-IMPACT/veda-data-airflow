@@ -11,6 +11,8 @@ from dateutil.tz import tzlocal
 import boto3
 from smart_open import open as smrt_open
 
+from .disasters_utils import extract_event_name_from_filename, extract_all_metadata_from_filename
+
 
 # Adding a custom exception for empty list
 class EmptyFileListError(Exception):
@@ -75,8 +77,12 @@ def discover_from_s3(
                 yield s3_object
 
 
-def group_by_item(discovered_files: List[str], id_regex: str, assets: dict) -> dict:
-    """Group assets by matching regex patterns against discovered files."""
+def group_by_item(discovered_files: List[str], id_regex: str, assets: dict, extract_event_name: bool = False, extract_monty: bool = False) -> dict:
+    """Group assets by matching regex patterns against discovered files.
+
+    If extract_event_name is True, extracts event name from filenames and adds to item metadata.
+    If extract_monty is True, extracts all monty metadata (country codes, hazard codes, corr_id) from filenames and adds to item metadata.
+    """
     grouped_files = []
     for uri in discovered_files:
         # Each file gets its matched asset type and id
@@ -112,6 +118,7 @@ def group_by_item(discovered_files: List[str], id_regex: str, assets: dict) -> d
     # Produce a dictionary in which each record is keyed by an item ID and contains a list of associated asset hrefs
     for group in grouped_data:
         item = {"item_id": group["item_id"], "assets": {}}
+
         for file in group["data"]:
             asset_type = file["asset_type"]
             filename = file["filename"]
@@ -119,6 +126,18 @@ def group_by_item(discovered_files: List[str], id_regex: str, assets: dict) -> d
             updated_asset = assets[file["asset_type"]].copy()
             updated_asset["href"] = f"{file['prefix']}/{file['filename']}"
             item["assets"][asset_type] = updated_asset
+
+        # Extract metadata from first file if flags are enabled
+        if group["data"]:
+            first_filename = group["data"][0]["filename"]
+
+            if extract_monty:
+                # Extract all metadata (country codes, hazard codes, corr_id, and event name)
+                item["extracted_event_name"] = extract_all_metadata_from_filename(first_filename)
+            elif extract_event_name:
+                # Extract only event name
+                item["extracted_event_name"] = extract_event_name_from_filename(first_filename)
+
         items_with_assets.append(item)
     return items_with_assets
 
@@ -200,6 +219,8 @@ def s3_discovery_handler(event, chunk_size=2800, role_arn=None, bucket_output=No
     id_template = event.get("id_template", "{}")
     date_fields = propagate_forward_datetime_args(event)
     dry_run = event.get("dry_run", False)
+    extract_event_name = event.get("disasters:extract_event_name", False)
+    extract_monty = event.get("disasters:monty", False)
     if process_from := event.get("process_from_yyyy_mm_dd"):
         process_from = datetime.strptime(process_from, "%Y-%m-%d").replace(
             tzinfo=tzlocal()
@@ -235,7 +256,13 @@ def s3_discovery_handler(event, chunk_size=2800, role_arn=None, bucket_output=No
 
     # group only if more than 1 assets
     if assets and len(assets.keys()) > 1:
-        items_with_assets = group_by_item(file_uris, id_regex, assets)
+        items_with_assets = group_by_item(
+            file_uris,
+            id_regex,
+            assets,
+            extract_event_name=extract_event_name,
+            extract_monty=extract_monty
+        )
     else:
         # out of convenience, we might not always want to explicitly define assets
         # or if only a single asset is defined, follow default flow
@@ -261,11 +288,12 @@ def s3_discovery_handler(event, chunk_size=2800, role_arn=None, bucket_output=No
                     item_count >= slice[1]
             ):  # Stop once we reach the end of the slice, while saving progress
                 break
+
         file_obj = {
             "collection": collection,
             "item_id": item["item_id"],
             "assets": item["assets"],
-            "properties": properties,
+            "properties": {**properties, **item.get("extracted_event_name", {})},
             **date_fields,
         }
 

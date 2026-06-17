@@ -106,6 +106,14 @@ module "sma-base" {
       {
         name  = "KEYCLOAK_CLIENT_SECRET"
         value = var.keycloak_client_secret
+      },
+      {
+        name  = "VEDA_AIRFLOW_VERSION"
+        value = var.veda_airflow_version
+      },
+      {
+        name  = "GIT_SHA"
+        value = var.git_sha
       }
     ],
     local.airflow_dag_variable_env_entries

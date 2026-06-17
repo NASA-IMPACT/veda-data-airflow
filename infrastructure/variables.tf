@@ -279,3 +279,15 @@ variable "alb_access_logs_prefix" {
   type        = string
   default     = null
 }
+
+variable "veda_airflow_version" {
+  description = "Deployed version tag of veda-data-airflow"
+  type        = string
+  default     = "unknown"
+}
+
+variable "git_sha" {
+  description = "Deployed git commit SHA of veda-data-airflow"
+  type        = string
+  default     = "unknown"
+}

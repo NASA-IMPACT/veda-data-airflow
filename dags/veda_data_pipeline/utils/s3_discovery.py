@@ -33,7 +33,7 @@ def assume_role(role_arn, session_name="veda-data-pipelines_s3-discovery"):
     }
 
 
-def get_s3_resp_iterator(bucket_name, prefix, s3_client, page_size=1000):
+def get_s3_resp_iterator(bucket_name, prefix, s3_client, request_payer, page_size=1000):
     """
     Returns an s3 paginator.
     :param bucket_name: The bucket.
@@ -43,8 +43,15 @@ def get_s3_resp_iterator(bucket_name, prefix, s3_client, page_size=1000):
     """
     s3_paginator = s3_client.get_paginator("list_objects")
     print(f"Getting S3 response iterator for bucket: {bucket_name}, prefix: {prefix}")
+    paginator_args = dict(
+        Bucket=bucket_name, 
+        Prefix=prefix, 
+        PaginationConfig={"page_size": page_size}
+    )
+    if request_payer:
+        paginator_args["ReqeuestPayer"] = request_payer
     return s3_paginator.paginate(
-        Bucket=bucket_name, Prefix=prefix, PaginationConfig={"page_size": page_size}
+        **paginator_args
     )
 
 
@@ -200,6 +207,8 @@ def s3_discovery_handler(event, chunk_size=2800, role_arn=None, bucket_output=No
     id_template = event.get("id_template", "{}")
     date_fields = propagate_forward_datetime_args(event)
     dry_run = event.get("dry_run", False)
+    request_payer = event.get("request_payer")
+
     if process_from := event.get("process_from_yyyy_mm_dd"):
         process_from = datetime.strptime(process_from, "%Y-%m-%d").replace(
             tzinfo=tzlocal()
@@ -221,7 +230,7 @@ def s3_discovery_handler(event, chunk_size=2800, role_arn=None, bucket_output=No
     kwargs = assume_role(role_arn=role_arn) if role_arn else {}
     s3client = boto3.client("s3", **kwargs)
     s3_iterator = get_s3_resp_iterator(
-        bucket_name=bucket, prefix=prefix, s3_client=s3client
+        bucket_name=bucket, prefix=prefix, s3_client=s3client, request_payer=request_payer
     )
     file_uris = [
         f"s3://{bucket}/{obj['Key']}"

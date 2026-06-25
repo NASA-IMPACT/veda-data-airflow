@@ -1,7 +1,6 @@
 name: CICD 🚀
 
 permissions:
-  id-token: write
   contents: read
 
 on:
@@ -71,6 +70,8 @@ jobs:
     needs: [gitflow-enforcer, define-environment]
     environment: development
     concurrency: development
+    permissions:
+      id-token: write # Required to request OIDC token for use with AWS
 
     steps:
       - name: Checkout
@@ -102,6 +103,8 @@ jobs:
     needs: [gitflow-enforcer, define-environment]
     environment: ${{ needs.define-environment.outputs.env_name }}
     concurrency: ${{ needs.define-environment.outputs.env_name }}
+    permissions:
+      id-token: write # Required to request OIDC token for use with AWS
 
     steps:
       - name: Checkout

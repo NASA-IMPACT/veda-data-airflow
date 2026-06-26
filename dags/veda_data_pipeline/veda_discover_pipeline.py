@@ -72,8 +72,9 @@ template_dag_run_conf = {
         },
     },
     "request_payer": Param(
-            enum=[None, "", "requester"], 
-            description="Use 'requester' to confirm charge for the request on bucket with Requester Pays enabled",
+            enum=[None, "requester"], 
+            type=["null", "string"],
+            description="Use 'requester' to confirm charge for the request on bucket with Requester Pays enabled (optional)",
             default=None
         )
 }

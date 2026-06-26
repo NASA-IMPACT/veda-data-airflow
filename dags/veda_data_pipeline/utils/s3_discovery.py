@@ -49,7 +49,7 @@ def get_s3_resp_iterator(bucket_name, prefix, s3_client, request_payer, page_siz
         PaginationConfig={"page_size": page_size}
     )
     if request_payer:
-        paginator_args["ReqeuestPayer"] = request_payer
+        paginator_args["RequestPayer"] = request_payer
     return s3_paginator.paginate(
         **paginator_args
     )

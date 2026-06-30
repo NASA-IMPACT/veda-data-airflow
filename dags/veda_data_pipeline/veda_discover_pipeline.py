@@ -37,7 +37,7 @@ The DAG `veda_ingest` will run in parallel processing (2800 files per each DAG)
             "regex": ".*asset2.*",
         },
     },
-    "request_payer": "requester"
+    "request_payer": False
 }
 ```
 - [Supports linking to external content](https://github.com/NASA-IMPACT/veda-data-pipelines)
@@ -72,10 +72,9 @@ template_dag_run_conf = {
         },
     },
     "request_payer": Param(
-            enum=[None, "requester"], 
-            type=["null", "string"],
-            description="Use 'requester' to confirm charge for the request on bucket with Requester Pays enabled (optional)",
-            default=None
+            type=bool,
+            description="Use 'requester' to confirm charge for the request on bucket with Requester Pays enabled",
+            default=False
         )
 }
 

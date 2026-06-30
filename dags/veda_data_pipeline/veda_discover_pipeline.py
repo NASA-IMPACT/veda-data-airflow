@@ -72,7 +72,7 @@ template_dag_run_conf = {
         },
     },
     "request_payer": Param(
-            type=bool,
+            type="boolean",
             description="Use 'requester' to confirm charge for the request on bucket with Requester Pays enabled",
             default=False
         )

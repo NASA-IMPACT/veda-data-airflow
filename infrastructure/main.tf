@@ -92,7 +92,6 @@ module "sma-base" {
         value = var.workers_task_retries
       },
       {
-        # Pin api-server to a single worker; workers > 1 crash-loops on Airflow 3.0.2.
         name  = "AIRFLOW__API__WORKERS"
         value = "1"
       },
@@ -138,6 +137,18 @@ module "sma-base" {
       {
         name  = "KEYCLOAK_CLIENT_SECRET"
         value = var.keycloak_client_secret
+      },
+      {
+        name  = "VEDA_AIRFLOW_VERSION"
+        value = var.veda_airflow_version
+      },
+      {
+        name  = "GIT_SHA"
+        value = var.git_sha
+      },
+      {
+        name  = "AIRFLOW__WEBSERVER__INSTANCE_NAME"
+        value = "VEDA SM2A ${var.veda_airflow_version} (${var.git_sha})"
       }
     ],
     local.airflow_dag_variable_env_entries

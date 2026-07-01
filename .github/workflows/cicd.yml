@@ -109,6 +109,12 @@ jobs:
         with:
           lfs: "true"
           submodules: "recursive"
+          fetch-depth: 0
+
+      - name: Get latest release tag
+        id: get_tag
+        run: echo "tag=$(git describe --tags --abbrev=0 2>/dev/null || echo 'unknown')" >> $GITHUB_OUTPUT
+
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@5fd3084fc36e372ff1fff382a39b10d03659f355 #v2.2.0
@@ -121,6 +127,9 @@ jobs:
         # Flag to deploy SM2A
         if: ${{ vars.DEPLOY_SM2A }} = "true"
         uses: "./.github/actions/terraform-deploy-sm2a"
+        env:
+          TF_VAR_veda_airflow_version: ${{ steps.get_tag.outputs.tag }}
+          TF_VAR_git_sha: ${{ github.sha }}
         with:
           dir: .
           env_aws_secret_name: ${{ vars.SM2A_ENVS_DEPLOYMENT_SECRET_NAME }}

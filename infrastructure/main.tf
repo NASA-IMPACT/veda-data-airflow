@@ -36,6 +36,7 @@ locals {
       SM2A_BASE_URL                 = "https://${lower(var.subdomain)}.${var.domain_name}"
       CLOUDFRONT_TO_INVALIDATE      = var.cloudfront_to_invalidate
       CLOUDFRONT_PATH_TO_INVALIDATE = var.cloudfront_path_to_invalidate
+      AWS_REQUEST_PAYER             = var.aws_request_payer
     },
     var.snapshot_bucket_name != "" ? module.rds_backups[0].rds_backup_environment : {}
   )

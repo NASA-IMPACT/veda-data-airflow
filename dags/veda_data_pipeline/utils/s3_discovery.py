@@ -33,18 +33,26 @@ def assume_role(role_arn, session_name="veda-data-pipelines_s3-discovery"):
     }
 
 
-def get_s3_resp_iterator(bucket_name, prefix, s3_client, page_size=1000):
+def get_s3_resp_iterator(bucket_name, prefix, s3_client, page_size=1000, aws_request_payer=None):
     """
     Returns an s3 paginator.
     :param bucket_name: The bucket.
     :param prefix: The path for the s3 granules.
     :param s3_client: Initialized boto3 S3 client
     :param page_size: Number of records returned
+    :param aws_request_payer: Use 'requester' to confirm charge for the request on bucket with Requester Pays enabled
     """
     s3_paginator = s3_client.get_paginator("list_objects")
     print(f"Getting S3 response iterator for bucket: {bucket_name}, prefix: {prefix}")
+    paginator_args = dict(
+        Bucket=bucket_name, 
+        Prefix=prefix, 
+        PaginationConfig={"page_size": page_size}
+    )
+    if aws_request_payer:
+        paginator_args["RequestPayer"] = aws_request_payer
     return s3_paginator.paginate(
-        Bucket=bucket_name, Prefix=prefix, PaginationConfig={"page_size": page_size}
+        **paginator_args
     )
 
 
@@ -189,7 +197,7 @@ def propagate_forward_datetime_args(event):
     return {key: event[key] for key in keys if key in event}
 
 
-def s3_discovery_handler(event, chunk_size=2800, role_arn=None, bucket_output=None):
+def s3_discovery_handler(event, chunk_size=2800, role_arn=None, bucket_output=None, aws_request_payer=None):
     bucket = event["bucket"]
     prefix = event["prefix"]
     filename_regex = event.get("filename_regex", None)

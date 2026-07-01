@@ -34,7 +34,7 @@ def discover_from_s3_task(event: dict={}, ti=None, payload: dict={}, prev_start_
 
     event_bucket = Variable.get("EVENT_BUCKET")
     read_assume_arn = Variable.get("ASSUME_ROLE_READ_ARN")
-    aws_request_payer = Variable.get("AWS_REQUEST_PAYER")
+    
     # Making the chunk size small, this helped us process large data faster than
     # passing a large chunk of 500
     chunk_size = config.get("chunk_size", 500)
@@ -43,8 +43,7 @@ def discover_from_s3_task(event: dict={}, ti=None, payload: dict={}, prev_start_
             event=config,
             role_arn=read_assume_arn,
             bucket_output=event_bucket,
-            chunk_size=chunk_size,
-            aws_request_payer=aws_request_payer
+            chunk_size=chunk_size
         )
     except EmptyFileListError as ex:
         print(f"Received an exception {ex}")

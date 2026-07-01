@@ -11,6 +11,8 @@ from dateutil.tz import tzlocal
 import boto3
 from smart_open import open as smrt_open
 
+from airflow.models.variable import Variable
+
 
 # Adding a custom exception for empty list
 class EmptyFileListError(Exception):
@@ -43,14 +45,17 @@ def get_s3_resp_iterator(bucket_name, prefix, s3_client, page_size=1000, aws_req
     :param aws_request_payer: Use 'requester' to confirm charge for the request on bucket with Requester Pays enabled
     """
     s3_paginator = s3_client.get_paginator("list_objects")
-    print(f"Getting S3 response iterator for bucket: {bucket_name}, prefix: {prefix}")
+    
     paginator_args = dict(
         Bucket=bucket_name, 
         Prefix=prefix, 
         PaginationConfig={"page_size": page_size}
     )
+    aws_request_payer = Variable.get("AWS_REQUEST_PAYER")
     if aws_request_payer:
         paginator_args["RequestPayer"] = aws_request_payer
+
+    print(f"Getting S3 response iterator for {bucket_name}, prefix: {prefix}, {aws_request_payer=}")
     return s3_paginator.paginate(
         **paginator_args
     )

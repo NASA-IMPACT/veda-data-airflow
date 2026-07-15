@@ -1,7 +1,6 @@
 name: CICD 🚀
 
 permissions:
-  id-token: write
   contents: read
 
 on:
@@ -31,9 +30,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out Git repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 #v3.6.0
 
-      - uses: astral-sh/setup-uv@v5
+      - uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 #v5.4.2
         name: Setup uv
         with:
           python-version: 3.11
@@ -71,6 +70,8 @@ jobs:
     needs: [gitflow-enforcer, define-environment]
     environment: development
     concurrency: development
+    permissions:
+      id-token: write # Required to request OIDC token for use with AWS
 
     steps:
       - name: Checkout
@@ -102,6 +103,8 @@ jobs:
     needs: [gitflow-enforcer, define-environment]
     environment: ${{ needs.define-environment.outputs.env_name }}
     concurrency: ${{ needs.define-environment.outputs.env_name }}
+    permissions:
+      id-token: write # Required to request OIDC token for use with AWS
 
     steps:
       - name: Checkout

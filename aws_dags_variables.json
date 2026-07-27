@@ -1,0 +1,12 @@
+{
+  "EVENT_BUCKET": "veda-tf-state-shared-disasters",
+  "STAC_INGESTOR_API_URL": "https://dev.disasters.openveda.cloud/api/ingest/",
+  "STAC_URL": "https://dev.disasters.openveda.cloud/api/stac",
+  "INGEST_API_KEYCLOAK_APP_SECRET": "",
+  "ASSUME_ROLE_READ_ARN": "",
+  "ASSUME_ROLE_WRITE_ARN": "",
+  "VECTOR_SECRET_NAME": "null",
+  "SM2A_BASE_URL": "https://airflow.disasters.openveda.cloud",
+  "CLOUDFRONT_TO_INVALIDATE": null,
+  "CLOUDFRONT_PATH_TO_INVALIDATE": null
+}

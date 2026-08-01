@@ -138,7 +138,7 @@ apache-airflow-providers-presto==4.2.1
 apache-airflow-providers-qubole==3.3.1
 apache-airflow-providers-redis==3.1.0
 apache-airflow-providers-salesforce==5.3.0
-apache-airflow-providers-samba==4.1.0
+apache-airflow-providers-samba==4.12.6
 apache-airflow-providers-segment==3.1.0
 apache-airflow-providers-sendgrid==3.1.0
 apache-airflow-providers-sftp==4.2.1

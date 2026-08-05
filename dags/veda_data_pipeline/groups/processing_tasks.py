@@ -1,4 +1,4 @@
-from datetime import timedelta
+from datetime import timedelta, datetime, timezone
 import json
 import logging
 from copy import deepcopy
@@ -82,7 +82,7 @@ def build_stac_task(payload, ti=None):
             AssetAlias("VEDA-Datasets")
         ],
 )
-def post_ingest_dataset_event(logical_date, built_items = {}, dag_run=None):  # params are Airflow kwargs - use this task without input
+def post_ingest_dataset_event(logical_date=None, built_items = {}, dag_run=None):  # params are Airflow kwargs - use this task without input
     """
     Logs a Dataset event, saving the config used as a versioned object in s3, and creating a Metadata object visible in Airflow.
 
@@ -100,9 +100,17 @@ def post_ingest_dataset_event(logical_date, built_items = {}, dag_run=None):  # 
     collection = payload.get("collection", None)
     if not collection:
         raise ValueError("Collection ID is required in the payload to create a report.")
-    
+
+    event_dt = (
+        logical_date
+        or getattr(dag_run, "logical_date", None)
+        or getattr(dag_run, "run_after", None)
+        or getattr(dag_run, "start_date", None)
+        or datetime.now(timezone.utc)
+    )
+
     # write the payload to S3 as a versioned object
-    key = f"s3://{event_bucket_name}/airflow_events/{collection}/{logical_date.format('YYYYMMDDHHmmss')}.json"
+    key = f"s3://{event_bucket_name}/airflow_events/{collection}/{event_dt.strftime('%Y%m%d%H%M%S')}.json"
     try:
         with smart_open.open(key, "w") as f:
             json.dump(payload, f, indent=2)
@@ -123,7 +131,7 @@ def post_ingest_dataset_event(logical_date, built_items = {}, dag_run=None):  # 
     yield Metadata(
         Asset(f"{collection}"),
         extra={
-            "ingest_datetime": str(logical_date),
+            "ingest_datetime": str(event_dt),
             "ingest_configuration": key,
             "successful_items": success_count,
             "failed_items": failure_count,

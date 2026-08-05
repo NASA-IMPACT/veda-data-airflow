@@ -3,9 +3,10 @@ name = "veda-data-airflow"
 version = "0.1.0"
 description = "Function and deployment code for producing cloud-optimized data products and STAC metadata for interfaces such as https://github.com/NASA-IMPACT/veda-ui."
 readme = "README.md"
-requires-python = ">=3.11.5, <3.12"
+requires-python = ">=3.12, <3.13"
 dependencies = [
-    "apache-airflow==2.10.5",
+    "apache-airflow==3.0.2",
+    "apache-airflow-providers-standard",
     "pytest>=8.3.5",
 ]
 
@@ -16,8 +17,8 @@ dev = [
     "isort"
 ]
 deploy = [
-    "boto3==1.26.62",
-    "requests==2.28.2"
+    "boto3",
+    "requests"
 ]
 test = [
     "coverage",
@@ -34,7 +35,7 @@ test = [
     "virtualenv",
 ]
 airflow-worker = [
-    "apache-airflow-providers-amazon",
+    "apache-airflow-providers-amazon==9.8.0",
     "botocore",
     "cryptography",
     "pycurl",
@@ -69,7 +70,7 @@ airflow-worker = [
     "stactools-noaa-hrrr"
 ]
 airflow-service = [
-    "apache-airflow-providers-amazon",
+    "apache-airflow-providers-amazon==9.8.0",
     "botocore",
     "cryptography",
     "pycurl",

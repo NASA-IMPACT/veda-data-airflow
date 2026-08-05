@@ -36,7 +36,7 @@ jobs:
       - uses: astral-sh/setup-uv@v5
         name: Setup uv
         with:
-          python-version: 3.11
+          python-version: 3.12
       
       - name: Run uv sync
         run: uv sync --all-groups

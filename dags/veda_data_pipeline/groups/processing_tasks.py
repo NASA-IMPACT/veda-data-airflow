@@ -1,13 +1,11 @@
-from datetime import timedelta
+from datetime import timedelta, datetime, timezone
 import json
 import logging
 from copy import deepcopy
 import smart_open
-from airflow.models.variable import Variable
-from airflow.models.xcom import LazyXComSelectSequence
+from airflow.sdk import Variable
 from airflow.decorators import task
-from airflow.datasets import Dataset, DatasetAlias
-from airflow.datasets.metadata import Metadata
+from airflow.sdk import Asset, AssetAlias, Metadata
 from veda_data_pipeline.utils.submit_stac import submission_handler
 
 group_kwgs = {"group_id": "Process", "tooltip": "Process"}
@@ -16,13 +14,13 @@ def log_task(text: str):
     logging.info(text)
 
 @task
-def extract_discovery_items_from_payload(ti, payload=None, **kwargs):
-    discovery_items = ti.dag_run.conf.get("discovery_items") if not payload else payload.get("discovery_items")
+def extract_discovery_items_from_payload(payload=None, dag_run=None, **kwargs):
+    discovery_items = dag_run.conf.get("discovery_items") if not payload else payload.get("discovery_items")
     return discovery_items
 
 @task
-def remove_thumbnail_asset(ti):
-    payload = deepcopy(ti.dag_run.conf)
+def remove_thumbnail_asset(dag_run=None):
+    payload = deepcopy(dag_run.conf)
     assets = payload.get("assets", {})
     if assets.get("thumbnail"):
         assets.pop("thumbnail")
@@ -81,30 +79,38 @@ def build_stac_task(payload, ti=None):
 
 @task(
         outlets=[
-            DatasetAlias("VEDA-Datasets")
+            AssetAlias("VEDA-Datasets")
         ],
 )
-def post_ingest_dataset_event(ti, logical_date, built_items = {}):  # params are Airflow kwargs - use this task without input
+def post_ingest_dataset_event(logical_date=None, built_items = {}, dag_run=None):  # params are Airflow kwargs - use this task without input
     """
     Logs a Dataset event, saving the config used as a versioned object in s3, and creating a Metadata object visible in Airflow.
-    
+
     Datasets are per-collection, with an alias of "VEDA-Datasets" for additional DAG triggers.
 
     Args:
         (Automatically populated by airflow when invoked)
-        ti: Airflow TaskInstance, used to access the DAG run configuration.
+        dag_run: Airflow DagRun, used to access the DAG run configuration.
         logical_date: The logical date of the DAG run, used for versioning.
     Returns:
         Yields a Metadata object that Airflow uses to register the Dataset event.
     """
-    payload = ti.dag_run.conf
+    payload = dag_run.conf
     event_bucket_name = Variable.get("EVENT_BUCKET")
     collection = payload.get("collection", None)
     if not collection:
         raise ValueError("Collection ID is required in the payload to create a report.")
-    
+
+    event_dt = (
+        logical_date
+        or getattr(dag_run, "logical_date", None)
+        or getattr(dag_run, "run_after", None)
+        or getattr(dag_run, "start_date", None)
+        or datetime.now(timezone.utc)
+    )
+
     # write the payload to S3 as a versioned object
-    key = f"s3://{event_bucket_name}/airflow_events/{collection}/{logical_date.format('YYYYMMDDHHmmss')}.json"
+    key = f"s3://{event_bucket_name}/airflow_events/{collection}/{event_dt.strftime('%Y%m%d%H%M%S')}.json"
     try:
         with smart_open.open(key, "w") as f:
             json.dump(payload, f, indent=2)
@@ -114,21 +120,21 @@ def post_ingest_dataset_event(ti, logical_date, built_items = {}):  # params are
     log_task(f"Payload written to {key}")
 
     # built items can be either a dict or a list of dicts
-    if isinstance(built_items, LazyXComSelectSequence):
-        built_items = list(built_items)
-    elif not isinstance(built_items, list):
+    if isinstance(built_items, dict):
         built_items = [built_items]
+    elif not isinstance(built_items, list):
+        built_items = list(built_items)
     print(f"Built items: {built_items}")
     success_count = sum(item.get("payload", {}).get("status", {}).get("successes", 0) for item in built_items)
     failure_count = sum(item.get("payload", {}).get("status", {}).get("failures", 0) for item in built_items)
 
     yield Metadata(
-        Dataset(f"{collection}"),
+        Asset(f"{collection}"),
         extra={
-            "ingest_datetime": str(logical_date),
+            "ingest_datetime": str(event_dt),
             "ingest_configuration": key,
             "successful_items": success_count,
             "failed_items": failure_count,
         },  # extra has to be provided, can be {}
-        alias="VEDA-Datasets",
+        alias=AssetAlias("VEDA-Datasets"),
     )

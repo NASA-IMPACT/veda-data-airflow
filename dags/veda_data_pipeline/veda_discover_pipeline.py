@@ -1,6 +1,6 @@
 import pendulum
 from airflow import DAG
-from airflow.operators.empty import EmptyOperator
+from airflow.providers.standard.operators.empty import EmptyOperator
 from airflow.models.param import Param
 from veda_data_pipeline.groups.discover_group import discover_from_s3_task, get_files_task
 from slack_notifications import slack_fail_alert

@@ -63,7 +63,7 @@ def test_transfer_assets_to_production_bucket_transfer_false(mock_task_instance,
     """Test that when transfer is False, payload is updated but no transfer occurs"""
     mock_task_instance.dag_run.conf["transfer"] = False
 
-    with patch("airflow.models.variable.Variable.get", side_effect=mock_variable_get):
+    with patch("airflow.sdk.Variable.get", side_effect=mock_variable_get):
         payload = {
             "bucket": "test-origin-bucket",
             "prefix": "test-prefix/",
@@ -72,7 +72,7 @@ def test_transfer_assets_to_production_bucket_transfer_false(mock_task_instance,
         }
 
         task_func = transfer_assets_to_production_bucket.function
-        result = task_func(ti=mock_task_instance, payload=payload)
+        result = task_func(dag_run=mock_task_instance.dag_run, payload=payload)
 
         response = s3.list_objects_v2(Bucket="test-target-bucket")
         assert "Contents" not in response
@@ -83,7 +83,7 @@ def test_transfer_assets_to_production_bucket_transfer_true(mock_task_instance, 
     """Test that when transfer is True, payload is updated and transfer occurs"""
     mock_task_instance.dag_run.conf["transfer"] = True
 
-    with patch("airflow.models.variable.Variable.get", side_effect=mock_variable_get):
+    with patch("airflow.sdk.Variable.get", side_effect=mock_variable_get):
         payload = {
             "bucket": "test-origin-bucket",
             "prefix": "test-prefix/",
@@ -92,7 +92,7 @@ def test_transfer_assets_to_production_bucket_transfer_true(mock_task_instance, 
         }
 
         task_func = transfer_assets_to_production_bucket.function
-        result = task_func(ti=mock_task_instance, payload=payload)
+        result = task_func(dag_run=mock_task_instance.dag_run, payload=payload)
 
         response = s3.list_objects_v2(Bucket="test-target-bucket")
         assert len(response["Contents"]) == 2
@@ -110,7 +110,7 @@ def test_transfer_assets_to_production_bucket_412_error(mock_task_instance, mock
         Key="test-collection/file1.tif"
     )
 
-    with patch("airflow.models.variable.Variable.get", side_effect=mock_variable_get):
+    with patch("airflow.sdk.Variable.get", side_effect=mock_variable_get):
         payload = {
             "bucket": "test-origin-bucket",
             "prefix": "test-prefix/",
@@ -119,7 +119,7 @@ def test_transfer_assets_to_production_bucket_412_error(mock_task_instance, mock
         }
 
         task_func = transfer_assets_to_production_bucket.function
-        result = task_func(ti=mock_task_instance, payload=payload)
+        result = task_func(dag_run=mock_task_instance.dag_run, payload=payload)
 
         assert result["bucket"] == "veda-data-store"
         assert result["prefix"] == "test-collection/"

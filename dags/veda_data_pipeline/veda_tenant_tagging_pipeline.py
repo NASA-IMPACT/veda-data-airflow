@@ -7,12 +7,12 @@ from airflow import DAG
 from airflow.exceptions import AirflowException
 from airflow.models.param import Param
 from airflow.decorators import task
-from airflow.operators.empty import EmptyOperator
+from airflow.providers.standard.operators.empty import EmptyOperator
 from veda_data_pipeline.utils.submit_stac import submission_handler
 from veda_data_pipeline.utils.schemas import normalize_temporal_extent
 from slack_notifications import slack_fail_alert
 import requests
-from airflow.models.variable import Variable
+from airflow.sdk import Variable
 
 logger = logging.getLogger(__name__)
 
@@ -78,10 +78,10 @@ dag_args = {
 }
 
 @task()
-def get_collection_ids(ti=None):
+def get_collection_ids(dag_run=None):
     """Extract and validate collection IDs from configuration"""
     try:
-        config = ti.dag_run.conf
+        config = dag_run.conf
         collections = config.get("collections")
         tenant = config.get("tenant")
 
@@ -201,7 +201,7 @@ def fetch_existing_collection(collection_id: str):
         raise
 
 @task()
-def update_collection_with_tenant_tags(ti=None, existing_collection=None):
+def update_collection_with_tenant_tags(existing_collection=None, dag_run=None):
     """Update collection with tenant tags at the top level. Returns None if collection is None (doesn't exist)."""
     try:
         # Skip if collection doesn't exist (was None from fetch step)
@@ -209,7 +209,7 @@ def update_collection_with_tenant_tags(ti=None, existing_collection=None):
             logger.warning("Skipping update - collection does not exist")
             return None
 
-        config = ti.dag_run.conf
+        config = dag_run.conf
         tenant = config.get("tenant")
         tenant_field = config.get("tenant_field") or "eic:tenant"
 

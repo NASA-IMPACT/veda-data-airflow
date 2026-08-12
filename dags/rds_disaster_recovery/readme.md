@@ -2,11 +2,11 @@
 # DAG Documentation for `get_rds_snapshots`
 
 ## Overview
-This setup includes two DAGs [get_snapshots_dag](../../dags/rds_disaster_recovery/get_snapshots_dag.py) and 
+This setup includes two DAGs [get_snapshots_dag](../../dags/rds_disaster_recovery/get_snapshots_dag.py) and
 [rds_s3_export](../../dags/rds_disaster_recovery/rds_s3_export.py) for handling the retrieval and export of RDS
 snapshots to S3, as well as metadata indexing through AWS Glue. This is intended as part of a disaster recovery strategy
 to ensure regular backups of key RDS databases are available in S3 and are queryable through AWS Glue.
-## Architecture 
+## Architecture
 ![get_rds_snapshots_dag_architecture](imgs/get_snapshots_dag_architecture.png)
 
 ## Workflow Steps for get_snapshots_dag DAG
@@ -62,7 +62,7 @@ The tasks within this DAG are executed in the following order:
 
 ## Default Arguments
 - **retries**: 0
-- **start_date**: Set to the current day with `days_ago(0)` (to be updated if scheduling changes).
+- **start_date**: Set to the current day with `pendulum.today()` (to be updated if scheduling changes).
 - **catchup**: False
 
 ## Tags

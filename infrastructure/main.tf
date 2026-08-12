@@ -50,7 +50,7 @@ locals {
 }
 
 module "sma-base" {
-  source                         = "https://github.com/NASA-IMPACT/self-managed-apache-airflow/releases/download/v1.1.15/self-managed-apache-airflow.zip"
+  source                         = "https://github.com/NASA-IMPACT/self-managed-apache-airflow/releases/download/v1.2.0-rc4/self-managed-apache-airflow.zip"
   project                        = var.project_name
   airflow_db                     = var.airflow_db
   fernet_key                     = var.fernet_key
@@ -91,6 +91,38 @@ module "sma-base" {
       {
         name  = "AIRFLOW__CORE__DEFAULT_TASK_RETRIES"
         value = var.workers_task_retries
+      },
+      {
+        # Pin api-server to a single worker; workers > 1 crash-loops on Airflow 3.0.2.
+        name  = "AIRFLOW__API__WORKERS"
+        value = "1"
+      },
+      {
+        # Externally reachable URL of the api-server. REQUIRED on Airflow 3: when
+        # unset, [core] execution_api_server_url defaults to
+        # http://localhost:8080/execution/, so Celery workers (which run as
+        # separate ECS tasks) dial their own localhost for the Task Execution API
+        # and every workload fails at startup with "[Errno 111] Connection
+        # refused" before any task code runs. Workers reach the api-server via the
+        # public ALB (same host already used for the task execution token URL).
+        # Airflow derives execution_api_server_url as "<base_url>/execution/".
+        name  = "AIRFLOW__API__BASE_URL"
+        value = "https://${lower(var.subdomain)}.${var.domain_name}"
+      },
+      {
+        # Re-parse each DAG file at most every 5 min instead of the 30s default.
+        # The dags-folder bundle is baked into the image and immutable between
+        # deploys, so frequent re-parsing is pure waste: it burns dag-processor
+        # CPU (generate_dags.py does S3 list + per-collection get_object + STS on
+        # every parse), churns DAG versions, and adds DB/serialization load that
+        # competes with the single api-server worker.
+        name  = "AIRFLOW__DAG_PROCESSOR__MIN_FILE_PROCESS_INTERVAL"
+        value = "300"
+      },
+      {
+        # Check whether bundles need refreshing every 30s instead of every 5s.
+        name  = "AIRFLOW__DAG_PROCESSOR__BUNDLE_REFRESH_CHECK_INTERVAL"
+        value = "30"
       },
       {
         name  = "KEYCLOAK_BASE_URL"

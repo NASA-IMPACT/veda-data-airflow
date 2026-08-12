@@ -1,7 +1,8 @@
 [api]
-auth_backends = airflow.api.auth.backend.basic_auth
+auth_backends = airflow.providers.fab.auth_manager.api.auth.backend.basic_auth
 
 [core]
+auth_manager = airflow.providers.fab.auth_manager.fab_auth_manager.FabAuthManager
 executor = CeleryExecutor
 dags_are_paused_at_creation = true
 load_examples = false

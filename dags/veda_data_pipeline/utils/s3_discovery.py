@@ -11,7 +11,7 @@ from dateutil.tz import tzlocal
 import boto3
 from smart_open import open as smrt_open
 
-from airflow.models.variable import Variable
+from airflow.sdk import Variable
 
 
 # Adding a custom exception for empty list

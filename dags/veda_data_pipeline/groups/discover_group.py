@@ -1,9 +1,8 @@
 from datetime import timedelta
 import uuid
 
-from airflow.models.variable import Variable
+from airflow.sdk import Variable
 from airflow.decorators import task
-from airflow.models.xcom import LazyXComSelectSequence
 from veda_data_pipeline.utils.s3_discovery import (
     s3_discovery_handler, EmptyFileListError
 )
@@ -13,20 +12,16 @@ group_kwgs = {"group_id": "Discover", "tooltip": "Discover"}
 
 
 @task(retries=1, retry_delay=timedelta(minutes=1))
-def discover_from_s3_task(event: dict={}, ti=None, payload: dict={}, prev_start_date_success: str=None):
+def discover_from_s3_task(event: dict={}, dag_run=None, payload: dict={}, prev_start_date_success: str=None):
     """Discover grouped assets/files from S3 in batches of 2800. Produce a list of such files stored on S3 to process.
     This task is used as part of the discover_group subdag and outputs data to EVENT_BUCKET.
     """
 
-    payload = payload or ti.dag_run.conf
+    payload = payload or dag_run.conf
     config = {
         **event,
         **payload,
     }
-    
-    # TODO: verify that scheduled DAGS that include a discovery step will work without this config mutation
-    if not ti.dag_run.conf:
-        ti.dag_run.conf = config
 
     if event.get("schedule") and prev_start_date_success:
         config["last_successful_execution"] = prev_start_date_success.isoformat()
@@ -52,24 +47,23 @@ def discover_from_s3_task(event: dict={}, ti=None, payload: dict={}, prev_start_
 
 
 @task
-def get_files_task(payload, ti=None):
+def get_files_task(payload, dag_run=None):
     """
     Get files from S3 produced by discovery or dataset tasks.
     Handles both single payload and multiple payload scenarios.
     """
-    dag_run_id = ti.dag_run.run_id
+    dag_run_id = dag_run.run_id
     results = []
 
     # Handle multiple payloads (dataset and items case)
     payloads = payload if isinstance(payload, list) else [payload]
 
     for item in payloads:
-        if isinstance(item, LazyXComSelectSequence):  # Dynamic task mapping case
-            payloads_xcom = item[0].pop("payload", [])
-            base_payload = item[0]
-        else:
-            payloads_xcom = item.pop("payload", [])
-            base_payload = item
+        # A dynamically-mapped upstream returns a lazy XCom sequence, not a dict
+        if not isinstance(item, dict):
+            item = item[0]
+        payloads_xcom = item.pop("payload", [])
+        base_payload = item
 
         for indx, payload_xcom in enumerate(payloads_xcom):
             results.append({
@@ -82,16 +76,14 @@ def get_files_task(payload, ti=None):
 
 @task
 @deprecated(reason="Please use get_files_task function that handles both files and dataset files use cases")
-def get_files_to_process(payload, ti=None):
+def get_files_to_process(payload, dag_run=None):
     """Get files from S3 produced by the discovery task.
     Used as part of both the parallel_run_process_rasters and parallel_run_process_vectors tasks.
     """
-    if isinstance(payload, LazyXComSelectSequence):  # if used as part of a dynamic task mapping
-        payloads_xcom = payload[0].pop("payload", [])
+    if not isinstance(payload, dict):  # dynamic task mapping returns a lazy XCom sequence
         payload = payload[0]
-    else:
-        payloads_xcom = payload.pop("payload", [])
-    dag_run_id = ti.dag_run.run_id
+    payloads_xcom = payload.pop("payload", [])
+    dag_run_id = dag_run.run_id
     return [{
         "run_id": f"{dag_run_id}_{uuid.uuid4()}_{indx}",
         **payload,
@@ -101,20 +93,18 @@ def get_files_to_process(payload, ti=None):
 
 @task
 @deprecated(reason="Please use get_files_task airflow task instead. This will be removed in the new release")
-def get_dataset_files_to_process(payload, ti=None):
+def get_dataset_files_to_process(payload, dag_run=None):
     """Get files from S3 produced by the dataset task.
     This is different from the get_files_to_process task as it produces a combined structure from repeated mappings.
     """
-    dag_run_id = ti.dag_run.run_id
+    dag_run_id = dag_run.run_id
 
     result = []
     for x in payload:
-        if isinstance(x, LazyXComSelectSequence):  # if used as part of a dynamic task mapping
-            payloads_xcom = x[0].pop("payload", [])
-            payload_0 = x[0]
-        else:
-            payloads_xcom = x.pop("payload", [])
-            payload_0 = x
+        if not isinstance(x, dict):  # dynamic task mapping returns a lazy XCom sequence
+            x = x[0]
+        payloads_xcom = x.pop("payload", [])
+        payload_0 = x
         for indx, payload_xcom in enumerate(payloads_xcom):
             result.append({
                 "run_id": f"{dag_run_id}_{uuid.uuid4()}_{indx}",

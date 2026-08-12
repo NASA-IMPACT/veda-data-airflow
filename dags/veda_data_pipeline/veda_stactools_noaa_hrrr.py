@@ -5,7 +5,7 @@ from slack_notifications import slack_fail_alert
 from airflow.decorators import task
 
 from airflow import DAG
-from airflow.operators.dummy_operator import DummyOperator
+from airflow.providers.standard.operators.empty import EmptyOperator
 from airflow.utils.trigger_rule import TriggerRule
 from stactools.core import use_fsspec
 from stactools.noaa_hrrr.metadata import parse_href, CloudProvider, Product, Region
@@ -37,9 +37,9 @@ template_dag_run_conf = {
 
 
 @task
-def build_items_from_granules(ti=None) -> List[dict]:
+def build_items_from_granules(dag_run=None) -> List[dict]:
     body = {
-        **ti.dag_run.conf,
+        **dag_run.conf,
     }
     use_fsspec()
     print(f'body: {body}')
@@ -53,9 +53,9 @@ def build_items_from_granules(ti=None) -> List[dict]:
     return output
 
 @task
-def upsert_stactools_collection(ti=None):
+def upsert_stactools_collection(dag_run=None):
     body = {
-        **ti.dag_run.conf,
+        **dag_run.conf,
     }
     region = body.get("region")
     product = body.get("product")
@@ -72,13 +72,13 @@ def get_stactools_dag(id, event={}):
     params_dag_run_conf = event or template_dag_run_conf
     with DAG(
         id,
-        schedule_interval=event.get("schedule", None),
+        schedule=event.get("schedule", None),
         params=params_dag_run_conf,
         **dag_args
     ) as dag:
         # ECS dependency variable
-        start = DummyOperator(task_id="Start", dag=dag)
-        end = DummyOperator(
+        start = EmptyOperator(task_id="Start", dag=dag)
+        end = EmptyOperator(
             task_id="End", trigger_rule=TriggerRule.ONE_SUCCESS, dag=dag
         )
         # define DAG using taskflow notation

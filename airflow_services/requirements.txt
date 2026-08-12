@@ -1,3 +1,4 @@
+apache-airflow-providers-standard
 apache-airflow-providers-amazon
 botocore
 cryptography
@@ -6,11 +7,12 @@ cryptography
 pycurl
 psycopg2-binary
 apache-airflow-providers-celery
-airflow_multi_dagrun
 apache-airflow-providers-postgres
 apache-airflow-providers-slack
 apache-airflow-providers-slack[http]
 apache-airflow[github_enterprise]
+# Explicit: FabAuthManager is our auth manager (Airflow 3 no longer installs FAB by default)
+apache-airflow-providers-fab
 affine
 netCDF4
 requests

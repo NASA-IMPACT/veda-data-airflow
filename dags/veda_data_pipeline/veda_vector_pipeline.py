@@ -3,9 +3,9 @@ import pendulum
 from airflow.models.param import Param
 from airflow.decorators import task
 from airflow import DAG
-from airflow.operators.empty import EmptyOperator
+from airflow.providers.standard.operators.empty import EmptyOperator
 from airflow.utils.trigger_rule import TriggerRule
-from airflow.models.variable import Variable
+from airflow.sdk import Variable
 from slack_notifications import slack_fail_alert
 from veda_data_pipeline.groups.discover_group import discover_from_s3_task, get_files_task
 
@@ -75,16 +75,16 @@ def ingest_vector_task(payload):
 
 
 @task
-def invalidate_cloudfront(ti):
+def invalidate_cloudfront(dag_run=None):
 
-    if not ti.dag_run.conf.get('invalidate_cloudfront'):
+    if not dag_run.conf.get('invalidate_cloudfront'):
         logging.info("Skipping cloudfront invalidation")
         return
 
     import boto3
     try:
-        cloudfront_to_invalidate_id = Variable.get("CLOUDFRONT_TO_INVALIDATE", default_var=None)
-        cloudfront_path_to_invalidate = Variable.get("CLOUDFRONT_PATH_TO_INVALIDATE", default_var=None)
+        cloudfront_to_invalidate_id = Variable.get("CLOUDFRONT_TO_INVALIDATE", default=None)
+        cloudfront_path_to_invalidate = Variable.get("CLOUDFRONT_PATH_TO_INVALIDATE", default=None)
 
         if cloudfront_to_invalidate_id and cloudfront_path_to_invalidate:
             client = boto3.client('cloudfront')

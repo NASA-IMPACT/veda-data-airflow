@@ -8,7 +8,7 @@ from typing import Dict, List, Optional
 import boto3
 from airflow import DAG
 from airflow.exceptions import AirflowException
-from airflow.models import Variable
+from airflow.sdk import Variable
 from airflow.models.param import Param
 from airflow.providers.standard.operators.empty import EmptyOperator
 from airflow.providers.standard.operators.python import PythonOperator

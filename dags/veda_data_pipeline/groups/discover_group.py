@@ -1,7 +1,7 @@
 from datetime import timedelta
 import uuid
 
-from airflow.models.variable import Variable
+from airflow.sdk import Variable
 from airflow.decorators import task
 from veda_data_pipeline.utils.s3_discovery import (
     s3_discovery_handler, EmptyFileListError

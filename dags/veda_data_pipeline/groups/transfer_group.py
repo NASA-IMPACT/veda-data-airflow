@@ -1,4 +1,4 @@
-from airflow.models.variable import Variable
+from airflow.sdk import Variable
 from airflow.operators.python import BranchPythonOperator, PythonOperator
 from airflow.utils.task_group import TaskGroup
 from airflow.utils.trigger_rule import TriggerRule

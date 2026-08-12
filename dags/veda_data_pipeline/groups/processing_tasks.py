@@ -3,7 +3,7 @@ import json
 import logging
 from copy import deepcopy
 import smart_open
-from airflow.models.variable import Variable
+from airflow.sdk import Variable
 from airflow.decorators import task
 from airflow.sdk import Asset, AssetAlias, Metadata
 from veda_data_pipeline.utils.submit_stac import submission_handler

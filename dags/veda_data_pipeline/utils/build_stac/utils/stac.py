@@ -2,7 +2,7 @@ import pystac
 import rasterio
 from pystac.utils import datetime_to_str
 from rasterio.session import AWSSession
-from airflow.models.variable import Variable
+from airflow.sdk import Variable
 from rio_stac import stac
 from rio_stac.stac import PROJECTION_EXT_VERSION, RASTER_EXT_VERSION
 
@@ -10,7 +10,7 @@ from veda_data_pipeline.utils.build_stac.utils import events, regex, role
 
 
 def get_sts_session():
-    if external_role_arn := Variable.get("ASSUME_ROLE_READ_ARN", default_var=""):
+    if external_role_arn := Variable.get("ASSUME_ROLE_READ_ARN", default=""):
         creds = role.assume_role(external_role_arn, "veda-data-pipelines_build-stac")
         return AWSSession(
             aws_access_key_id=creds["AccessKeyId"],

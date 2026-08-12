@@ -12,7 +12,7 @@ from veda_data_pipeline.utils.submit_stac import submission_handler
 from veda_data_pipeline.utils.schemas import normalize_temporal_extent
 from slack_notifications import slack_fail_alert
 import requests
-from airflow.models.variable import Variable
+from airflow.sdk import Variable
 
 logger = logging.getLogger(__name__)
 

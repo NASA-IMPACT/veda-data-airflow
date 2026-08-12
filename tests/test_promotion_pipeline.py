@@ -63,7 +63,7 @@ def test_transfer_assets_to_production_bucket_transfer_false(mock_task_instance,
     """Test that when transfer is False, payload is updated but no transfer occurs"""
     mock_task_instance.dag_run.conf["transfer"] = False
 
-    with patch("airflow.models.variable.Variable.get", side_effect=mock_variable_get):
+    with patch("airflow.sdk.Variable.get", side_effect=mock_variable_get):
         payload = {
             "bucket": "test-origin-bucket",
             "prefix": "test-prefix/",
@@ -83,7 +83,7 @@ def test_transfer_assets_to_production_bucket_transfer_true(mock_task_instance, 
     """Test that when transfer is True, payload is updated and transfer occurs"""
     mock_task_instance.dag_run.conf["transfer"] = True
 
-    with patch("airflow.models.variable.Variable.get", side_effect=mock_variable_get):
+    with patch("airflow.sdk.Variable.get", side_effect=mock_variable_get):
         payload = {
             "bucket": "test-origin-bucket",
             "prefix": "test-prefix/",
@@ -110,7 +110,7 @@ def test_transfer_assets_to_production_bucket_412_error(mock_task_instance, mock
         Key="test-collection/file1.tif"
     )
 
-    with patch("airflow.models.variable.Variable.get", side_effect=mock_variable_get):
+    with patch("airflow.sdk.Variable.get", side_effect=mock_variable_get):
         payload = {
             "bucket": "test-origin-bucket",
             "prefix": "test-prefix/",

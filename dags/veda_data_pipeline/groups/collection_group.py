@@ -1,5 +1,5 @@
 import requests
-from airflow.models.variable import Variable
+from airflow.sdk import Variable
 from airflow.decorators import task, task_group
 
 from veda_data_pipeline.utils.collection_generation import GenerateCollection

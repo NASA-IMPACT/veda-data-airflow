@@ -223,6 +223,11 @@ variable "assume_role_write_arn" {
   default = ""
 }
 
+variable "aws_request_payer" {
+  description = "Use 'requester' to confirm charge for the request on bucket with Requester Pays enabled"
+  type        = string
+  default     = ""
+}
 
 variable "snapshot_bucket_name" {
   default = ""

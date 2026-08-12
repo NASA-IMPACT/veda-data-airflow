@@ -29,6 +29,7 @@ def discover_from_s3_task(event: dict={}, dag_run=None, payload: dict={}, prev_s
 
     event_bucket = Variable.get("EVENT_BUCKET")
     read_assume_arn = Variable.get("ASSUME_ROLE_READ_ARN")
+    
     # Making the chunk size small, this helped us process large data faster than
     # passing a large chunk of 500
     chunk_size = config.get("chunk_size", 500)

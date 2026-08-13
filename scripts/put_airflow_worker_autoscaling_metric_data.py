@@ -178,7 +178,9 @@ def get_task_count_where_state(states: List[str]) -> int:
             session.query(func.sum(tasks_query.c.count))
             .join(DagModel, DagModel.dag_id == tasks_query.c.dag_id)
             .filter(
-                DagModel.is_active.is_(True),
+                # Airflow 3 removed the DagModel.is_active column; is_stale is its
+                # inverse (a DAG missing from its bundle is marked stale).
+                DagModel.is_stale.is_(False),
                 DagModel.is_paused.is_(False),
             )
             .scalar()

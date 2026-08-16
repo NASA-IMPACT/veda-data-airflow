@@ -1,13 +1,15 @@
-import boto3
 import json
 from argparse import ArgumentParser
+from pathlib import Path
+
+import boto3
 
 
 def get_secrets_as_env(secret_id, out_file):
     sm_client = boto3.client("secretsmanager")
     response = sm_client.get_secret_value(SecretId=secret_id)
     secrets = json.loads(response["SecretString"])
-    with open(out_file, "w") as _env:
+    with Path(out_file).open("w") as _env:
         for out_key in secrets:
             out_value = secrets[out_key]
             _env.write(f"{out_key}={out_value}\n")

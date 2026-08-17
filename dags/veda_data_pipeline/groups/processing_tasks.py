@@ -1,22 +1,27 @@
-from datetime import timedelta, datetime, timezone
 import json
 import logging
 from copy import deepcopy
+from datetime import UTC, datetime
+
 import smart_open
-from airflow.sdk import Variable
-from airflow.decorators import task
-from airflow.sdk import Asset, AssetAlias, Metadata
+from airflow.sdk import Asset, AssetAlias, Metadata, Variable, task
 from veda_data_pipeline.utils.submit_stac import submission_handler
 
 group_kwgs = {"group_id": "Process", "tooltip": "Process"}
 
+
 def log_task(text: str):
     logging.info(text)
 
+
 @task
 def extract_discovery_items_from_payload(payload=None, dag_run=None, **kwargs):
-    discovery_items = dag_run.conf.get("discovery_items") if not payload else payload.get("discovery_items")
-    return discovery_items
+    return (
+        payload.get("discovery_items")
+        if payload
+        else dag_run.conf.get("discovery_items")
+    )
+
 
 @task
 def remove_thumbnail_asset(dag_run=None):
@@ -30,14 +35,19 @@ def remove_thumbnail_asset(dag_run=None):
         payload.pop("assets", True)
     return payload
 
+
 # with exponential backoff enabled, retry delay is converted to seconds
-@task(retries=2, retry_delay=60, retry_exponential_backoff=True, max_active_tis_per_dag=5)
+@task(
+    retries=2, retry_delay=60, retry_exponential_backoff=True, max_active_tis_per_dag=5
+)
 def submit_to_stac_ingestor_task(built_stac: dict):
     """Submit STAC items to the STAC ingestor API."""
     event = built_stac.copy()
     success_file = event["payload"]["success_event_key"]
 
-    app_secret = Variable.get("aws_dags_variables", deserialize_json=True).get("INGEST_API_KEYCLOAK_APP_SECRET")
+    app_secret = Variable.get("aws_dags_variables", deserialize_json=True).get(
+        "INGEST_API_KEYCLOAK_APP_SECRET"
+    )
     stac_ingestor_api_url = Variable.get("STAC_INGESTOR_API_URL")
     try:
         success_file = event["payload"]["success_event_key"]
@@ -56,10 +66,15 @@ def submit_to_stac_ingestor_task(built_stac: dict):
         )
     return event
 
-@task(retries=2, retry_delay=60, retry_exponential_backoff=True, max_active_tis_per_dag=5)
+
+@task(
+    retries=2, retry_delay=60, retry_exponential_backoff=True, max_active_tis_per_dag=5
+)
 def submit_to_stac_ingestor_task_direct(stac_items: dict):
     # to submit items without a success file
-    app_secret = Variable.get("aws_dags_variables", deserialize_json=True).get("INGEST_API_KEYCLOAK_APP_SECRET")
+    app_secret = Variable.get("aws_dags_variables", deserialize_json=True).get(
+        "INGEST_API_KEYCLOAK_APP_SECRET"
+    )
     stac_ingestor_api_url = Variable.get("STAC_INGESTOR_API_URL")
 
     submission_handler(
@@ -74,19 +89,23 @@ def submit_to_stac_ingestor_task_direct(stac_items: dict):
 @task(max_active_tis_per_dag=5)
 def build_stac_task(payload, ti=None):
     from veda_data_pipeline.utils.build_stac.handler import stac_handler
+
     event_bucket = Variable.get("EVENT_BUCKET")
     return stac_handler(payload_src=payload, bucket_output=event_bucket, ti=ti)
 
-@task(
-        outlets=[
-            AssetAlias("VEDA-Datasets")
-        ],
-)
-def post_ingest_dataset_event(logical_date=None, built_items = {}, dag_run=None):  # params are Airflow kwargs - use this task without input
-    """
-    Logs a Dataset event, saving the config used as a versioned object in s3, and creating a Metadata object visible in Airflow.
 
-    Datasets are per-collection, with an alias of "VEDA-Datasets" for additional DAG triggers.
+@task(
+    outlets=[AssetAlias("VEDA-Datasets")],
+)
+def post_ingest_dataset_event(
+    logical_date=None, built_items=None, dag_run=None
+):  # params are Airflow kwargs - use this task without input
+    """
+    Logs a Dataset event, saving the config used as a versioned object in s3,
+    and creating a Metadata object visible in Airflow.
+
+    Datasets are per-collection, with an alias of "VEDA-Datasets"
+    for additional DAG triggers.
 
     Args:
         (Automatically populated by airflow when invoked)
@@ -95,6 +114,8 @@ def post_ingest_dataset_event(logical_date=None, built_items = {}, dag_run=None)
     Returns:
         Yields a Metadata object that Airflow uses to register the Dataset event.
     """
+    if built_items is None:
+        built_items = {}
     payload = dag_run.conf
     event_bucket_name = Variable.get("EVENT_BUCKET")
     collection = payload.get("collection", None)
@@ -106,7 +127,7 @@ def post_ingest_dataset_event(logical_date=None, built_items = {}, dag_run=None)
         or getattr(dag_run, "logical_date", None)
         or getattr(dag_run, "run_after", None)
         or getattr(dag_run, "start_date", None)
-        or datetime.now(timezone.utc)
+        or datetime.now(UTC)
     )
 
     # write the payload to S3 as a versioned object
@@ -125,8 +146,14 @@ def post_ingest_dataset_event(logical_date=None, built_items = {}, dag_run=None)
     elif not isinstance(built_items, list):
         built_items = list(built_items)
     print(f"Built items: {built_items}")
-    success_count = sum(item.get("payload", {}).get("status", {}).get("successes", 0) for item in built_items)
-    failure_count = sum(item.get("payload", {}).get("status", {}).get("failures", 0) for item in built_items)
+    success_count = sum(
+        item.get("payload", {}).get("status", {}).get("successes", 0)
+        for item in built_items
+    )
+    failure_count = sum(
+        item.get("payload", {}).get("status", {}).get("failures", 0)
+        for item in built_items
+    )
 
     yield Metadata(
         Asset(f"{collection}"),

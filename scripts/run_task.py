@@ -2,11 +2,6 @@ import argparse
 import os
 import sys
 from textwrap import dedent
-from typing import List
-
-if sys.version_info.major < 3:
-    print("Please try again with python version 3+")
-    sys.exit(1)
 
 try:
     import botocore.session
@@ -16,9 +11,10 @@ except ImportError:
     sys.exit(1)
 
 
-def list_public_subnet_ids(botocore_ec2_client, vpc_id: str) -> List[str]:
+def list_public_subnet_ids(botocore_ec2_client, vpc_id: str) -> list[str]:
     """
-    Use botocore_ec2_client to obtain a list of public subnet ids for vpc named {vpc_name}
+    Use botocore_ec2_client to obtain a list
+    of public subnet ids for vpc named {vpc_name}
     """
 
     subnets = botocore_ec2_client.describe_subnets(
@@ -43,7 +39,8 @@ def list_public_subnet_ids(botocore_ec2_client, vpc_id: str) -> List[str]:
 
             # keep only the main one
             route_tables = [
-                rt for rt in route_tables
+                rt
+                for rt in route_tables
                 if any(assoc.get("Main") for assoc in rt.get("Associations", []))
             ]
 
@@ -58,7 +55,8 @@ def list_public_subnet_ids(botocore_ec2_client, vpc_id: str) -> List[str]:
 
 def get_security_group_id(botocore_ec2_client, security_group_name: str) -> str:
     """
-    Use botocore_ec2_client to obtain the id of the security group named {security_group_name}
+    Use botocore_ec2_client to obtain the id
+    of the security group named {security_group_name}
     """
     res = botocore_ec2_client.describe_security_groups(
         Filters=[{"Name": "group-name", "Values": [security_group_name]}]
@@ -79,11 +77,14 @@ if __name__ == "__main__":
             Examples
             --------
             Initialize the db
-            $ python3 scripts/run_task.py --public-subnet-ids subnet-xxx --security-group sg-xxx --command 'db migrate --initialize'
+            $ python3 scripts/run_task.py --public-subnet-ids subnet-xxx \\
+                --security-group sg-xxx --command 'db migrate --initialize'
 
             Create an admin user
-            $ python3 scripts/run_task.py --public-subnet-ids subnet-xxx --security-group sg-xxx --command \\
-                'users create --username airflow --firstname airflow --lastname airflow --password airflow --email airflow@example.com --role Admin'
+            $ python3 scripts/run_task.py --public-subnet-ids subnet-xxx \\
+                --security-group sg-xxx --command 'users create --username airflow \\
+                --firstname airflow --lastname airflow --password airflow \\
+                --email airflow@example.com --role Admin'
             """
         ),
     )
@@ -97,13 +98,19 @@ if __name__ == "__main__":
         "--task-definition",
         type=str,
         default=f"{prefix}-standalone-task",
-        help="The name of the standalone task definition. Defaults to 'airflow-standalone-task'.",
+        help=(
+            "The name of the standalone task definition. "
+            "Defaults to 'airflow-standalone-task'."
+        ),
     )
     parser.add_argument(
         "--container-name",
         type=str,
         default="airflow",
-        help="The name of the container in the standalone task definition. Defaults to 'airflow'.",
+        help=(
+            "The name of the container in the standalone task definition. "
+            "Defaults to 'airflow'."
+        ),
     )
     parser.add_argument(
         "--profile",
@@ -121,7 +128,10 @@ if __name__ == "__main__":
         "--security-group-name",
         type=str,
         default=f"{prefix}-standalone-task",
-        help="The name of the standalone task security group. Defaults to 'airflow-standalone-task'.",
+        help=(
+            "The name of the standalone task security group. "
+            "Defaults to 'airflow-standalone-task'."
+        ),
     )
     parser.add_argument(
         "--command",

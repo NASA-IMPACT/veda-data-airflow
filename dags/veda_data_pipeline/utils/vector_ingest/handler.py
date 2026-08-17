@@ -1,23 +1,22 @@
 import base64
-from argparse import ArgumentParser
-from pathlib import Path
-import boto3
-import os
-import subprocess
-import json
-import smart_open
-from urllib.parse import urlparse
-import psycopg2
-import geopandas as gpd
-from shapely import wkb
-from geoalchemy2 import Geometry
-import sqlalchemy
-from sqlalchemy import create_engine, MetaData, Table, Column, inspect
 import concurrent.futures
-from sqlalchemy.dialects.postgresql import DOUBLE_PRECISION, INTEGER, VARCHAR, TIMESTAMP
+import json
+import subprocess
+from pathlib import Path
+from urllib.parse import urlparse
+
+import boto3
+import geopandas as gpd
+import psycopg2
+import smart_open
+import sqlalchemy
+from geoalchemy2 import Geometry
+from shapely import wkb
+from sqlalchemy import Column, MetaData, Table, create_engine, inspect
+from sqlalchemy.dialects.postgresql import DOUBLE_PRECISION, INTEGER, TIMESTAMP, VARCHAR
 
 
-def download_file(file_uri: str, role_arn:[str, None]):
+def download_file(file_uri: str, role_arn: str | None):
     session = boto3.Session()
     if role_arn:
         sts = boto3.client("sts")
@@ -37,21 +36,25 @@ def download_file(file_uri: str, role_arn:[str, None]):
     bucket = url_parse.netloc
     path = url_parse.path[1:]
     filename = url_parse.path.split("/")[-1]
-    target_filepath = os.path.join("/tmp", filename)
+    target_filepath = Path("/tmp") / filename
 
     s3.download_file(bucket, path, target_filepath)
 
     print(f"downloaded {target_filepath}")
-
 
     return target_filepath
 
 
 def get_connection_string(secret: dict, as_uri: bool = False) -> str:
     if as_uri:
-        return f"postgresql://{secret['username']}:{secret['password']}@{secret['host']}:5432/{secret['dbname']}"
-    else:
-        return f"PG:host={secret['host']} dbname={secret['dbname']} user={secret['username']} password={secret['password']}"
+        return (
+            f"postgresql://{secret['username']}:{secret['password']}"
+            f"@{secret['host']}:5432/{secret['dbname']}"
+        )
+    return (
+        f"PG:host={secret['host']} dbname={secret['dbname']} "
+        f"user={secret['username']} password={secret['password']}"
+    )
 
 
 def get_gdf_schema(gdf, target_projection):
@@ -69,13 +72,13 @@ def get_gdf_schema(gdf, target_projection):
         "datetime64": TIMESTAMP,
     }
     schema = []
-    for column, dtype in zip(gdf.columns, gdf.dtypes):
+    for column, dtype in zip(gdf.columns, gdf.dtypes, strict=False):
         if str(dtype) == "geometry":
             # do not inpsect to retrieve geom type, just use generic GEOMETRY
             # geom_type = str(gdf[column].geom_type.unique()[0]).upper()
             geom_type = str(dtype).upper()
             # do not taKe SRID from existing file for target table
-            # we always want to transform from file EPSG to Table EPSG(<target_projection>)
+            # we want to transform from file EPSG to Table EPSG(<target_projection>)
             column_type = Geometry(geometry_type=geom_type, srid=target_projection)
         else:
             dtype_str = str(dtype)
@@ -116,7 +119,8 @@ def ensure_table_exists(
     for column in gdf_schema:
         if column.name not in existing_column_names:
             raise ValueError(
-                f"your .gpkg seems to have a column={column.name} that does not exist in the existing table columns={existing_column_names}"
+                f"your .gpkg seems to have a column={column.name} that does not exist "
+                f"in the existing table columns={existing_column_names}"
             )
 
 
@@ -126,16 +130,15 @@ def delete_region(
     table_name: str,
 ):
     gdf = gpd.read_file(gpkg_path)
-    if 'region' in gdf.columns:
+    if "region" in gdf.columns:
         region_name = gdf["region"].iloc[0]
-        with engine.connect() as conn:
-            with conn.begin():
-                delete_sql = sqlalchemy.text(
-                    f"""
+        with engine.connect() as conn, conn.begin():
+            delete_sql = sqlalchemy.text(
+                f"""
                     DELETE FROM {table_name} WHERE region=:region_name
                     """
-                )
-                conn.execute(delete_sql, {'region_name': region_name})
+            )
+            conn.execute(delete_sql, {"region_name": region_name})
     else:
         print(f"'region' column not found in {gpkg_path}. No records deleted.")
 
@@ -156,43 +159,46 @@ def upsert_to_postgis(
     :return:
     """
     gdf = gpd.read_file(gpkg_path)
-    source_epsg_code = gdf.crs.to_epsg()
-    if not source_epsg_code:
-        # assume NAD27 Equal Area for now :shrug:
-        # since that's what the default is for Fire Atlas team exports
-        # that's what PROJ4 does under the hood for 9311 :wethinksmirk:
-        source_epsg_code = 2163
+    source_epsg_code = gdf.crs.to_epsg() or 2163
 
-    # convert the `t` column to something suitable for sql insertion otherwise we get 'Timestamp(<value>)'
+    # convert the `t` column to something suitable for sql insertion
+    # otherwise we get 'Timestamp(<value>)'
     gdf["t"] = gdf["t"].dt.strftime("%Y-%m-%d %H:%M:%S")
     # convert to WKB
     gdf["geometry"] = gdf["geometry"].apply(lambda geom: wkb.dumps(geom, hex=True))
 
     def upsert_batch(batch):
-        with engine.connect() as conn:
-            with conn.begin():
-                for row in batch.to_dict(orient="records"):
-                    # make sure all column names are lower case for keys and values
-                    row = {k.lower(): v for k, v in row.items()}
-                    columns = [col.lower() for col in batch.columns]
+        with engine.connect() as conn, conn.begin():
+            for row in batch.to_dict(orient="records"):
+                # make sure all column names are lower case for keys and values
+                row = {k.lower(): v for k, v in row.items()}
+                columns = [col.lower() for col in batch.columns]
 
-                    non_geom_placeholders = ", ".join(
-                        [f":{col}" for col in columns[:-1]]
-                    )
-                    # NOTE: we need to escape `::geometry` so parameterized statements don't try to replace it
-                    # because parametrized statements in sqlalchemy are `:<variable-name>`
-                    geom_placeholder = f"ST_Transform(ST_SetSRID(ST_GeomFromWKB(:geometry\:\:geometry), {source_epsg_code}), {target_projection})"  # noqa: W605
-                    upsert_sql = sqlalchemy.text(
-                        f"""
-                            INSERT INTO {table_name} ({', '.join([col for col in columns])})
-                            VALUES ({non_geom_placeholders},{geom_placeholder})
-                            ON CONFLICT (primarykey)
-                            DO UPDATE SET {', '.join(f"{col}=EXCLUDED.{col}" for col in columns if col != 'primarykey')}
-                        """
-                    )
+                non_geom_placeholders = ", ".join([f":{col}" for col in columns[:-1]])
+                # NOTE: we need to escape `::geometry` so parameterized statements
+                # don't try to replace it, because parametrized statements in sqlalchemy
+                # are `:<variable-name>`
+                geom_placeholder = (
+                    f"ST_Transform(ST_SetSRID(ST_GeomFromWKB(:geometry\:\:geometry), "  #  noqa: W605
+                    f"{source_epsg_code}), {target_projection})"
+                )
+                upsert_sql = sqlalchemy.text(
+                    f"""
+                        INSERT INTO {table_name} ({", ".join(list(columns))})
+                        VALUES ({non_geom_placeholders},{geom_placeholder})
+                        ON CONFLICT (primarykey)
+                        DO UPDATE SET {
+                        ", ".join(
+                            f"{col}=EXCLUDED.{col}"
+                            for col in columns
+                            if col != "primarykey"
+                        )
+                    }
+                    """
+                )
 
-                    # logging.debug(f"[ UPSERT SQL ]:\n{str(upsert_sql)}")
-                    conn.execute(upsert_sql, row)
+                # logging.debug(f"[ UPSERT SQL ]:\n{str(upsert_sql)}")
+                conn.execute(upsert_sql, row)
 
     batches = [gdf.iloc[i : i + batch_size] for i in range(0, len(gdf), batch_size)]
     # set `max_workers` to something below max concurrent connections for postgresql
@@ -205,7 +211,8 @@ def get_secret(secret_name: str, region_name: str = "us-west-2") -> None:
     """Retrieve secrets from AWS Secrets Manager
 
     Args:
-        secret_name (str): name of aws secrets manager secret containing database connection secrets
+        secret_name (str): name of aws secrets manager secret
+        containing database connection secrets
 
     Returns:
         secrets (dict): decrypted secrets in dict
@@ -215,18 +222,18 @@ def get_secret(secret_name: str, region_name: str = "us-west-2") -> None:
     session = boto3.session.Session(region_name=region_name)
     client = session.client(service_name="secretsmanager")
 
-    # In this sample we only handle the specific exceptions for the 'GetSecretValue' API.
+    # In this sample we only handle the specific exceptions for the 'GetSecretValue' API
     # See https://docs.aws.amazon.com/secretsmanager/latest/apireference/API_GetSecretValue.html
     # We rethrow the exception by default.
 
     get_secret_value_response = client.get_secret_value(SecretId=secret_name)
 
     # Decrypts secret using the associated KMS key.
-    # Depending on whether the secret is a string or binary, one of these fields will be populated.
+    # Depending on whether the secret is a string or binary,
+    # one of these fields will be populated.
     if "SecretString" in get_secret_value_response:
         return json.loads(get_secret_value_response["SecretString"])
-    else:
-        return json.loads(base64.b64decode(get_secret_value_response["SecretBinary"]))
+    return json.loads(base64.b64decode(get_secret_value_response["SecretBinary"]))
 
 
 def load_to_featuresdb(
@@ -235,7 +242,7 @@ def load_to_featuresdb(
     vector_secret_name: str,
     source_projection: str,
     target_projection: str,
-    extra_flags: list = None
+    extra_flags: list = None,
 ):
     secret_name = vector_secret_name
 
@@ -255,7 +262,7 @@ def load_to_featuresdb(
         source_projection,
         "-t_srs",
         target_projection,
-        *extra_flags
+        *extra_flags,
     ]
     out = subprocess.run(
         options,
@@ -291,12 +298,13 @@ def load_to_featuresdb_eis(
     # NOTE: about `collection.rsplit` below:
     #
     # EIS Fire team naming convention for outputs
-    #     Snapshots: "snapshot_{layer_name}_nrt_{region_name}.gpkg"
-    #     Lf_archive: "lf_{layer_name}_archive_{region_name}.gpkg"
-    #     Lf_nrt: "lf_{layer_name}_nrt_{region_name}.gpkg"
+    #   Snapshots: "snapshot_{layer_name}_nrt_{region_name}.gpkg"
+    #   Lf_archive: "lf_{layer_name}_archive_{region_name}.gpkg"
+    #   Lf_nrt: "lf_{layer_name}_nrt_{region_name}.gpkg"
     #
     # Insert/Alter on table call everything except the region name:
-    #     e.g. `snapshot_perimeter_nrt_conus` this gets inserted into the table `eis_fire_snapshot_perimeter_nrt`
+    #   e.g. `snapshot_perimeter_nrt_conus` this gets inserted
+    #   into the table `eis_fire_snapshot_perimeter_nrt`
     collection = collection.rsplit("_", 1)[0]
     target_table_name = f"eis_fire_{collection}"
 
@@ -310,16 +318,17 @@ def load_to_featuresdb_eis(
     return {"status": "success"}
 
 
-def alter_datetime_add_indexes_eis(collection: str,vector_secret_name: str ):
+def alter_datetime_add_indexes_eis(collection: str, vector_secret_name: str):
     # NOTE: about `collection.rsplit` below:
     #
     # EIS Fire team naming convention for outputs
-    #     Snapshots: "snapshot_{layer_name}_nrt_{region_name}.gpkg"
-    #     Lf_archive: "lf_{layer_name}_archive_{region_name}.gpkg"
-    #     Lf_nrt: "lf_{layer_name}_nrt_{region_name}.gpkg"
+    #   Snapshots: "snapshot_{layer_name}_nrt_{region_name}.gpkg"
+    #   Lf_archive: "lf_{layer_name}_archive_{region_name}.gpkg"
+    #   Lf_nrt: "lf_{layer_name}_nrt_{region_name}.gpkg"
     #
     # Insert/Alter on table call everything except the region name:
-    #     e.g. `snapshot_perimeter_nrt_conus` this gets inserted into the table `eis_fire_snapshot_perimeter_nrt`
+    #   e.g. `snapshot_perimeter_nrt_conus` this gets inserted
+    #   into the table `eis_fire_snapshot_perimeter_nrt`
     collection = collection.rsplit("_", 1)[0]
 
     secret_name = vector_secret_name
@@ -334,22 +343,29 @@ def alter_datetime_add_indexes_eis(collection: str,vector_secret_name: str ):
     cur = conn.cursor()
     cur.execute(
         f"ALTER table eis_fire_{collection} "
-        f"ALTER COLUMN t TYPE TIMESTAMP USING t::timestamp without time zone; "
-        f"CREATE INDEX IF NOT EXISTS idx_eis_fire_{collection}_datetime ON eis_fire_{collection}(t);"
-        f"CREATE INDEX IF NOT EXISTS idx_eis_fire_{collection}_primarykey ON eis_fire_{collection}(primarykey);"
-        f"CREATE INDEX IF NOT EXISTS idx_eis_fire_{collection}_region ON eis_fire_{collection}(region);"
+        "ALTER COLUMN t TYPE TIMESTAMP "
+        "USING t::timestamp without time zone; "
+        "CREATE INDEX IF NOT EXISTS "
+        f"idx_eis_fire_{collection}_datetime "
+        f"ON eis_fire_{collection}(t);"
+        "CREATE INDEX IF NOT EXISTS "
+        f"idx_eis_fire_{collection}_primarykey "
+        f"ON eis_fire_{collection}(primarykey);"
+        "CREATE INDEX IF NOT EXISTS "
+        f"idx_eis_fire_{collection}_region "
+        f"ON eis_fire_{collection}(region);"
     )
     conn.commit()
 
 
-def handler(payload_src: dict, vector_secret_name: str, assume_role_arn: [str, None]):
+def handler(payload_src: dict, vector_secret_name: str, assume_role_arn: str | None):
 
     payload_event = payload_src.copy()
     s3_event = payload_event.pop("payload")
 
     # Extract dag config
-    source_projection = payload_event.get("source_projection", 'EPSG:4326')
-    target_projection = payload_event.get("target_projection", 'EPSG:4326')
+    source_projection = payload_event.get("source_projection", "EPSG:4326")
+    target_projection = payload_event.get("target_projection", "EPSG:4326")
     extra_flags = payload_event.get("extra_flags", ["-overwrite", "-progress"])
     collection_not_provided = payload_event["collection"] == ""
 
@@ -357,30 +373,44 @@ def handler(payload_src: dict, vector_secret_name: str, assume_role_arn: [str, N
         s3_event_read = _file.read()
     event_received = json.loads(s3_event_read)
     s3_objects = event_received["objects"]
-    status = list()
+    status = []
     for s3_object in s3_objects:
         href = s3_object["assets"]["default"]["href"]
         collection = s3_object["collection"]
         downloaded_filepath = download_file(href, assume_role_arn)
 
-        # Note that the boto3 ListObjectsV2 response is transformed to use new keys in veda_data_pipelline/utils/s3_discovery.py discover_from_s3
-        # The transformed keys are preprocessed for STAC Item COG asset metadata but href can also be used for vector ingest
+        # Note that the boto3 ListObjectsV2 response is transformed to use new keys in
+        # veda_data_pipeline/utils/s3_discovery.py discover_from_s3
+        # The transformed keys are preprocessed for STAC Item COG asset metadata but
+        # href can also be used for vector ingest
         s3_object_prefix = event_received["prefix"]
         if s3_object_prefix.startswith("EIS/"):
             collection = Path(href).stem
-            print(f"Load new EIS fire features from {href=} using {collection=} {downloaded_filepath=}")
-            coll_status = load_to_featuresdb_eis(downloaded_filepath, collection, vector_secret_name)
+            print(
+                f"Load new EIS fire features from {href=} "
+                f"using {collection=} {downloaded_filepath=}"
+            )
+            coll_status = load_to_featuresdb_eis(
+                downloaded_filepath, collection, vector_secret_name
+            )
         else:
             # Get the filename
             filename = href.split("/")[-1].split(".")[0]
             # Use id template with filename when collection is not provided in the conf
             if collection_not_provided:
                 collection = payload_event.get("id_template", "{}").format(filename)
-            coll_status = load_to_featuresdb(downloaded_filepath, collection, vector_secret_name, source_projection, target_projection, extra_flags)
+            coll_status = load_to_featuresdb(
+                downloaded_filepath,
+                collection,
+                vector_secret_name,
+                source_projection,
+                target_projection,
+                extra_flags,
+            )
 
         status.append(coll_status)
         # delete file after ingest
-        os.remove(downloaded_filepath)
+        Path(downloaded_filepath).unlink()
 
         if coll_status["status"] == "success" and s3_object_prefix.startswith("EIS/"):
             alter_datetime_add_indexes_eis(collection, vector_secret_name)
@@ -388,5 +418,3 @@ def handler(payload_src: dict, vector_secret_name: str, assume_role_arn: [str, N
             # bubble exception so Airflow shows it as a failure
             raise Exception(coll_status["reason"])
     return status
-
-

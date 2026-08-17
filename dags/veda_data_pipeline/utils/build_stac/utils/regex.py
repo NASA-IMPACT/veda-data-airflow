@@ -1,12 +1,12 @@
 import re
+from collections.abc import Callable
 from datetime import datetime
-from typing import Callable, Dict, Tuple, Union
 
 from dateutil.relativedelta import relativedelta
 
 from . import events
 
-DATERANGE = Tuple[datetime, datetime]
+DATERANGE = tuple[datetime, datetime]
 
 
 def _calculate_year_range(datetime_obj: datetime) -> DATERANGE:
@@ -27,7 +27,7 @@ def _calculate_day_range(datetime_obj: datetime) -> DATERANGE:
     return start_datetime, end_datetime
 
 
-DATETIME_RANGE_METHODS: Dict[events.INTERVAL, Callable[[datetime], DATERANGE]] = {
+DATETIME_RANGE_METHODS: dict[events.INTERVAL, Callable[[datetime], DATERANGE]] = {
     "month": _calculate_month_range,
     "year": _calculate_year_range,
     "day": _calculate_day_range,
@@ -36,7 +36,7 @@ DATETIME_RANGE_METHODS: Dict[events.INTERVAL, Callable[[datetime], DATERANGE]] =
 
 def extract_dates(
     filename: str, datetime_range: events.INTERVAL
-) -> Union[Tuple[datetime, datetime, None], Tuple[None, None, datetime]]:
+) -> tuple[datetime, datetime, None] | tuple[None, None, datetime]:
     """
     Extracts start & end or single date string from filename.
     """

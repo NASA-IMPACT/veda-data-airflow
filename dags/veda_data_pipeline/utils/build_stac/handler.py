@@ -1,13 +1,11 @@
-import logging
 import json
-from typing import Any, Dict, TypedDict, Union
-from uuid import uuid4
-import smart_open
-from veda_data_pipeline.utils.build_stac.utils import events
-from veda_data_pipeline.utils.build_stac.utils import stac
+import logging
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from airflow.exceptions import AirflowException
+from typing import Any, TypedDict
+from uuid import uuid4
 
+import smart_open
+from veda_data_pipeline.utils.build_stac.utils import events, stac
 
 
 class S3LinkOutput(TypedDict):
@@ -31,10 +29,10 @@ def using_pool(objects, workers_count: int):
 
 
 class StacItemOutput(TypedDict):
-    stac_item: Dict[str, Any]
+    stac_item: dict[str, Any]
 
 
-def handler(event: Dict[str, Any]) -> Union[S3LinkOutput, StacItemOutput]:
+def handler(event: dict[str, Any]) -> S3LinkOutput | StacItemOutput:
     """
     Handler for STAC Collection Item generation
 
@@ -70,15 +68,18 @@ def handler(event: Dict[str, Any]) -> Union[S3LinkOutput, StacItemOutput]:
             href = first_asset.get("href", "")
             filename = href.split("/")[-1] if href else None
 
-        item_id = event.get("item_id", None)
-        logging.error(f"Failed to generate STAC for file: {filename} (item_id: {item_id}) - Error: {ex}")
+        item_id = event.get("item_id")
+        logging.error(
+            f"Failed to generate STAC for file: {filename} "
+            f"(item_id: {item_id}) - Error: {ex}"
+        )
 
         out_err: StacItemOutput = {
             "stac_item": {
                 "error": f"{ex}",
                 "filename": filename,
                 "item_id": item_id,
-                "event": event
+                "event": event,
             }
         }
         return out_err
@@ -105,7 +106,6 @@ def write_outputs_to_s3(key, payload_success, payload_failures):
         with smart_open.open(dead_letter_key, "w") as _file:
             _file.write(json.dumps(payload_failures))
     return [success_key, dead_letter_key]
-
 
 
 def stac_handler(payload_src: dict, bucket_output, ti=None):
@@ -152,7 +152,11 @@ def stac_handler(payload_src: dict, bucket_output, ti=None):
         logging.info(f"Total Processed: {total_processed}")
         logging.info(f"Successes: {len(payload_success)}")
         logging.info(f"Failures: {len(payload_failures)}")
-        logging.info(f"Success Rate: {(len(payload_success) / total_processed) * 100:.2f}%" if total_processed > 0 else "0%")
+        logging.info(
+            f"Success Rate: {(len(payload_success) / total_processed) * 100:.2f}%"
+            if total_processed > 0
+            else "0%"
+        )
 
         if payload_failures:
             logging.warning("\n=== Error Breakdown ===")
@@ -160,18 +164,18 @@ def stac_handler(payload_src: dict, bucket_output, ti=None):
             failed_files_by_error = {}  # Track files per error type
 
             for failure in payload_failures:
-                error_msg = failure.get('error', 'Unknown error')
+                error_msg = failure.get("error", "Unknown error")
                 error_breakdown[error_msg] = error_breakdown.get(error_msg, 0) + 1
 
                 # Extract filename
-                filename = failure.get('filename', 'unknown')
-                if filename == 'unknown' and 'event' in failure:
+                filename = failure.get("filename", "unknown")
+                if filename == "unknown" and "event" in failure:
                     # Fallback: extract from event if not in failure directly
-                    assets = failure['event'].get('assets', {})
+                    assets = failure["event"].get("assets", {})
                     if assets:
                         first_asset = next(iter(assets.values()), {})
-                        href = first_asset.get('href', '')
-                        filename = href.split("/")[-1] if href else 'unknown'
+                        href = first_asset.get("href", "")
+                        filename = href.split("/")[-1] if href else "unknown"
 
                 # Group filenames by error
                 if error_msg not in failed_files_by_error:
@@ -184,7 +188,9 @@ def stac_handler(payload_src: dict, bucket_output, ti=None):
                 example_files = failed_files_by_error[error][:5]
                 logging.warning(f"    Example files: {', '.join(example_files)}")
                 if len(failed_files_by_error[error]) > 5:
-                    logging.warning(f"    ... and {len(failed_files_by_error[error]) - 5} more")
+                    logging.warning(
+                        f"    ... and {len(failed_files_by_error[error]) - 5} more"
+                    )
 
         result = {
             "payload": {
@@ -193,13 +199,14 @@ def stac_handler(payload_src: dict, bucket_output, ti=None):
                 "status": {
                     "successes": len(payload_success),
                     "failures": len(payload_failures),
-                }
+                },
             }
         }
 
         if len(payload_failures) != 0:
             logging.warning(
-                f"Build STAC completed with {len(payload_failures)} failures. See logs for details {dead_letter_key}"
+                f"Build STAC completed with {len(payload_failures)} failures. "
+                f"See logs for details {dead_letter_key}"
             )
 
         return result

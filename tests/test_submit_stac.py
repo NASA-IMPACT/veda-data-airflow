@@ -1,11 +1,11 @@
-from veda_data_pipeline.utils import submit_stac
-
 import os
+from unittest.mock import MagicMock, patch
+
 import boto3
 import pytest
-from moto import mock_aws
 import requests_mock
-from unittest.mock import patch, MagicMock
+from moto import mock_aws
+from veda_data_pipeline.utils import submit_stac
 
 
 @pytest.fixture(scope="function")
@@ -19,60 +19,76 @@ def aws_credentials():
     os.environ["APP_SECRET"] = "app_secret"
     os.environ["STAC_INGESTOR_API_URL"] = "http://www.test.com"
 
+
 @pytest.fixture(scope="function")
 def aws(aws_credentials):
     with mock_aws():
         yield boto3.client("secretsmanager", region_name="us-west-2")
 
+
 @pytest.fixture
 def create_secret(aws):
-    boto3.client("secretsmanager", region_name="us-west-2").create_secret(Name="app_secret", SecretString="{\"userinfo_url\":\"https://keycloak.realm.url/openid-connect/userinfo\",\"id\":\"airflow-ingest-api-etl\",\"auth_url\":\"https://keycloak.url/veda/protocol/openid-connect/auth\",\"secret\":\"secret\",\"token_url\":\"https://keycloak.realms/veda/protocol/openid-connect/token\"")
+    boto3.client("secretsmanager", region_name="us-west-2").create_secret(
+        Name="app_secret",
+        SecretString='{"userinfo_url":"https://keycloak.realm.url/openid-connect/userinfo","id":"airflow-ingest-api-etl","auth_url":"https://keycloak.url/veda/protocol/openid-connect/auth","secret":"secret","token_url":"https://keycloak.realms/veda/protocol/openid-connect/token"',
+    )
+
 
 @requests_mock.Mocker(kw="mock")
 def test_submission_handler_dry_run(create_secret, capsys, **kwargs):
-  token_endpoint = kwargs["mock"].post("http://test.com/oauth2/token", json={"token_type": "bearer", "access_token": "token"})
-  ingestions_endpoint = kwargs["mock"].post("http://www.test.com/ingestions", json={"id": "123", "status": "success", "message": "STAC item ingested successfully"})
-  fake_event = {
-    "dry_run": "dry run",
-    "stac_file_url": "http://www.test.com",
-    "stac_item": 123
-  }
+    token_endpoint = kwargs["mock"].post(
+        "http://test.com/oauth2/token",
+        json={"token_type": "bearer", "access_token": "token"},
+    )
+    ingestions_endpoint = kwargs["mock"].post(
+        "http://www.test.com/ingestions",
+        json={
+            "id": "123",
+            "status": "success",
+            "message": "STAC item ingested successfully",
+        },
+    )
+    fake_event = {
+        "dry_run": "dry run",
+        "stac_file_url": "http://www.test.com",
+        "stac_item": 123,
+    }
 
-  res = submit_stac.submission_handler(fake_event)
+    res = submit_stac.submission_handler(fake_event)
 
-  assert res == None
-  captured = capsys.readouterr()
-  assert "Dry run, not inserting" in captured.out
-  assert token_endpoint.call_count == 0
-  assert ingestions_endpoint.call_count == 0
+    assert res is None
+    captured = capsys.readouterr()
+    assert "Dry run, not inserting" in captured.out
+    assert token_endpoint.call_count == 0
+    assert ingestions_endpoint.call_count == 0
+
 
 @requests_mock.Mocker(kw="mock")
 @patch("veda_data_pipeline.utils.submit_stac.IngestionApi.from_veda_auth_secret")
-def test_submission_handler_with_mocked_api(mock_from_secret, create_secret, capsys, **kwargs):
+def test_submission_handler_with_mocked_api(
+    mock_from_secret, create_secret, capsys, **kwargs
+):
     # Mock token and ingestion response
     mocked_api = MagicMock()
     mocked_api.submit.return_value = {
         "id": "123",
         "status": "success",
-        "message": "STAC item ingested successfully"
+        "message": "STAC item ingested successfully",
     }
     mock_from_secret.return_value = mocked_api
 
-    fake_event_no_dry_run = {
-        "stac_file_url": "http://www.test.com",
-        "stac_item": 123
-    }
+    fake_event_no_dry_run = {"stac_file_url": "http://www.test.com", "stac_item": 123}
 
     res = submit_stac.submission_handler(
         fake_event_no_dry_run,
         app_secret=os.environ["APP_SECRET"],
-        stac_ingestor_api_url="http://www.test.com"
+        stac_ingestor_api_url="http://www.test.com",
     )
 
     assert res == {
         "id": "123",
         "status": "success",
-        "message": "STAC item ingested successfully"
+        "message": "STAC item ingested successfully",
     }
 
     captured = capsys.readouterr()

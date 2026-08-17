@@ -62,7 +62,7 @@ This is a evolving document that outlines the governance structure, development 
 ### 5.2 Deployment Procedures
 
 * The `dev` environment is continuously deployed using GitHub Actions. Manual deployments are possible, but not recommended.
-* The `sit` environment is manually deployed using `make sm2a-deploy`. This requires updating the Makefile with a secret name corresponding to the live environment (currently `veda-sm2a-sit-deployment-secrets`). 
+* The `sit` environment is manually deployed using `make sm2a-deploy`. This requires updating the Makefile with a secret name corresponding to the live environment (currently `veda-sm2a-sit-deployment-secrets`).
 
 ### 5.3. Releases
 
@@ -78,6 +78,6 @@ This is a evolving document that outlines the governance structure, development 
 
 ## 7. Change Log & Versioning
 
-- Does not exist yet, but should be automated. To support this, we should use [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) to generate a changelog.
-- The changelog should be generated automatically using semantic-release.
-- To help maintain a clean history, PRs should be rebased and squashed to consolidate unneeded commits before merging.
+* Does not exist yet, but should be automated. To support this, we should use [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) to generate a changelog.
+* The changelog should be generated automatically using semantic-release.
+* To help maintain a clean history, PRs should be rebased and squashed to consolidate unneeded commits before merging.

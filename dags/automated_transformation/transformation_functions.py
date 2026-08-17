@@ -1,10 +1,7 @@
 import re
 from datetime import datetime
 
-import boto3
 import xarray
-
-
 
 """
 The naming convention for the transformation function is as follows:
@@ -107,7 +104,7 @@ def geos_oco2_transformation(file_obj, name, nodata):
     var_data_netcdf = {}
     xds = xarray.open_dataset(file_obj)
     xds = xds.assign_coords(lon=(((xds.lon + 180) % 360) - 180)).sortby("lon")
-    variable = [var for var in xds.data_vars]
+    variable = list(xds.data_vars)
     for time_increment in range(0, len(xds.time)):
         for var in variable:
             filename = name.split("/ ")[-1]
@@ -151,7 +148,7 @@ def ecco_darwin_transformation(file_obj, name, nodata):
         "latitude"
     )
 
-    variable = [var for var in xds.data_vars]
+    variable = list(xds.data_vars)
 
     for _ in xds.time.values:
         for var in variable[2:]:

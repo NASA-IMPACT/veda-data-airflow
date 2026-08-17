@@ -1,37 +1,47 @@
-import logging
-import pendulum
-import traceback
-import time
 import json
-from airflow import DAG
-from airflow.exceptions import AirflowException
-from airflow.models.param import Param
-from airflow.decorators import task
-from airflow.providers.standard.operators.empty import EmptyOperator
-from veda_data_pipeline.utils.submit_stac import submission_handler
-from veda_data_pipeline.utils.schemas import normalize_temporal_extent
-from slack_notifications import slack_fail_alert
+import logging
+import time
+import traceback
+
+import pendulum
 import requests
-from airflow.sdk import Variable
+from airflow.exceptions import AirflowException
+from airflow.providers.standard.operators.empty import EmptyOperator
+from airflow.sdk import DAG, Variable, task
+from airflow.sdk.definitions.param import Param
+from slack_notifications import slack_fail_alert
+from veda_data_pipeline.utils.schemas import normalize_temporal_extent
+from veda_data_pipeline.utils.submit_stac import submission_handler
 
 logger = logging.getLogger(__name__)
 
 template_dag_run_conf = {
     "collections": Param(
         type="array",
-        description="List of collection IDs to tag. In the UI form, enter one collection ID per line. When triggering via API or CLI, provide as a list: [\"collection1\", \"collection2\"] (JSON format will be converted to a Python list)"
+        description=(
+            "List of collection IDs to tag. In the UI form, enter one collection ID "
+            "per line. When triggering via API or CLI, provide as a list: "
+            '["collection1", "collection2"] (JSON format will be converted to '
+            "a Python list)"
+        ),
     ),
-    "tenant": Param(default=None, type="string", description="Tenant ID to tag the collection with"),
+    "tenant": Param(
+        default=None, type="string", description="Tenant ID to tag the collection with"
+    ),
     "tenant_field": Param(
         default="eic:tenant",
         type="string",
-        description="Top-level collection key to write the tenant into (e.g., 'eic-tenant' or 'eic:tenant')",
+        description=(
+            "Top-level collection key to write the tenant into "
+            "(e.g., 'eic-tenant' or 'eic:tenant')"
+        ),
     ),
 }
 
 dag_doc_md = """
 ### Tenant Tagging DAG
-Tags existing collections with tenant information by updating the collection with tenant tags.
+Tags existing collections with tenant information by updating the collection
+with tenant tags.
 
 This pipeline:
 1. Fetches existing collections from the STAC catalog
@@ -45,8 +55,10 @@ This pipeline:
 
 **Collection Source:**
 - `collections` (array of strings): List of collection IDs to tag
+
 **Optional Parameters:**
-- `tenant_field` (string): Top-level collection key to write tenant into (default: `eic:tenant`)
+- `tenant_field` (string): Top-level collection key to write tenant into
+    (default: `eic:tenant`)
 
 #### Example Configurations
 
@@ -77,6 +89,7 @@ dag_args = {
     "tags": ["collection", "tenant"],
 }
 
+
 @task()
 def get_collection_ids(dag_run=None):
     """Extract and validate collection IDs from configuration"""
@@ -89,7 +102,11 @@ def get_collection_ids(dag_run=None):
 
         # Validate collections is a list
         if not isinstance(collections, list):
-            error_msg = f"Collections must be a list, but got type: {type(collections)}. For UI form: enter one collection ID per line. For API or CLI: provide as a list [\"col1\", \"col2\"]"
+            error_msg = (
+                f"Collections must be a list, but got type: {type(collections)}. "
+                "For UI form: enter one collection ID per line. For API or CLI: "
+                'provide as a list ["col1", "col2"]'
+            )
             logger.error(error_msg)
             raise ValueError(error_msg)
 
@@ -102,7 +119,10 @@ def get_collection_ids(dag_run=None):
         normalized_collections = []
         for coll in collections:
             if not isinstance(coll, str):
-                error_msg = f"Collections must be a list of strings, but got element of type: {type(coll)}"
+                error_msg = (
+                    "Collections must be a list of strings, but got element of type: "
+                    f"{type(coll)}"
+                )
                 logger.error(error_msg)
                 raise ValueError(error_msg)
 
@@ -110,25 +130,32 @@ def get_collection_ids(dag_run=None):
             if not coll_stripped:
                 continue
 
-            # Handle case where user entered multiple values in a single string (fallback)
+            # Handle case where user entered multiple values in a single string
+            # (fallback)
             if "\n" in coll_stripped or "," in coll_stripped:
-                logger.warning(f"Received string with separators: {coll_stripped}. Parsing as fallback. For UI form: enter one collection ID per line (should be parsed automatically). For API/CLI: provide as a list [\"col1\", \"col2\"]")
+                logger.warning(
+                    f"Received string with separators: {coll_stripped}. "
+                    "Parsing as fallback. For UI form: enter one collection ID per "
+                    "line (should be parsed automatically). For API/CLI: provide as a "
+                    'list ["col1", "col2"]'
+                )
                 if "\n" in coll_stripped:
                     # split on newlines (to handle UI form input)
-                    split_collections = [c.strip() for c in coll_stripped.split("\n") if c.strip()]
+                    split_collections = [
+                        c.strip() for c in coll_stripped.split("\n") if c.strip()
+                    ]
                 else:
                     # split on commas (in case this is used in form)
-                    split_collections = [c.strip() for c in coll_stripped.split(",") if c.strip()]
+                    split_collections = [
+                        c.strip() for c in coll_stripped.split(",") if c.strip()
+                    ]
 
                 # strip quotes from each
                 for split_coll in split_collections:
-                    cleaned = split_coll.strip('"').strip("'").strip()
-                    if cleaned:
+                    if cleaned := split_coll.strip('"').strip("'").strip():
                         normalized_collections.append(cleaned)
             else:
-                # basic case: single collection ID
-                cleaned = coll_stripped.strip('"').strip("'").strip()
-                if cleaned:
+                if cleaned := coll_stripped.strip('"').strip("'").strip():
                     normalized_collections.append(cleaned)
 
         logger.info(f"Validated {len(normalized_collections)} collection IDs")
@@ -140,9 +167,13 @@ def get_collection_ids(dag_run=None):
         logger.error(f"Traceback: {traceback.format_exc()}")
         raise
 
+
 @task()
 def fetch_existing_collection(collection_id: str):
-    """Fetch an existing collection from the STAC catalog. Returns None if collection doesn't exist or fetching returns error."""
+    """
+    Fetch an existing collection from the STAC catalog.
+    Returns None if collection doesn't exist or fetching returns error.
+    """
     try:
         logger.info(f"Fetching collection: {collection_id}")
 
@@ -160,20 +191,31 @@ def fetch_existing_collection(collection_id: str):
             response = requests.get(collection_url, timeout=30)
             # If collection doesn't exist (404), log and return None instead of failing
             if response.status_code == 404:
-                logger.warning(f"Collection {collection_id} not found (404). Skipping...")
+                logger.warning(
+                    f"Collection {collection_id} not found (404). Skipping..."
+                )
                 return None
             if response.status_code == 500:
-                logger.warning(f"Collection {collection_id} returns an Internal Server Error. Skipping...")
+                logger.warning(
+                    f"Collection {collection_id} returns an Internal Server Error. "
+                    "Skipping..."
+                )
             response.raise_for_status()
         except requests.exceptions.HTTPError as e:
             if e.response.status_code == 404:
-                logger.warning(f"Collection {collection_id} not found (404). Skipping...")
+                logger.warning(
+                    f"Collection {collection_id} not found (404). Skipping..."
+                )
                 return None
-            error_msg = f"HTTP error while fetching collection {collection_id}: {str(e)}"
+            error_msg = (
+                f"HTTP error while fetching collection {collection_id}: {str(e)}"
+            )
             logger.error(error_msg)
             raise
         except requests.exceptions.RequestException as e:
-            error_msg = f"Request error while fetching collection {collection_id}: {str(e)}"
+            error_msg = (
+                f"Request error while fetching collection {collection_id}: {str(e)}"
+            )
             logger.error(error_msg)
             raise
 
@@ -189,7 +231,10 @@ def fetch_existing_collection(collection_id: str):
             error_msg = f"Failed to parse JSON response for collection {collection_id}"
             logger.error(error_msg)
             logger.error(f"Response status code: {response.status_code}")
-            raise ValueError(f"{error_msg}. Response was not valid JSON. Status: {response.status_code}") from json_error
+            raise ValueError(
+                f"{error_msg}. Response was not valid JSON. "
+                f"Status: {response.status_code}"
+            ) from json_error
 
         logger.info(f"Successfully fetched collection {collection_id}")
         logger.debug(f"Collection keys: {list(collection.keys())}")
@@ -200,9 +245,13 @@ def fetch_existing_collection(collection_id: str):
         logger.error(f"Traceback: {traceback.format_exc()}")
         raise
 
+
 @task()
 def update_collection_with_tenant_tags(existing_collection=None, dag_run=None):
-    """Update collection with tenant tags at the top level. Returns None if collection is None (doesn't exist)."""
+    """
+    Update collection with tenant tags at the top level.
+    Returns None if collection is None (doesn't exist).
+    """
     try:
         # Skip if collection doesn't exist (was None from fetch step)
         if existing_collection is None:
@@ -213,11 +262,16 @@ def update_collection_with_tenant_tags(existing_collection=None, dag_run=None):
         tenant = config.get("tenant")
         tenant_field = config.get("tenant_field") or "eic:tenant"
 
-        collection_id = existing_collection.get("id") if existing_collection else "unknown"
+        collection_id = (
+            existing_collection.get("id") if existing_collection else "unknown"
+        )
         logger.info(f"Updating collection {collection_id} with tenant tags")
 
         if not tenant:
-            error_msg = "Tenant ID is required. Please provide a 'tenant' parameter in the DAG configuration."
+            error_msg = (
+                "Tenant ID is required. Please provide a 'tenant' parameter "
+                "in the DAG configuration."
+            )
             logger.error(error_msg)
             raise ValueError(error_msg)
 
@@ -239,7 +293,8 @@ def update_collection_with_tenant_tags(existing_collection=None, dag_run=None):
 
         if old_tenant:
             logger.info(
-                f"Collection {collection_id}: Updated {tenant_field} from '{old_tenant}' to '{tenant}'"
+                f"Collection {collection_id}: Updated {tenant_field} from "
+                f"'{old_tenant}' to '{tenant}'"
             )
         else:
             logger.info(f"Collection {collection_id}: Added {tenant_field} '{tenant}'")
@@ -251,10 +306,15 @@ def update_collection_with_tenant_tags(existing_collection=None, dag_run=None):
         return updated_collection
 
     except Exception as e:
-        collection_id = existing_collection.get("id") if existing_collection else "unknown"
-        logger.error(f"Error updating collection {collection_id} with tenant tags: {str(e)}")
+        collection_id = (
+            existing_collection.get("id") if existing_collection else "unknown"
+        )
+        logger.error(
+            f"Error updating collection {collection_id} with tenant tags: {str(e)}"
+        )
         logger.error(f"Traceback: {traceback.format_exc()}")
         raise
+
 
 @task(retries=0)
 def ingest_all_collections(collections=None):
@@ -266,18 +326,25 @@ def ingest_all_collections(collections=None):
     results = []
     total = len(collections)
 
-    app_secret = Variable.get("aws_dags_variables", deserialize_json=True).get("INGEST_API_KEYCLOAK_APP_SECRET")
+    app_secret = Variable.get("aws_dags_variables", deserialize_json=True).get(
+        "INGEST_API_KEYCLOAK_APP_SECRET"
+    )
     stac_ingestor_api_url = Variable.get("STAC_INGESTOR_API_URL")
 
     if not app_secret or not stac_ingestor_api_url:
-        error_msg = "INGEST_API_KEYCLOAK_APP_SECRET or STAC_INGESTOR_API_URL not found in Airflow variables"
+        error_msg = (
+            "INGEST_API_KEYCLOAK_APP_SECRET or STAC_INGESTOR_API_URL "
+            "not found in Airflow variables"
+        )
         logger.error(error_msg)
         raise ValueError(error_msg)
 
     for idx, collection in enumerate(collections, 1):
         # Skip None collections (collections that don't exist)
         if collection is None:
-            logger.warning(f"Skipping ingestion - collection does not exist ({idx}/{total})")
+            logger.warning(
+                f"Skipping ingestion - collection does not exist ({idx}/{total})"
+            )
             continue
 
         collection_id = collection.get("id") if collection else "unknown"
@@ -285,36 +352,71 @@ def ingest_all_collections(collections=None):
         # Adding logging to calculate and log payload size before sending to be ingested
         try:
             payload_json = json.dumps(collection)
-            payload_size = len(payload_json.encode('utf-8'))
+            payload_size = len(payload_json.encode("utf-8"))
             payload_size_kb = payload_size / 1024
-            logger.info(f"Starting ingestion of collection {collection_id} ({idx}/{total}) - payload size: {payload_size:,} bytes ({payload_size_kb:.2f} KB)")
+            logger.info(
+                f"Starting ingestion of collection {collection_id} ({idx}/{total}) - "
+                f"payload size: {payload_size:,} bytes ({payload_size_kb:.2f} KB)"
+            )
 
             if payload_size > 8192:
-                logger.warning(f"Collection {collection_id} payload size ({payload_size_kb:.2f} KB) exceeds 8KB - may trigger WAF SizeRestrictions_BODY rule")
+                logger.warning(
+                    f"Collection {collection_id} payload size ({payload_size_kb:.2f} KB) "  # noqa: E501
+                    f"exceeds 8KB - may trigger WAF SizeRestrictions_BODY rule"
+                )
         except Exception as e:
-            logger.warning(f"Could not calculate payload size for {collection_id}: {str(e)}")
+            logger.warning(
+                f"Could not calculate payload size for {collection_id}: {str(e)}"
+            )
             payload_size = None
             payload_size_kb = None
-            logger.info(f"Starting ingestion of collection {collection_id} ({idx}/{total})")
+            logger.info(
+                f"Starting ingestion of collection {collection_id} ({idx}/{total})"
+            )
 
         try:
             submission_handler(
                 event=collection,
                 endpoint="/collections",
                 app_secret=app_secret,
-                stac_ingestor_api_url=stac_ingestor_api_url
+                stac_ingestor_api_url=stac_ingestor_api_url,
             )
-            logger.info(f"Successfully ingested collection {collection_id} ({idx}/{total})")
-            results.append({"collection_id": collection_id, "status": "success", "payload_size_bytes": payload_size})
+            logger.info(
+                f"Successfully ingested collection {collection_id} ({idx}/{total})"
+            )
+            results.append(
+                {
+                    "collection_id": collection_id,
+                    "status": "success",
+                    "payload_size_bytes": payload_size,
+                }
+            )
         except Exception as e:
             error_msg = str(e)
             if payload_size:
-                logger.error(f"Error ingesting collection {collection_id}: {error_msg} - payload size: {payload_size:,} bytes ({payload_size_kb:.2f} KB)")
-                if "403" in error_msg or "SizeRestrictions" in error_msg or "Request blocked" in error_msg:
-                    logger.error(f"Collection {collection_id} was likely blocked by WAF due to payload size ({payload_size_kb:.2f} KB)")
+                logger.error(
+                    f"Error ingesting collection {collection_id}: {error_msg} - "
+                    f"payload size: {payload_size:,} bytes ({payload_size_kb:.2f} KB)"
+                )
+                if (
+                    "403" in error_msg
+                    or "SizeRestrictions" in error_msg
+                    or "Request blocked" in error_msg
+                ):
+                    logger.error(
+                        f"Collection {collection_id} was likely blocked by WAF due to "
+                        f"payload size ({payload_size_kb:.2f} KB)"
+                    )
             else:
                 logger.error(f"Error ingesting collection {collection_id}: {error_msg}")
-            results.append({"collection_id": collection_id, "status": "error", "error": error_msg, "payload_size_bytes": payload_size})
+            results.append(
+                {
+                    "collection_id": collection_id,
+                    "status": "error",
+                    "error": error_msg,
+                    "payload_size_bytes": payload_size,
+                }
+            )
             # Continue processing other collections instead of failing immediately
             continue
 
@@ -324,20 +426,35 @@ def ingest_all_collections(collections=None):
 
     successful = sum(r.get("status") == "success" for r in results)
     failed = sum(r.get("status") == "error" for r in results)
-    logger.info(f"Ingestion complete: {successful} successful, {failed} failed out of {total} total")
+    logger.info(
+        f"Ingestion complete: {successful} successful, {failed} "
+        f"failed out of {total} total"
+    )
 
     if failed > 0:
-        failed_collections = [r["collection_id"] for r in results if r.get("status") == "error"]
+        failed_collections = [
+            r["collection_id"] for r in results if r.get("status") == "error"
+        ]
         logger.warning(f"Failed collections: {failed_collections}")
-        raise AirflowException(f"Failed to ingest {failed} collection(s): {failed_collections}")
+        raise AirflowException(
+            f"Failed to ingest {failed} collection(s): {failed_collections}"
+        )
 
     return results
 
-with DAG("veda_tenant_tagging_pipeline", params=template_dag_run_conf, **dag_args) as dag:
+
+with DAG(
+    "veda_tenant_tagging_pipeline",
+    params=template_dag_run_conf,
+    schedule=None,
+    **dag_args,
+) as dag:
     start = EmptyOperator(task_id="start", dag=dag)
     end = EmptyOperator(task_id="end", dag=dag)
 
     collection_ids = start >> get_collection_ids()
     fetch_collections = fetch_existing_collection.expand(collection_id=collection_ids)
-    update_collections = update_collection_with_tenant_tags.expand(existing_collection=fetch_collections)
+    update_collections = update_collection_with_tenant_tags.expand(
+        existing_collection=fetch_collections
+    )
     ingest_collections = ingest_all_collections(collections=update_collections) >> end

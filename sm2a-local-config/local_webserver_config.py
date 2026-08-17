@@ -19,7 +19,7 @@
 
 from __future__ import annotations
 
-import os
+from pathlib import Path
 
 from flask_appbuilder.const import AUTH_DB
 
@@ -28,8 +28,7 @@ from flask_appbuilder.const import AUTH_DB
 # from airflow.www.fab_security.manager import AUTH_OID
 # from airflow.www.fab_security.manager import AUTH_REMOTE_USER
 
-
-basedir = os.path.abspath(os.path.dirname(__file__))
+basedir = Path(__file__).resolve().parent
 
 # Flask-WTF flag for CSRF
 WTF_CSRF_ENABLED = True
@@ -59,7 +58,8 @@ AUTH_TYPE = AUTH_DB
 # Will allow user self registration
 # AUTH_USER_REGISTRATION = True
 
-# The recaptcha it's automatically enabled for user self registration is active and the keys are necessary
+# The recaptcha it's automatically enabled for user self registration
+# is active and the keys are necessary
 # RECAPTCHA_PRIVATE_KEY = PRIVATE_KEY
 # RECAPTCHA_PUBLIC_KEY = PUBLIC_KEY
 

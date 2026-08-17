@@ -2,10 +2,9 @@
 
 A concise reference for contributors designing, implementing, and reviewing tasks in SM2A projects.*
 
-
 ## Airflow Task Design Goals
 
-| # | Goals | What it means | Why it matters |
+| #  | Goals | What it means | Why it matters |
 | - | - | - | - |
 | 1 | **Explicit parameters** | Declare every input (e.g., `bucket: str`, `run_date: datetime`) as a named argument in the TaskFlow function signature. | Readers (and IDEs) know exactly what values the task needs; type hints support linting & autocompletion. |
 | 2 | **Direct parameter access** | Pass scalar / simple objects directly—avoid wrapping them in catch‑all dicts or `**kwargs`. | Prevents “mystery meat” payloads and accidental hidden dependencies. |
@@ -13,7 +12,6 @@ A concise reference for contributors designing, implementing, and reviewing task
 | 4 | **TaskFlow‑first** | Define tasks with `@task` (TaskFlow) rather than classic operators when writing Python tasks. | Makes tasks testable with `pytest` and keeps DAGs readable. |
 | 5 | **Separation of concerns** | Task functions orchestrate **data flow and execution**; computation and logic lives in `util` functions/modules imported by the task. | Logic can be unit‑tested in isolation and reused in other tasks. |
 | 6 | **Idempotency** | Tasks should safely re‑run without corrupting state; leverage run‑date‑based keys, checksums, or existence checks. | Supports retries & backfills. |
-
 
 ## Recommended Patterns
 
@@ -97,18 +95,17 @@ def build_collection(collection_id: str, description: str) -> dict[str, str]:
     return {"collection_body": collection_body, "collection_id": collection_id}
 ```
 
-
 ## Anti‑Patterns to Avoid
 
-| Anti‑Pattern  | Why to avoid |
+| Anti‑Pattern | Why to avoid |
 | --------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
 | **Monolithic payloads**: outputting multiple values into a dict or JSON and passing to next task as a single XCom | Downstream tasks must deserialize and know key names; incidental tight coupling between tasks. |
 | **Hidden parameters**: accessing fields on `kwargs["ti"].xcom_pull()` (or similar) inside tasks | Hides dependencies; makes signatures lie; breaks static analysis & tests. |
 | **Heavy logic in DAG file**: performing data transformations directly in the DAG definition | Complicates refactors; hampers testability; Increases DAG parse time |
 | **Non‑idempotent side effects**: tasks must be idempotent - each task does one thing, and can be reversed or retried independently | Retries/backfills can cause duplicated data or data loss. |
 
-
 ## Further Reading
+
 * [Airflow 2 TaskFlow API docs](https://airflow.apache.org/docs/apache-airflow/stable/core-concepts/taskflow.html)
 * "DAG writing best practices in Apache Airflow" – [Astronomer article](https://www.astronomer.io/docs/learn/dag-best-practices/)
 * [Adding a DAG](docs/contributing/add_a_general_dag.md)

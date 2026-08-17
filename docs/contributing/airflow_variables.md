@@ -1,9 +1,9 @@
 
-### Working with Airflow Variables
+# Working with Airflow Variables
 
 Airflow variables are used to pass configuration and secrets to DAG tasks. There are two types of variables, depending on sensitivity:
 
-#### Non-sensitive variables (environment variables)
+## Non-sensitive variables (environment variables)
 
 Non-sensitive configuration values (bucket names, URLs, ARNs) are set as `AIRFLOW_VAR_*` environment variables on the ECS containers via the `airflow_dag_variables` Terraform input. Airflow resolves these automatically when you call `Variable.get()`.
 
@@ -20,7 +20,7 @@ These variables are defined in `infrastructure/main.tf` under the `airflow_dag_v
 2. Add the mapping in `infrastructure/main.tf` under `airflow_dag_variables`
 3. Access it in your DAG with `Variable.get("YOUR_VARIABLE_NAME")`
 
-#### Sensitive variables (Secrets Manager)
+## Sensitive variables (Secrets Manager)
 
 Sensitive values (API secrets, credentials) are stored as a JSON blob in AWS Secrets Manager under `<prefix>/airflow/variables/aws_dags_variables`, configured via the `airflow_dag_secrets` Terraform input.
 
@@ -37,9 +37,10 @@ To add a new sensitive variable:
 2. Add the mapping in `infrastructure/main.tf` under `airflow_dag_secrets`
 3. Access it in your DAG by deserializing the `aws_dags_variables` JSON blob
 
-#### Current variable inventory
+## Current variable inventory
 
 **Non-sensitive (`airflow_dag_variables` -> `AIRFLOW_VAR_*` env vars):**
+
 - `EVENT_BUCKET` - S3 bucket for pipeline events
 - `STAC_INGESTOR_API_URL` - STAC ingestor API endpoint
 - `STAC_URL` - STAC catalog URL
@@ -55,8 +56,9 @@ To add a new sensitive variable:
 - `S3_EXPORT_KMS_KEY_ID` - KMS key ID for RDS S3 export (conditional)
 
 **Sensitive (`airflow_dag_secrets` -> Secrets Manager JSON blob):**
+
 - `INGEST_API_KEYCLOAK_APP_SECRET` - Keycloak client secret for ingest API authentication
 
-#### Testing
+## Testing
 
 In tests, non-sensitive variables are set as individual `AIRFLOW_VAR_*` environment variables in `tests/conftest.py`. Sensitive variables remain in the `AIRFLOW_VAR_AWS_DAGS_VARIABLES` JSON blob.

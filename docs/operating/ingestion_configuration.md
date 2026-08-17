@@ -5,6 +5,7 @@ This pipeline is designed to handle the ingestion of both vector and raster data
 ## Ingestion Configuration
 
 ### Vector Data Ingestion
+
 ```json
 {
   "bucket": "ghgc-data-store-develop",
@@ -27,6 +28,7 @@ This pipeline is designed to handle the ingestion of both vector and raster data
 ```
 
 ### Raster Data Ingestion
+
 ```json
 {
     "collection": "",
@@ -46,7 +48,9 @@ This pipeline is designed to handle the ingestion of both vector and raster data
 }
 
 ```
+
 ## Configuration Fields Description
+
 - `collection`: The collection_id of the raster or vector data.
 - `bucket`: The name of the S3 bucket where the data is stored.
 - `prefix`: The location within the bucket where the files are to be discovered.
@@ -55,6 +59,6 @@ This pipeline is designed to handle the ingestion of both vector and raster data
 - `vector`: Set to true to trigger the generic vector ingestion pipeline.
 - `vector_eis`: Set to true to trigger the EIS Fire specific vector ingestion pipeline.
 
-
 ## Pipeline Behaviour
+
 Since this pipeline can ingest both raster and vector data, the configuration can be modified accordingly. The `"vector": true` triggers the `generic_ingest_vector` dag. If the `collection` is provided, it uses the collection name as the table name for ingestion (recommended to use `append` extra_flag when the collection is provided). When no `collection` is provided, it uses the `id_template` and generates a table name by appending the actual ingested filename to the id_template (recommended to use `overwrite` extra flag).

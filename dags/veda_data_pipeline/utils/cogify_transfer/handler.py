@@ -71,7 +71,10 @@ def cogify_transfer_handler(event_src, external_role_arn=None):
     )
     if not event.get("dry_run"):
         for origin_key in matching_files:
-            with tempfile.NamedTemporaryFile() as local_tif, tempfile.NamedTemporaryFile() as local_cog:
+            with (
+                tempfile.NamedTemporaryFile() as local_tif,
+                tempfile.NamedTemporaryFile() as local_cog,
+            ):
                 local_tif_path = local_tif.name
                 local_cog_path = local_cog.name
                 source_s3.download_file(origin_bucket, origin_key, local_tif_path)
@@ -81,6 +84,7 @@ def cogify_transfer_handler(event_src, external_role_arn=None):
                 target_s3.upload_file(local_cog_path, target_bucket, destination_key)
     else:
         print(
-            f"Would have copied {len(matching_files)} files from {origin_bucket} to {target_bucket}"
+            f"Would have copied {len(matching_files)} files "
+            f"from {origin_bucket} to {target_bucket}"
         )
         print(f"Files matched: {matching_files}")

@@ -1,7 +1,5 @@
 import requests
-from airflow.sdk import Variable
-from airflow.decorators import task, task_group
-
+from airflow.sdk import Variable, task, task_group
 from veda_data_pipeline.utils.collection_generation import GenerateCollection
 from veda_data_pipeline.utils.submit_stac import submission_handler
 
@@ -23,6 +21,7 @@ def check_collection_exists(endpoint: str, collection_id: str):
         else "Collection.generate_collection"
     )
 
+
 @task()
 def ingest_collection_task(ti=None, collection=None):
     """
@@ -32,17 +31,18 @@ def ingest_collection_task(ti=None, collection=None):
         dataset (Dict[str, Any]): dataset dictionary (JSON)
         role_arn (str): role arn for Zarr collection generation
     """
-    import json
     if not collection:
-        collection = ti.xcom_pull(task_ids='Collection.generate_collection')
-    app_secret = Variable.get("aws_dags_variables", deserialize_json=True).get("INGEST_API_KEYCLOAK_APP_SECRET")
+        collection = ti.xcom_pull(task_ids="Collection.generate_collection")
+    app_secret = Variable.get("aws_dags_variables", deserialize_json=True).get(
+        "INGEST_API_KEYCLOAK_APP_SECRET"
+    )
     stac_ingestor_api_url = Variable.get("STAC_INGESTOR_API_URL")
 
     return submission_handler(
         event=collection,
         endpoint="/collections",
         app_secret=app_secret,
-        stac_ingestor_api_url=stac_ingestor_api_url
+        stac_ingestor_api_url=stac_ingestor_api_url,
     )
 
 
@@ -60,20 +60,18 @@ def check_collection_exists_task(dag_run=None):
 def generate_collection_task(dag_run=None):
     config = dag_run.conf
 
-    # If a STAC Collection is provided, we don't need to generate generate a collection from the dataset config.
-    # We assume the collection being passed is a valid STAC Collection and the config is validated upstream (i.e. Ingest UI)
-    if not config.get("collection"): # Only the dataset config has a collection key
+    # If a STAC Collection is provided, we don't need to generate generate a collection
+    # from the dataset config. We assume the collection being passed is a valid STAC
+    # Collection and the config is validated upstream (i.e. Ingest UI)
+    if not config.get("collection"):  # Only the dataset config has a collection key
         return config
 
     role_arn = Variable.get("ASSUME_ROLE_READ_ARN")
 
-    collection = generator.generate_stac(
-        dataset_config=config, role_arn=role_arn
-    )
-    return collection
+    return generator.generate_stac(dataset_config=config, role_arn=role_arn)
+
 
 @task_group(group_id="Collection", tooltip="Collection")
 def collection_task_group():
     generate_collection = generate_collection_task()
-    ingest_collection = ingest_collection_task(collection=generate_collection)
-
+    ingest_collection_task(collection=generate_collection)

@@ -1,18 +1,21 @@
 import logging
+
 import pendulum
-from airflow.models.param import Param
-from airflow.decorators import task
-from airflow import DAG
 from airflow.providers.standard.operators.empty import EmptyOperator
+from airflow.sdk import DAG, Variable, task
+from airflow.sdk.definitions.param import Param
 from airflow.utils.trigger_rule import TriggerRule
-from airflow.sdk import Variable
 from slack_notifications import slack_fail_alert
-from veda_data_pipeline.groups.discover_group import discover_from_s3_task, get_files_task
+from veda_data_pipeline.groups.discover_group import (
+    discover_from_s3_task,
+    get_files_task,
+)
 
 dag_doc_md = """
 ### Build and submit stac
 #### Purpose
-This DAG is supposed to be triggered by `veda_discover`. But you still can trigger this DAG manually or through an API
+This DAG is supposed to be triggered by `veda_discover`. But you still can trigger this
+DAG manually or through an API
 
 #### Notes
 - This DAG can run with the following configuration <br>
@@ -30,9 +33,17 @@ This DAG is supposed to be triggered by `veda_discover`. But you still can trigg
     "vector": true,
     "source_projection": "EPSG:4326",
     "target_projection": "EPSG:4326",
-    "extra_flags": ["-overwrite", "-lco", "OVERWRITE=YES", "-oo", "X_POSSIBLE_NAMES=latitude", "-oo", "Y_POSSIBLE_NAMES=longitude"]
+    "extra_flags": [
+        "-overwrite",
+        "-lco",
+        "OVERWRITE=YES",
+        "-oo",
+        "X_POSSIBLE_NAMES=latitude",
+        "-oo",
+        "Y_POSSIBLE_NAMES=longitude"
+    ],
     "discovered": 33,
-    "payload": "s3://data-pipeline-ghgc-dev-mwaa-597746869805/events/test_layer_name2/s3_discover_output_f88257e8-ee50-4a14-ace4-5612ae6ebf38.jsonn"
+    "payload": "s3://data-pipeline-ghgc-dev-mwaa-597746869805/events/test_layer_name2/s3_discover_output_f88257e8-ee50-4a14-ace4-5612ae6ebf38.jsonn",
     "invalidate_cloudfront": true
 
 }
@@ -42,11 +53,18 @@ This DAG is supposed to be triggered by `veda_discover`. But you still can trigg
 
 template_dag_run_conf = {
     "collection": Param("collection_name", type="string"),
-    "prefix": Param("<prefix>/", type="string",  pattern="^[^/].*/$", description="Must have a trailing slash"),
+    "prefix": Param(
+        "<prefix>/",
+        type="string",
+        pattern="^[^/].*/$",
+        description="Must have a trailing slash",
+    ),
     "bucket": "<bucket>",
     "filename_regex": "<filename_regex>",
     "id_template": "<id_template_prefix>-{}",
-    "datetime_range": Param(type="string", enum=["month", "day", ""], description="<month|day>", default=""),
+    "datetime_range": Param(
+        type="string", enum=["month", "day", ""], description="<month|day>", default=""
+    ),
     "vector": Param(True, type="boolean"),
     "x_possible": "<x_column_name>",
     "y_possible": "<y_column_name>",
@@ -54,7 +72,7 @@ template_dag_run_conf = {
     "target_projection": "<crs>",
     "extra_flags": "<args>",
     "payload": "<s3_uri_event_payload>",
-    "invalidate_cloudfront": Param(True, type="boolean")
+    "invalidate_cloudfront": Param(True, type="boolean"),
 }
 dag_args = {
     "start_date": pendulum.today("UTC").add(days=-1),
@@ -70,33 +88,38 @@ def ingest_vector_task(payload):
 
     read_role_arn = Variable.get("ASSUME_ROLE_READ_ARN")
     vector_secret_name = Variable.get("VECTOR_SECRET_NAME")
-    return handler(payload_src=payload, vector_secret_name=vector_secret_name,
-                   assume_role_arn=read_role_arn)
+    return handler(
+        payload_src=payload,
+        vector_secret_name=vector_secret_name,
+        assume_role_arn=read_role_arn,
+    )
 
 
 @task
 def invalidate_cloudfront(dag_run=None):
 
-    if not dag_run.conf.get('invalidate_cloudfront'):
+    if not dag_run.conf.get("invalidate_cloudfront"):
         logging.info("Skipping cloudfront invalidation")
-        return
+        return None
 
     import boto3
+
     try:
-        cloudfront_to_invalidate_id = Variable.get("CLOUDFRONT_TO_INVALIDATE", default=None)
-        cloudfront_path_to_invalidate = Variable.get("CLOUDFRONT_PATH_TO_INVALIDATE", default=None)
+        cloudfront_to_invalidate_id = Variable.get(
+            "CLOUDFRONT_TO_INVALIDATE", default=None
+        )
+        cloudfront_path_to_invalidate = Variable.get(
+            "CLOUDFRONT_PATH_TO_INVALIDATE", default=None
+        )
 
         if cloudfront_to_invalidate_id and cloudfront_path_to_invalidate:
-            client = boto3.client('cloudfront')
+            client = boto3.client("cloudfront")
             response = client.create_invalidation(
                 DistributionId=cloudfront_to_invalidate_id,
                 InvalidationBatch={
-                    'Paths': {
-                        'Quantity': 1,
-                        'Items': [cloudfront_path_to_invalidate]
-                    },
-                    'CallerReference': str(hash(cloudfront_path_to_invalidate))
-                }
+                    "Paths": {"Quantity": 1, "Items": [cloudfront_path_to_invalidate]},
+                    "CallerReference": str(hash(cloudfront_path_to_invalidate)),
+                },
             )
 
             print(f"Invalidation created: {response['Invalidation']['Id']}")
@@ -109,13 +132,12 @@ def invalidate_cloudfront(dag_run=None):
 
 def get_ingest_vector_dag(id: str, event: dict):
     with DAG(
-            id,
-            schedule=event.get("schedule", None),
-            params=template_dag_run_conf,
-            **dag_args
+        id, schedule=event.get("schedule"), params=template_dag_run_conf, **dag_args
     ) as dag:
-        start = EmptyOperator(task_id="Start", dag=dag)
-        end = EmptyOperator(task_id="End", trigger_rule=TriggerRule.ONE_SUCCESS, dag=dag)
+        start = EmptyOperator(task_id="start", dag=dag)
+        end = EmptyOperator(
+            task_id="end", trigger_rule=TriggerRule.ONE_SUCCESS, dag=dag
+        )
         discover = start >> discover_from_s3_task(event=event)
         get_files = get_files_task(payload=discover)
         ingest_vector_task.expand(payload=get_files) >> invalidate_cloudfront() >> end

@@ -82,7 +82,6 @@ This pipeline:
 
 dag_args = {
     "start_date": pendulum.today("UTC").add(days=-1),
-    "schedule": None,
     "catchup": False,
     "doc_md": dag_doc_md,
     "on_failure_callback": slack_fail_alert,

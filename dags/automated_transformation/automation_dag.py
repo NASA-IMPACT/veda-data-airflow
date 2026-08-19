@@ -34,7 +34,6 @@ dag_run_config = {
     "collection_name": Param("gpw", type="string"),
     "nodata": Param(-9999, type="number"),
     "ext": Param(".nc", type="string", pattern="^\\..*$"),
-    "max_parallel_processing": Param(10, type="integer"),
     "chunk_limit": Param(100, type="integer"),
 }
 dag_doc_md = """
@@ -92,20 +91,6 @@ with DAG(
         except Exception as e:
             raise Exception(f"Error checking file existence: {e}") from e
 
-    @task()
-    def set_max_active_processing(**kwargs):
-        from time import sleep
-
-        dag_run = kwargs.get("dag_run")
-        config = dag_run.conf.copy()
-        max_parallel_value_stored = Variable.get("max_parallel_processing", default=10)
-        max_parallel_value_configured = config.get("max_parallel_processing", 10)
-        if max_parallel_value_stored != max_parallel_value_configured:
-            Variable.set("max_parallel_processing", max_parallel_value_configured)
-            # Give time for the scheduler to catch up
-            sleep(15)
-        return max_parallel_value_configured
-
     @task
     def discover_files(dag_run=None):
         from dags.automated_transformation.transformation_pipeline import (
@@ -138,9 +123,7 @@ with DAG(
             chunks_xcom.append(output_key)
         return chunks_xcom
 
-    @task(
-        max_active_tis_per_dag=int(Variable.get("max_parallel_processing", default=10))
-    )
+    @task(max_active_tis_per_dag=10)
     def process_files(s3_url, **kwargs):
         dag_run = kwargs.get("dag_run")
         from dags.automated_transformation.transformation_pipeline import transform_cog
@@ -202,12 +185,7 @@ with DAG(
     #         print(f"Top 10 failed file: {all_failures[:10]}")
     #         raise  Exception(f"Detected {len(all_failures)} errors")
 
-    s3_urls = (
-        start
-        >> check_function_exists()
-        >> set_max_active_processing()
-        >> discover_files()
-    )
+    s3_urls = start >> check_function_exists() >> discover_files()
     report_data = process_files.expand(s3_url=s3_urls)
     statuses = generate_report(reports=report_data)
     # report_failure(statuses=statuses) >> end

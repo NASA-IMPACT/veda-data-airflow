@@ -23,3 +23,8 @@ repos:
         - "pyproject.toml"
         - "--configPointer"
         - "/tool/markdownlint-cli2"
+
+  - repo: https://github.com/astral-sh/uv-pre-commit
+    rev: 0.12.5
+    hooks:
+      - id: uv-lock

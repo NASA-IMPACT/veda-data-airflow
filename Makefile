@@ -22,6 +22,7 @@ count_down = \
 	all
 	list
 	test
+	lint
 
 all: sm2a-local-init sm2a-local-run
 
@@ -79,4 +80,7 @@ list:
 	@grep '^[^#[:space:]].*:' Makefile
 
 test:
-	pytest tests
+	uv runpytest tests
+
+lint:
+	uv run pre-commit run --all-files

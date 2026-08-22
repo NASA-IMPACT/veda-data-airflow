@@ -128,3 +128,6 @@ docstring-code-line-length = "dynamic"
 [tool.markdownlint-cli2.config]
 MD013 = false
 MD033 = { allowed_elements = ["span"] }
+
+[tool.ruff.lint.isort]
+combine-as-imports = true

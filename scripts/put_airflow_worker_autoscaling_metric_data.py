@@ -3,7 +3,6 @@ import logging
 import sys
 import time
 from contextlib import contextmanager
-from typing import List
 
 import botocore.session
 from airflow.models import DagModel, TaskInstance
@@ -23,7 +22,7 @@ def session_scope(_session):
         _session.close()
 
 
-def get_unique_hostnames_for_states(states: List[str]) -> List[str]:
+def get_unique_hostnames_for_states(states: list[str]) -> list[str]:
     """
     Returns the list of unique hostnames where tasks are in one of {states}
 
@@ -34,21 +33,19 @@ def get_unique_hostnames_for_states(states: List[str]) -> List[str]:
         unique_hostnames_query = _session.query(
             TaskInstance.hostname.distinct()
         ).filter(TaskInstance.state.in_(states))
-        hostnames = [result[0] for result in unique_hostnames_query]
-        return hostnames
+        return [result[0] for result in unique_hostnames_query]
 
 
-def get_pending_tasks_count(states: List[str]):
+def get_pending_tasks_count(states: list[str]):
     """
     Returns the number of tasks in a 'queued' state.
     """
     with session_scope(Session) as _session:
-        pending_tasks_count = (
+        return (
             _session.query(func.count(TaskInstance.task_id))
             .filter(TaskInstance.state.in_(states))
             .scalar()
         )
-        return pending_tasks_count
 
 
 def get_tasks_info(ecs_client, cluster_name, service_name):
@@ -144,7 +141,8 @@ def scale_down_ecs_service(
     tasks_to_kill = list(tasks_to_kill)[: len(tasks_to_kill) - new_desired_count]
 
     logging.info(
-        f"ECS service {service_name} scaled down to {current_desired_count - len(tasks_to_kill)} tasks."
+        f"ECS service {service_name} scaled down to "
+        f"{current_desired_count - len(tasks_to_kill)} tasks."
     )
     for task_to_kill in tasks_to_kill:
         print(f"Terminating task: {task_to_kill}")
@@ -157,7 +155,7 @@ def scale_down_ecs_service(
     )
 
 
-def get_task_count_where_state(states: List[str]) -> int:
+def get_task_count_where_state(states: list[str]) -> int:
     """
     Returns the number of tasks in one of {states}
 
@@ -201,7 +199,8 @@ def get_capacity_provider_reservation(
 
     If M and N are both zero, meaning no instances and no running tasks, then
     CapacityProviderReservation = 100. If M > 0 and N = 0, meaning no instances and no
-    running tasks, but at least one required task, then CapacityProviderReservation = 200.
+    running tasks, but at least one required task,
+    then CapacityProviderReservation = 200.
 
     The return value unit is a percentage. Scale airflow workers by applying this metric
     in a target tracking scaling policy with a target value of 100.
@@ -213,7 +212,7 @@ def get_capacity_provider_reservation(
     n = current_worker_count
     if m == 0 and n == 0:
         return 100
-    elif m > 0 and n == 0:
+    if m > 0 and n == 0:
         return 200
     return int(m / n * 100)
 
@@ -257,7 +256,6 @@ if __name__ == "__main__":
     ecs = session.create_client("ecs", region_name=args.region_name)
     task_count_pointer = 0
     while True:
-
         task_count = get_task_count_where_state(
             states=[State.QUEUED, State.RUNNING, State.UP_FOR_RETRY]
         )

@@ -1,6 +1,7 @@
 # How to Add a DAG
 
 ## Steps
+
 1. Copy the template DAG file from the `dags` directory
 2. Rename the file adhering to the following naming conventions
 3. Update the DAG file with the necessary configurations, including relevant Tag(s) and Owner Links
@@ -61,21 +62,24 @@ output_d = task_d(input=output_d)
 ## Naming Conventions
 
 ### DAG File & Class Name
+
 - `<noun/subject>_<verb/method>_<qualifier>_` - for general DAGs where:
   - `<noun/subject>` is the subject of the DAG
   - `<verb/method>` is the action the DAG performs
   - `<qualifier>` is an optional qualifier to differentiate DAGs with the same subject and verb (action)
   - Example: `metadata_monitor_`
 - `v_<noun>_<verb>_<vendor>` - similar to the general DAG pattern, but for vendor-specific DAGs that don't qualify for the Dynamic Vendor ETL Pipeline (i.e. `v_data_unzip_maxar`)
-- `util_` - for utility files that can be shared across multiple DAGs (e.g. `util_s3file_check_`) 
+- `util_` - for utility files that can be shared across multiple DAGs (e.g. `util_s3file_check_`)
 
 ### Tags
+
 - `Operations` - DAGs that are used for operational purposeds, not for ingesting new data (for example, scheduling and restoring backups)
 - `Collection` - DAGs that create a new collection in the targeted STAC catalog
 - `Discovery` - DAGs that discover and ingest new assets and items
 - `Automated` - DAGs that cannot be run manually, and are scheduled to run automatically
 
 ### General Principles
+
 - **Keep things simple**. If a DAG is too complex, its scheduling performance may be impacted. This includes a DAG's structure: simple linear DAGs (A -> B -> C) are preferred over deeply nested DAGs that may incur delays in scheduling ([reference](https://airflow.apache.org/docs/apache-airflow/stable/best-practices.html#reducing-dag-complexity)).
 - **Write efficient Python code**.
 - **Avoid Top-Level Code in the DAG file** to avoid scheduling delays, since the scheduler always executes top-level code as it parses a DAG file ([reference](https://airflow.apache.org/docs/apache-airflow/stable/best-practices.html#best-practices-top-level-code)).
@@ -84,5 +88,6 @@ output_d = task_d(input=output_d)
 - **Time and test your DAGs**. Make sure they run as expected and complete within an expected time frame ([reference](https://airflow.apache.org/docs/apache-airflow/stable/best-practices.html#testing-a-dag)).
 
 ## Additional Resources
+
 - [Apache Airflow Best Practices](https://airflow.apache.org/docs/apache-airflow/stable/best-practices.html)
 - [Apache Airflow Concepts](https://airflow.apache.org/docs/apache-airflow/stable/concepts.html)

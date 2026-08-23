@@ -1,11 +1,16 @@
 import pendulum
-from airflow import DAG
 from airflow.providers.standard.operators.empty import EmptyOperator
-from airflow.models.param import Param
-from veda_data_pipeline.groups.discover_group import discover_from_s3_task, get_files_task
+from airflow.sdk import DAG
+from airflow.sdk.definitions.param import Param
 from slack_notifications import slack_fail_alert
-
-from veda_data_pipeline.groups.processing_tasks import submit_to_stac_ingestor_task, build_stac_task
+from veda_data_pipeline.groups.discover_group import (
+    discover_from_s3_task,
+    get_files_task,
+)
+from veda_data_pipeline.groups.processing_tasks import (
+    build_stac_task,
+    submit_to_stac_ingestor_task,
+)
 
 dag_doc_md = """
 ### Discover files from S3
@@ -57,7 +62,12 @@ template_dag_run_conf = {
     "filename_regex": "<file_regex>",
     "id_regex": "<id_regex>",
     "id_template": "<id_template_string>",
-    "datetime_range": Param(type="string", enum=["year","month", "day", ""], description="<year|month|day>", default=""),
+    "datetime_range": Param(
+        type="string",
+        enum=["year", "month", "day", ""],
+        description="<year|month|day>",
+        default="",
+    ),
     "assets": {
         "<asset1_name>": {
             "title": "<asset_title>",
@@ -72,18 +82,14 @@ template_dag_run_conf = {
     },
 }
 
+
 def get_discover_dag(id: str, event: dict):
 
     with DAG(
-            id,
-            schedule=event.get("schedule"),
-            params=template_dag_run_conf,
-            **dag_args
+        id, schedule=event.get("schedule"), params=template_dag_run_conf, **dag_args
     ) as dag:
-        start = EmptyOperator(task_id="Start", dag=dag)
-        end = EmptyOperator(
-            task_id="End", dag=dag
-        )
+        start = EmptyOperator(task_id="start", dag=dag)
+        end = EmptyOperator(task_id="end", dag=dag)
         # define DAG using taskflow notation
 
         discover = discover_from_s3_task(event=event)
@@ -94,8 +100,9 @@ def get_discover_dag(id: str, event: dict):
 
         start >> discover
         submit_stac >> end
-        
+
         return dag
+
 
 # Sending empty event because we rely on task instance (ti) for manual runs
 # and payload for scheduled runs

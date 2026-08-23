@@ -22,6 +22,7 @@ count_down = \
 	all
 	list
 	test
+	lint
 
 all: sm2a-local-init sm2a-local-run
 
@@ -52,9 +53,9 @@ sm2a-local-build:
 sm2a-deploy:
 ifeq ($(GITHUB_ACTIONS_ENV),true)
 	@echo "Installing the deployment dependency"
-	pip install -r ./deploy_requirements.txt
+	uv sync --locked --group deploy
 	@echo "Deploying SM2A"
-	python scripts/generate_env_file.py --secret-id ${SECRET_NAME} --env-file ${ENV_FILE}
+	uv run scripts/generate_env_file.py --secret-id ${SECRET_NAME} --env-file ${ENV_FILE}
 	@bash -c './scripts/deploy.sh ${ENV_FILE} <<< init'
 	@bash -c './scripts/deploy.sh ${ENV_FILE} <<< deploy'
 else
@@ -63,9 +64,9 @@ endif
 
 sm2a-plan:
 	@echo "Installing the deployment dependency"
-	pip install -r ./deploy_requirements.txt
+	uv sync --locked --group deploy
 	@echo "Shopwing Plan for Deploying SM2A"
-	python scripts/generate_env_file.py --secret-id ${SECRET_NAME} --env-file ${ENV_FILE}
+	uv run scripts/generate_env_file.py --secret-id ${SECRET_NAME} --env-file ${ENV_FILE}
 	@bash -c './scripts/deploy.sh ${ENV_FILE} <<< init'
 	@bash -c './scripts/deploy.sh ${ENV_FILE} <<< plan'
 
@@ -79,4 +80,7 @@ list:
 	@grep '^[^#[:space:]].*:' Makefile
 
 test:
-	pytest tests
+	uv runpytest tests
+
+lint:
+	uv run pre-commit run --all-files

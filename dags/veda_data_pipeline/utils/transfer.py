@@ -50,8 +50,8 @@ def transfer_files_within_s3(
         target_key = f"{collection}/{filename}"
         copy_source = {"Bucket": origin_bucket, "Key": file_key}
 
-        # We can use the etag to check if the file has already been copied and avoid duplication of effort
-        # by using the CopySourceIfNoneMatch parameter below.
+        # We can use the etag to check if the file has already been copied and avoid
+        # duplication of effort by using the CopySourceIfNoneMatch parameter below.
         target_etag = None
         try:
             target_metadata = s3_client.head_object(
@@ -69,14 +69,15 @@ def transfer_files_within_s3(
             if err.response["Error"]["Code"] == "404":
                 # File not found OK to copy
                 s3_client.copy_object(
-                    CopySource=copy_source,
-                    Bucket=destination_bucket,
-                    Key=target_key
+                    CopySource=copy_source, Bucket=destination_bucket, Key=target_key
                 )
             elif err.response["Error"]["Code"] == "PreconditionFailed":  # 412 error
                 # File is already up to date, skip copying
                 print(f"File {filename} is already up to date, skipping")
-                print(f"CopySourceIfNoneMatch: {target_etag}. Skip copy: object is unchanged (ETag matches).")
+                print(
+                    f"CopySourceIfNoneMatch: {target_etag}. "
+                    f"Skip copy: object is unchanged (ETag matches)."
+                )
                 continue
             else:
                 msg = f"ClientError copying {filename=} {err=}"
@@ -119,7 +120,8 @@ def data_transfer_handler(event, role_arn=None):
         )
     else:
         print(
-            f"Would have copied {len(matching_files)} files from {origin_bucket} to {target_bucket}"
+            f"Would have copied {len(matching_files)} files "
+            f"from {origin_bucket} to {target_bucket}"
         )
         print(f"Files matched: {matching_files}")
 

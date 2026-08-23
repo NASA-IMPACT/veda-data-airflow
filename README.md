@@ -33,6 +33,7 @@ See [install-docker-and-docker-compose](https://docs.docker.com/compose/install/
 - Run `uv sync` to install the required python packages. By default, all optional dependencies are included. To avoid this, use `uv sync --no-default-groups`.
 
 ### Configuration
+
 - ⚠️ You need to copy ./sm2a-local-config/env_example to ./sm2a-local-config/.env
 - You can define AWS credentials or other custom envs in [.env](./sm2a/sm2a-local-config/.env) file.
 - ⚠️  If you update ./sm2a/sm2a-local-config/.env file you should run `make sm2a-local-run` again
@@ -41,13 +42,12 @@ See [install-docker-and-docker-compose](https://docs.docker.com/compose/install/
 
 To retrieve the variables for a stage that has been previously deployed, the secrets manager can be used to quickly populate an .env file with [`scripts/sync-env-local.sh`](scripts/sync-env-local.sh).
 
-```
+```bash
 ./scripts/sync-env-local.sh <app-secret-name>
 ```
 
 > [!IMPORTANT]
 > Be careful not to check in `.env` (or whatever you called your env file) when committing work.
-
 
 ### Setup a local SM2A development environment
 
@@ -57,7 +57,7 @@ To retrieve the variables for a stage that has been previously deployed, the sec
 make sm2a-local-build
 ```
 
-2. Initialize the metadata db
+1. Initialize the metadata db
 
 > [!NOTE]
 > This command is typically required only once at the beginning.
@@ -70,15 +70,15 @@ make sm2a-local-init
 
 This will create an airflow username: `airflow` with password `airflow`
 
-3. Start all services
+1. Start all services
 
 ```shell
 make sm2a-local-run
 ```
 
-This will start SM2A services and will be running on http://localhost:8080
+This will start SM2A services and will be running on <http://localhost:8080>
 
-4. Stop all services
+1. Stop all services
 
 ```shell
 make sm2a-local-stop
@@ -99,7 +99,6 @@ This project uses Terraform modules to deploy Apache Airflow and related AWS res
 - [deploy.yml](./.github/workflows/deploy.yml) file uses OpenOIDC to obtain AWS credentials and deploys Terraform modules to AWS. The necessary environment variables are retrieved from AWS Secret Manager using the following Python [script](./scripts/generate_env_file.py).
 - [gitflow.yml](./.github/workflows/gitflow.yml) provides a structured way to manage the development, testing, and deployment of terraform modules. For more info refer to [gitflow](https://github.com/NASA-IMPACT/csda-data-pipelines/blob/dev/GITFLOW.md)
 
-
 ### Login to UI
 
 To log in to the Airflow UI, you must be added to a specific GitHub team, depending on the deployed Airflow configuration.
@@ -109,7 +108,6 @@ Once added, you can log in by visiting https://<domain_name> and using your GitH
 ## Developers Guide
 
 Please review the [docs](docs/) folder for more information on how to create a DAG, add tasks, and manage dependencies and variables.
-
 
 ### Adding a DAG
 
@@ -146,6 +144,7 @@ def foo_task():
 Doing so, the scheduler won't need numpy installed to schedule the task.
 
 ## DAG Launcher Role Overview
+
 The DAG Launcher role in Airflow is designed to provide users with the necessary permissions to manage and launch DAGs
 in the Airflow UI. This role allows users to perform actions such as reading DAG runs,
 and interacting with various views like Task Instances, Jobs, and XComs.
@@ -153,12 +152,12 @@ and interacting with various views like Task Instances, Jobs, and XComs.
 The permissions granted are tailored to streamline the interaction with the DAG management interface,
 enabling effective monitoring and control over DAG executions.
 
-### Key Permissions Assigned to the DAG Launcher Role:
+### Key Permissions Assigned to the DAG Launcher Role
+
 - Permission on Dag runs for `veda_discover`, `veda_dataset_pipeline`, `veda_collection_pipeline`
 - Read access to "My Profile", "DAG Runs", "Jobs", "Task Instances", "XComs", "DAG Dependencies", "Task Logs", and "Website".
 - Create, Read, Edit, and Menu Access for DAG runs and DAG-related views (e.g., DAGs, Documentation).
 - Edit access to specific DAGs like veda_discover.
 - Integrating GitHub Users with the Airflow DAG UI
-To grant users access to the Airflow UI, including the ability to manage DAGs and view the Swagger interface, 
+To grant users access to the Airflow UI, including the ability to manage DAGs and view the Swagger interface,
 GitHub users must be added to a GitHub [team](https://github.com/orgs/NASA-IMPACT/teams/veda-dag-launcher).
-

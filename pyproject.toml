@@ -12,18 +12,16 @@ dependencies = [
 
 [dependency-groups]
 dev = [
-    "pytest",
-    "ruff",
-    "isort"
+    "pre-commit==4.6.2"
 ]
 deploy = [
-    "boto3",
-    "requests"
+    "boto3==1.37.0",
+    "requests==2.31.0"
 ]
 test = [
     "coverage",
     "moto>=4.2.13",
-    "boto3>=1.26.62",
+    "boto3>=1.37.0",
     "smart-open>=7.1.0",
     "requests-mock",
     "xarray",
@@ -98,3 +96,38 @@ airflow-service = [
 [tool.uv]
 default-groups = ["dev", "deploy", "test"]
 
+[tool.ruff]
+line-length = 88
+
+[tool.ruff.lint]
+select = [
+    "AIR",  # apache-airflow
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
+    "F",    # Pyflakes
+    "I",    # isort
+    "UP",   # pyupgrade
+    "B",    # flake8-bugbear
+    "C4",   # flake8-comprehensions
+    "SIM",  # flake8-simplify
+    "PTH",  # flake8-use-pathlib
+    "RET",  # flake8-return
+    "TID",  # flake8-tidy-imports
+    "TC",   # flake8-type-checking
+    "ISC",  # flake8-implicit-str-concat
+    "ICN",  # flake8-import-conventions
+]
+ignore = [
+  "BLE001",  # Blind Exceptions
+]
+
+[tool.ruff.format]
+docstring-code-format = true
+docstring-code-line-length = "dynamic"
+
+[tool.markdownlint-cli2.config]
+MD013 = false
+MD033 = { allowed_elements = ["span"] }
+
+[tool.ruff.lint.isort]
+combine-as-imports = true

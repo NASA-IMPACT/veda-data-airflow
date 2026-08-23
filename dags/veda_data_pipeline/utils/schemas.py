@@ -1,15 +1,15 @@
 # Description: Lightweight schema definitions
 
 from datetime import datetime
-from typing import List, Union, Any, Dict
-from stac_pydantic.collection import Extent, TimeInterval
-from pystac.utils import datetime_to_str
+from typing import Any
+
 from dateutil import parser as date_parser
+from stac_pydantic.collection import Extent, TimeInterval
 
 
 class DatetimeInterval(TimeInterval):
     # reimplement stac_pydantic's TimeInterval to leverage datetime types
-    interval: List[List[Union[datetime, None]]]
+    interval: list[list[datetime | None]]
 
 
 class SpatioTemporalExtent(Extent):
@@ -17,7 +17,7 @@ class SpatioTemporalExtent(Extent):
     temporal: DatetimeInterval
 
 
-def normalize_datetime_to_iso8601(dt: Any) -> Union[str, None, Any]:
+def normalize_datetime_to_iso8601(dt: Any) -> str | None | Any:
     """
     Normalize a datetime value to ISO 8601 format with T separator and Z for UTC.
 
@@ -44,15 +44,13 @@ def normalize_datetime_to_iso8601(dt: Any) -> Union[str, None, Any]:
     dt_str = dt.isoformat()
 
     # Convert UTC timezone to Z: +00:00 -> Z
-    if dt_str.endswith('+00:00'):
-        dt_str = dt_str[:-6] + 'Z'
-    elif dt_str.endswith('-00:00'):
-        dt_str = dt_str[:-6] + 'Z'
+    if dt_str.endswith("+00:00") or dt_str.endswith("-00:00"):
+        dt_str = dt_str[:-6] + "Z"
 
     return dt_str
 
 
-def normalize_temporal_extent(collection: Dict[str, Any]) -> Dict[str, Any]:
+def normalize_temporal_extent(collection: dict[str, Any]) -> dict[str, Any]:
     """
     Normalize temporal extent in a STAC collection to ISO 8601 format
 

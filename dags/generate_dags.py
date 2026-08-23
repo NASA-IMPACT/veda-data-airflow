@@ -1,37 +1,41 @@
 """
-Builds a DAG for each collection (indicated by a .json file) in the <BUCKET>/collections/ folder.
+Builds a DAG for each collection (indicated by a .json file) in the
+<BUCKET>/collections/folder.
+
 These DAGs are used to discover and ingest items for each collection.
 """
 
 from airflow.sdk import Variable
-
+from veda_data_pipeline.helpers.veda_wmts2stac_update_pipeline import (
+    get_ingest_wmts2stac_dag_config,
+)
 from veda_data_pipeline.veda_discover_pipeline import get_discover_dag
+from veda_data_pipeline.veda_pyarc2stac_pipeline import get_ingest_pyarc2stac_dag
 from veda_data_pipeline.veda_vector_pipeline import get_ingest_vector_dag
 from veda_data_pipeline.veda_wmts2stac_update_pipeline import get_ingest_wmts2stac_dag
-from veda_data_pipeline.veda_pyarc2stac_pipeline import get_ingest_pyarc2stac_dag
-from veda_data_pipeline.helpers.veda_wmts2stac_update_pipeline import get_ingest_wmts2stac_dag_config
 
 dag_generators = {
-        "veda_discover":          get_discover_dag,
-        "veda_ingest_vector":     get_ingest_vector_dag,
-        "veda_pyarc2stac_ingest": get_ingest_pyarc2stac_dag,
-        "veda_wmts2stac_ingest": get_ingest_wmts2stac_dag
-    }
+    "veda_discover": get_discover_dag,
+    "veda_ingest_vector": get_ingest_vector_dag,
+    "veda_pyarc2stac_ingest": get_ingest_pyarc2stac_dag,
+    "veda_wmts2stac_ingest": get_ingest_wmts2stac_dag,
+}
 
 # preserve DAG history
 dag_names = {
     "veda_discover": "discover",
     "veda_ingest_vector": "vector",
     "veda_pyarc2stac_ingest": "pyarc2stac",
-    "veda_wmts2stac_ingest": "wmts2stac"
+    "veda_wmts2stac_ingest": "wmts2stac",
 }
 
-def generate_dags():
-    import boto3
-    import json
-    from botocore.exceptions import ClientError, NoCredentialsError
 
+def generate_dags():
+    import json
     from pathlib import Path
+
+    import boto3
+    from botocore.exceptions import ClientError, NoCredentialsError
 
     try:
         bucket = Variable.get("EVENT_BUCKET")
@@ -64,14 +68,16 @@ def generate_dags():
         for c in collection_configs:
             if c.get("schedule", None) and (dag := c.get("dag", "veda_discover")):
                 if id := c.get("id"):
-                    file_name = id # use id for DAG name if provided, otherwise default to file name
+                    # use id for DAG name if provided, otherwise default to file name
+                    file_name = id
                 try:
                     dag_generators[dag](id=f"{dag_names[dag]}-{file_name}", event=c)
                 except KeyError:
-                    continue # configured DAG not present in current environment
+                    continue  # configured DAG not present in current environment
+
 
 generate_dags()
 # create default DAGs (no config or schedule)
 get_ingest_vector_dag(id="veda_ingest_vector", event={})
 get_discover_dag(id="veda_discover", event={})
-get_ingest_wmts2stac_dag(id='veda_wmts2stac', event=get_ingest_wmts2stac_dag_config)
+get_ingest_wmts2stac_dag(id="veda_wmts2stac", event=get_ingest_wmts2stac_dag_config)

@@ -36,7 +36,7 @@ def subdag_ecs_task(
     environment_vars=None,
 ):
     if environment_vars is None:
-        environment_vars = list()
+        environment_vars = []
     with TaskGroup(**group_kwgs) as ecs_task_grp:
         if stage == "local":
             from airflow.providers.docker.operators.docker import DockerOperator

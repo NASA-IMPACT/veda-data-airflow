@@ -1,10 +1,8 @@
-from typing import Any, Dict
+from typing import Any
 
 import fsspec
 import xarray as xr
 import xstac
-from veda_data_pipeline.utils.schemas import SpatioTemporalExtent
-from datetime import datetime, timezone
 
 
 class GenerateCollection:
@@ -27,13 +25,13 @@ class GenerateCollection:
         "is_periodic",
         "time_density",
         "type",
-        "transfer"
+        "transfer",
     ]
 
-    def get_template(self, dataset: Dict[str, Any]) -> dict:
+    def get_template(self, dataset: dict[str, Any]) -> dict:
         extra_fields = {
             key: dataset[key]
-            for key in dataset.keys()
+            for key in dataset
             if key not in GenerateCollection.keys_to_ignore
         }
 
@@ -51,13 +49,13 @@ class GenerateCollection:
 
         return collection_dict
 
-    def _create_zarr_template(self, dataset: Dict[str, Any], store_path: str) -> dict:
+    def _create_zarr_template(self, dataset: dict[str, Any], store_path: str) -> dict:
         template = self.get_template(dataset)
         template["assets"] = {
             "zarr": {
                 "href": store_path,
                 "title": "Zarr Array Store",
-                "description": "Zarr array store with one or several arrays (variables)",
+                "description": "Zarr array store with one or more arrays (variables)",
                 "roles": ["data", "zarr"],
                 "type": "application/vnd+zarr",
                 "xarray:open_kwargs": {
@@ -69,7 +67,7 @@ class GenerateCollection:
         }
         return template
 
-    def create_zarr_collection(self, dataset: Dict[str, Any], role_arn: str) -> dict:
+    def create_zarr_collection(self, dataset: dict[str, Any], role_arn: str) -> dict:
         """
         Creates a zarr stac collection based off of the user input
         """
@@ -93,22 +91,18 @@ class GenerateCollection:
         )
         return collection.to_dict()
 
-    def create_cog_collection(self, dataset: Dict[str, Any]) -> dict:
+    def create_cog_collection(self, dataset: dict[str, Any]) -> dict:
         collection_stac = self.get_template(dataset)
 
         # Override the extents if they exists
         if spatial_extent := dataset.get("spatial_extent"):
-            collection_stac["extent"]["spatial"] = {"bbox": [list(spatial_extent.values())]}
+            collection_stac["extent"]["spatial"] = {
+                "bbox": [list(spatial_extent.values())]
+            }
 
         if temporal_extent := dataset.get("temporal_extent"):
             collection_stac["extent"]["temporal"] = {
-                "interval": [
-                    [
-                        x
-                        if x else None
-                        for x in list(temporal_extent.values())
-                    ]
-                ]
+                "interval": [[x if x else None for x in list(temporal_extent.values())]]
             }
 
         collection_stac["item_assets"] = {
@@ -122,7 +116,7 @@ class GenerateCollection:
         return collection_stac
 
     def generate_stac(
-        self, dataset_config: Dict[str, Any], role_arn: str = None
+        self, dataset_config: dict[str, Any], role_arn: str = None
     ) -> dict:
         """
         Generates a STAC collection based on the dataset and data type
@@ -134,5 +128,4 @@ class GenerateCollection:
         data_type = dataset_config.get("data_type", "cog")
         if data_type == "zarr":
             return self.create_zarr_collection(dataset_config, role_arn)
-        else:
-            return self.create_cog_collection(dataset_config)
+        return self.create_cog_collection(dataset_config)

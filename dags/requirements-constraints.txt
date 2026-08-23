@@ -199,7 +199,7 @@ bcrypt==4.0.1
 beautifulsoup4==4.11.1
 billiard==3.6.4.0
 black==23.1a1
-bleach==5.0.1
+bleach==6.4.0
 blinker==1.5
 boto3==1.26.51
 boto==2.49.0

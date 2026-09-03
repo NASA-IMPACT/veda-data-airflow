@@ -6,6 +6,7 @@ These DAGs are used to discover and ingest items for each collection.
 from airflow.sdk import Variable
 
 from veda_data_pipeline.veda_discover_pipeline import get_discover_dag
+from veda_data_pipeline.veda_disasters_discover_pipeline import get_disasters_discover_dag
 from veda_data_pipeline.veda_vector_pipeline import get_ingest_vector_dag
 from veda_data_pipeline.veda_wmts2stac_update_pipeline import get_ingest_wmts2stac_dag
 from veda_data_pipeline.veda_pyarc2stac_pipeline import get_ingest_pyarc2stac_dag
@@ -13,6 +14,7 @@ from veda_data_pipeline.helpers.veda_wmts2stac_update_pipeline import get_ingest
 
 dag_generators = {
         "veda_discover":          get_discover_dag,
+        "veda_disasters_discover": get_disasters_discover_dag,
         "veda_ingest_vector":     get_ingest_vector_dag,
         "veda_pyarc2stac_ingest": get_ingest_pyarc2stac_dag,
         "veda_wmts2stac_ingest": get_ingest_wmts2stac_dag
@@ -21,6 +23,7 @@ dag_generators = {
 # preserve DAG history
 dag_names = {
     "veda_discover": "discover",
+    "veda_disasters_discover": "disasters-discover",
     "veda_ingest_vector": "vector",
     "veda_pyarc2stac_ingest": "pyarc2stac",
     "veda_wmts2stac_ingest": "wmts2stac"
@@ -74,4 +77,5 @@ generate_dags()
 # create default DAGs (no config or schedule)
 get_ingest_vector_dag(id="veda_ingest_vector", event={})
 get_discover_dag(id="veda_discover", event={})
+get_disasters_discover_dag(id="veda_disasters_discover", event={})
 get_ingest_wmts2stac_dag(id='veda_wmts2stac', event=get_ingest_wmts2stac_dag_config)

@@ -90,58 +90,6 @@ def extract_event_name_from_geotiff(file_path: str) -> dict:
     return {"event:name": event}
 
 
-def extract_country_codes_from_geotiff(file_path: str) -> dict:
-    """Extract ISO 3166-1 alpha-3 country codes from GeoTIFF EVENT metadata."""
-    event = _read_geotiff_event(file_path)
-    if not event:
-        return {"monty:country_codes": None}
-    parsed = _parse_event_string(event)
-    if not parsed:
-        return {"monty:country_codes": None}
-    codes = _get_country_codes_mapping().get(parsed["location"])
-    return {"monty:country_codes": codes if codes else None}
-
-
-def extract_hazard_codes_from_geotiff(file_path: str) -> dict:
-    """Extract GLIDE and UNDRR-ISC hazard classification codes from GeoTIFF EVENT metadata."""
-    event = _read_geotiff_event(file_path)
-    if not event:
-        return {"monty:hazard_codes": None}
-    parsed = _parse_event_string(event)
-    if not parsed:
-        return {"monty:hazard_codes": None}
-    hazard = _get_hazard_codes_mapping().get(parsed["hazard_type"])
-    return {"monty:hazard_codes": [hazard["glide_code"], hazard["classification_code"]] if hazard else None}
-
-
-def extract_hazard_and_location_from_geotiff(file_path: str) -> dict:
-    """Extract hazard and location arrays from GeoTIFF EVENT metadata using S3 mapping.
-
-    Reads the EVENT field from GeoTIFF and looks it up in the event-hazard-location.json
-    mapping to get the associated hazard types and locations.
-
-    Args:
-        file_path: Full path to the GeoTIFF file
-
-    Returns:
-        Dictionary with hazard and location keys, or None values if not found
-    """
-    event = _read_geotiff_event(file_path)
-    if not event:
-        return {"hazard": None, "location": None}
-
-    event_mapping = _get_event_hazard_location_mapping()
-    event_data = event_mapping.get(event)
-
-    if not event_data:
-        return {"hazard": None, "location": None}
-
-    return {
-        "hazard": event_data.get("hazard"),
-        "location": event_data.get("location")
-    }
-
-
 def extract_providers_from_geotiff(file_path: str) -> dict:
     """Extract providers from GeoTIFF metadata (case-insensitive).
 
@@ -174,37 +122,6 @@ def extract_datetime_from_filename(filename: str) -> str:
         if match := re.search(pattern, filename):
             return formatter(match.group(1))
     return ""
-
-
-def extract_corr_id_from_geotiff(file_path: str) -> dict:
-    """Extract correlation ID from GeoTIFF metadata in format: {datetime}-{ISO3}-{GLIDE_CODE}-1-GCDB.
-
-    Note: Datetime is extracted from the filename, not from GeoTIFF metadata.
-    """
-    event = _read_geotiff_event(file_path)
-    if not event:
-        return {"monty:corr_id": None}
-    parsed = _parse_event_string(event)
-    if not parsed:
-        return {"monty:corr_id": None}
-
-    # Extract filename from path for datetime extraction
-    filename = file_path.split("/")[-1]
-    datetime_str = extract_datetime_from_filename(filename)
-    if not datetime_str:
-        return {"monty:corr_id": None}
-
-    location = parsed["location"]
-    country_mapping = _get_country_codes_mapping()
-    if location not in country_mapping:
-        return {"monty:corr_id": None}
-    hazard_type = parsed["hazard_type"]
-    hazard_mapping = _get_hazard_codes_mapping()
-    if hazard_type not in hazard_mapping:
-        return {"monty:corr_id": None}
-    country_code = country_mapping[location][0]
-    glide_code = hazard_mapping[hazard_type]["glide_code"]
-    return {"monty:corr_id": f"{datetime_str}-{country_code}-{glide_code}-1-GCDB"}
 
 
 def extract_all_metadata_from_geotiff(file_path: str) -> dict:

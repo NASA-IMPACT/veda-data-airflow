@@ -1,0 +1,54 @@
+{
+    "202603_Flood_HI": {
+        "hazard": ["Flood", "Landslide"], 
+        "location": ["Hawaii"]
+    },
+    "202601_WinterWx_US": {
+        "hazard": ["WinterWx"], 
+        "location": ["Virginia", "Texas", "Tennessee", "South Carolina", "Mississippi"]
+    },
+    "202512_Flood_WA": {
+        "hazard": ["Flood"], 
+        "location": ["Washington", "Landslide"]
+    },
+    "202510_Hurricane_Melissa": {
+        "hazard": ["Tropical Cyclone", "Hurricane", "Flood", "Landslide"], 
+        "location": ["Jamaica"]
+    },
+    "202510_Flood_AK": {
+        "hazard": ["Flood"], 
+        "location": ["Alaska"]
+    },
+    "202507_Flood_TX": {
+        "hazard": ["Flood"], 
+        "location": ["Texas"]
+    },
+    "202506_Fire_NM": {
+        "hazard": ["Fire", "Flood"], 
+        "location": ["New Mexico"]
+    },
+    "202504_SevereWx_US": {
+        "hazard": ["SevereWx", "Flood"], 
+        "location": ["Arkansas", "Alabama", "Louisiana", "Mississippi", "Missouri", "Tennessee"]
+    },
+    "202503_SevereWx_US": {
+        "hazard": ["SevereWx"], 
+        "location": ["Arkansas", "Alabama", "Kentucky", "Louisiana", "Mississippi", "Missouri", "Tennessee"]
+    },
+    "202502_Flood_OhioValley": {
+        "hazard": ["Flood", "Landslide"], 
+        "location": ["Kentucky", "Tennessee", "Virginia", "West Virginia"]
+    },
+    "202501_Fire_CA": {
+        "hazard": ["Fire"], 
+        "location": ["California"]
+    },
+    "202410_Hurricane_Milton": {
+        "hazard": ["Tropical Cyclone", "Hurricane", "Flood"], 
+        "location": ["Florida"]
+    },
+    "202409_Hurricane_Helene": {
+        "hazard": ["Tropical Cyclone", "Hurricane", "Flood", "Landslide"], 
+        "location": ["Alabama", "North Carolina", "South Carolina", "Tennessee", "Virginia"]
+    }
+}

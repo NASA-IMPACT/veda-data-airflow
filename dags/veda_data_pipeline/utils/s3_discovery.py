@@ -13,6 +13,13 @@ from smart_open import open as smrt_open
 
 from airflow.sdk import Variable
 
+from .disasters_utils import (
+    extract_all_metadata_from_geotiff,
+    extract_event_name_from_geotiff,
+    extract_providers_from_geotiff,
+    extract_sensor_and_product_from_path,
+)
+
 
 # Adding a custom exception for empty list
 class EmptyFileListError(Exception):
@@ -88,8 +95,14 @@ def discover_from_s3(
                 yield s3_object
 
 
-def group_by_item(discovered_files: List[str], id_regex: str, assets: dict) -> dict:
-    """Group assets by matching regex patterns against discovered files."""
+def group_by_item(discovered_files: List[str], id_regex: str, assets: dict, extract_event_name: bool = False, extract_monty: bool = False, add_product: bool = False, add_providers: bool = False) -> dict:
+    """Group assets by matching regex patterns against discovered files.
+
+    If extract_event_name is True, extracts event name from filenames and adds to item metadata.
+    If extract_monty is True, extracts all monty metadata (country codes, hazard codes, corr_id) from filenames and adds to item metadata.
+    If add_product is True, extracts sensor and product from S3 path and adds to item metadata.
+    If add_providers is True, extracts providers from GeoTIFF metadata and adds to item metadata.
+    """
     grouped_files = []
     for uri in discovered_files:
         # Each file gets its matched asset type and id
@@ -125,6 +138,7 @@ def group_by_item(discovered_files: List[str], id_regex: str, assets: dict) -> d
     # Produce a dictionary in which each record is keyed by an item ID and contains a list of associated asset hrefs
     for group in grouped_data:
         item = {"item_id": group["item_id"], "assets": {}}
+
         for file in group["data"]:
             asset_type = file["asset_type"]
             filename = file["filename"]
@@ -132,11 +146,32 @@ def group_by_item(discovered_files: List[str], id_regex: str, assets: dict) -> d
             updated_asset = assets[file["asset_type"]].copy()
             updated_asset["href"] = f"{file['prefix']}/{file['filename']}"
             item["assets"][asset_type] = updated_asset
+
+        # Extract metadata from first file if flags are enabled
+        if group["data"]:
+            # Construct full file path (S3 URI) from prefix and filename
+            first_file_path = f"{group['data'][0]['prefix']}/{group['data'][0]['filename']}"
+
+            if extract_monty:
+                # Extract all metadata (country codes, hazard codes, corr_id, and event name)
+                item["extracted_event_name"] = extract_all_metadata_from_geotiff(first_file_path)
+            elif extract_event_name:
+                # Extract only event name
+                item["extracted_event_name"] = extract_event_name_from_geotiff(first_file_path)
+
+            if add_product:
+                # Extract sensor and product from S3 path
+                item["extracted_product"] = extract_sensor_and_product_from_path(first_file_path)
+
+            if add_providers:
+                # Extract providers from GeoTIFF metadata
+                item["extracted_providers"] = extract_providers_from_geotiff(first_file_path)
+
         items_with_assets.append(item)
     return items_with_assets
 
 
-def construct_single_asset_items(discovered_files: List[str], assets: dict|None) -> dict:
+def construct_single_asset_items(discovered_files: List[str], assets: dict|None, extract_event_name: bool = False, extract_monty: bool = False, add_product: bool = False, add_providers: bool = False) -> dict:
     items_with_assets = []
     asset_key = "default"
     asset_value = {}
@@ -148,17 +183,36 @@ def construct_single_asset_items(discovered_files: List[str], assets: dict|None)
         filename = uri.split("/")[-1]
         filename_without_extension = Path(filename).stem
         prefix = "/".join(uri.split("/")[:-1])
+        file_path = f"{prefix}/{filename}"
+
         item = {
             "item_id": filename_without_extension,
             "assets": {
                 asset_key: {
                     "title": "Default COG Layer",
                     "description": "Cloud optimized default layer to display on map",
-                    "href": f"{prefix}/{filename}",
+                    "href": file_path,
                     **asset_value
                 }
             },
         }
+
+        # Extract metadata if flags are enabled
+        if extract_monty:
+            # Extract all metadata (country codes, hazard codes, corr_id, and event name)
+            item["extracted_event_name"] = extract_all_metadata_from_geotiff(file_path)
+        elif extract_event_name:
+            # Extract only event name
+            item["extracted_event_name"] = extract_event_name_from_geotiff(file_path)
+
+        if add_product:
+            # Extract sensor and product from S3 path
+            item["extracted_product"] = extract_sensor_and_product_from_path(file_path)
+
+        if add_providers:
+            # Extract providers from GeoTIFF metadata
+            item["extracted_providers"] = extract_providers_from_geotiff(file_path)
+
         items_with_assets.append(item)
     return items_with_assets
 
@@ -213,6 +267,10 @@ def s3_discovery_handler(event, chunk_size=2800, role_arn=None, bucket_output=No
     id_template = event.get("id_template", "{}")
     date_fields = propagate_forward_datetime_args(event)
     dry_run = event.get("dry_run", False)
+    extract_event_name = event.get("disasters:extract_event_name", False)
+    extract_monty = event.get("disasters:monty", False)
+    add_product = event.get("disasters:add_product", False)
+    add_providers = event.get("disasters:add_providers", False)
     if process_from := event.get("process_from_yyyy_mm_dd"):
         process_from = datetime.strptime(process_from, "%Y-%m-%d").replace(
             tzinfo=tzlocal()
@@ -248,11 +306,26 @@ def s3_discovery_handler(event, chunk_size=2800, role_arn=None, bucket_output=No
 
     # group only if more than 1 assets
     if assets and len(assets.keys()) > 1:
-        items_with_assets = group_by_item(file_uris, id_regex, assets)
+        items_with_assets = group_by_item(
+            file_uris,
+            id_regex,
+            assets,
+            extract_event_name=extract_event_name,
+            extract_monty=extract_monty,
+            add_product=add_product,
+            add_providers=add_providers
+        )
     else:
         # out of convenience, we might not always want to explicitly define assets
         # or if only a single asset is defined, follow default flow
-        items_with_assets = construct_single_asset_items(file_uris, assets)
+        items_with_assets = construct_single_asset_items(
+            file_uris,
+            assets,
+            extract_event_name=extract_event_name,
+            extract_monty=extract_monty,
+            add_product=add_product,
+            add_providers=add_providers
+        )
 
     if len(items_with_assets) == 0:
         raise EmptyFileListError(
@@ -274,11 +347,23 @@ def s3_discovery_handler(event, chunk_size=2800, role_arn=None, bucket_output=No
                     item_count >= slice[1]
             ):  # Stop once we reach the end of the slice, while saving progress
                 break
+
+        # Merge all extracted metadata
+        merged_properties = {
+            **properties,
+            **item.get("extracted_event_name", {}),
+            **item.get("extracted_product", {}),
+            **item.get("extracted_providers", {})
+        }
+
+        # Filter out None values before submitting to STAC ingestor
+        filtered_properties = {k: v for k, v in merged_properties.items() if v is not None}
+
         file_obj = {
             "collection": collection,
             "item_id": item["item_id"],
             "assets": item["assets"],
-            "properties": properties,
+            "properties": filtered_properties,
             **date_fields,
         }
 

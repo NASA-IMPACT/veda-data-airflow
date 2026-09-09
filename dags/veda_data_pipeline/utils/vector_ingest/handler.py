@@ -266,7 +266,11 @@ def load_to_featuresdb(
     if out.stderr:
         error_description = f"Error: {out.stderr}"
         print(error_description)
-        return {"status": "failure", "reason": error_description}
+    
+        # warnings and successes will return status code 0, failures will return a 1
+        # https://gdal.org/en/stable/programs/ogr2ogr.html#return-status-code
+        if out.returncode != 0: # if ogr2ogr fails, return failure
+            return {"status": "failure", "reason": error_description}
 
     return {"status": "success"}
 

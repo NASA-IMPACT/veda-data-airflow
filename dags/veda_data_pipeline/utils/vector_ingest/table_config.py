@@ -120,14 +120,44 @@ def find_invalid_indexes(cursor, collection: str, schema: str = "public") -> lis
     return [row[0] for row in cursor.fetchall()]
 
 
+def run_statements(conn, collection: str, table_config: dict) -> dict:
+    """Execute a table_config against an open connection.
+
+    Separated from secret lookup so this can be pointed at any Postgres -- a local
+    container, a test fixture -- without AWS.
+    """
+    statements = build_statements(collection, table_config)
+    if not statements:
+        print("No table_config provided, skipping table configuration")
+        return {"status": "skipped", "statements": []}
+
+    # CREATE INDEX CONCURRENTLY cannot run inside a transaction block.
+    conn.autocommit = True
+
+    with conn.cursor() as cursor:
+        for statement in statements:
+            print(f"Running: {statement}")
+            cursor.execute(statement)
+
+        invalid = find_invalid_indexes(
+            cursor, collection, table_config.get("schema", "public")
+        )
+        if invalid:
+            print(
+                f"WARNING: invalid indexes on {collection} (likely an interrupted "
+                f"CONCURRENTLY build); drop and recreate them: {invalid}"
+            )
+
+    return {"status": "success", "statements": statements}
+
+
 def apply_table_config(collection: str, table_config: dict, vector_secret_name: str) -> dict:
     """Run the table_config statements against the features database."""
     import psycopg2
 
     from veda_data_pipeline.utils.vector_ingest.handler import get_secret
 
-    statements = build_statements(collection, table_config)
-    if not statements:
+    if not build_statements(collection, table_config):
         print("No table_config provided, skipping table configuration")
         return {"status": "skipped", "statements": []}
 
@@ -138,24 +168,7 @@ def apply_table_config(collection: str, table_config: dict, vector_secret_name: 
         user=secrets["username"],
         password=secrets["password"],
     )
-    # CREATE INDEX CONCURRENTLY cannot run inside a transaction block.
-    conn.autocommit = True
-
     try:
-        with conn.cursor() as cursor:
-            for statement in statements:
-                print(f"Running: {statement}")
-                cursor.execute(statement)
-
-            invalid = find_invalid_indexes(
-                cursor, collection, table_config.get("schema", "public")
-            )
-            if invalid:
-                print(
-                    f"WARNING: invalid indexes on {collection} (likely an interrupted "
-                    f"CONCURRENTLY build); drop and recreate them: {invalid}"
-                )
+        return run_statements(conn, collection, table_config)
     finally:
         conn.close()
-
-    return {"status": "success", "statements": statements}

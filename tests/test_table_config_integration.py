@@ -9,16 +9,24 @@ Skipped unless TEST_DATABASE_URL is set, so the default test run stays offline.
     TEST_DATABASE_URL=postgresql://postgres:postgres@localhost:55432/postgres \
         pytest tests/test_table_config_integration.py -v
 
-These cover what the unit tests cannot: that the generated DDL is valid Postgres, that
-CREATE INDEX CONCURRENTLY works under the autocommit handling, and that the invalid-index
-query returns what it claims to.
+The postgis image restarts its server once after initialising extensions, so a connection
+made in the first few seconds after `docker run` can be refused even when `pg_isready`
+already reports ready.
+
+These cover what the unit tests cannot: the exact SQL each statement renders to, that the
+generated DDL is valid Postgres, that CREATE INDEX CONCURRENTLY works under the autocommit
+handling, and that the invalid-index query returns what it claims to.
 """
 
+import json
 import os
 
+import psycopg2
 import pytest
+from psycopg2 import sql
 
 from veda_data_pipeline.utils.vector_ingest.table_config import (
+    build_statements,
     find_invalid_indexes,
     run_statements,
 )
@@ -30,34 +38,37 @@ pytestmark = pytest.mark.skipif(
 )
 
 TABLE = "hms_smoke_test"
+QUALIFIED = sql.Identifier("public", TABLE)
 
 
 @pytest.fixture
 def conn():
-    import psycopg2
-
     connection = psycopg2.connect(DATABASE_URL)
     connection.autocommit = True
     with connection.cursor() as cur:
-        cur.execute(f"DROP TABLE IF EXISTS public.{TABLE}")
+        cur.execute(sql.SQL("DROP TABLE IF EXISTS {}").format(QUALIFIED))
         cur.execute(
-            f"""
-            CREATE TABLE public.{TABLE} (
-                fid           serial PRIMARY KEY,
-                datetime      timestamptz,
-                density       text,
-                density_rank  integer,
-                geom          geometry(MultiPolygon, 4326)
-            )
-            """
+            sql.SQL(
+                """
+                CREATE TABLE {} (
+                    fid           serial PRIMARY KEY,
+                    datetime      timestamptz,
+                    density       text,
+                    density_rank  integer,
+                    geom          geometry(MultiPolygon, 4326)
+                )
+                """
+            ).format(QUALIFIED)
         )
         cur.execute(
-            f"INSERT INTO public.{TABLE} (datetime, density, density_rank) "
-            f"SELECT now(), 'Light', 1 FROM generate_series(1, 500)"
+            sql.SQL(
+                "INSERT INTO {} (datetime, density, density_rank) "
+                "SELECT now(), 'Light', 1 FROM generate_series(1, 500)"
+            ).format(QUALIFIED)
         )
     yield connection
     with connection.cursor() as cur:
-        cur.execute(f"DROP TABLE IF EXISTS public.{TABLE}")
+        cur.execute(sql.SQL("DROP TABLE IF EXISTS {}").format(QUALIFIED))
     connection.close()
 
 
@@ -70,11 +81,30 @@ def indexes_on(conn, table=TABLE):
         return {row[0] for row in cur.fetchall()}
 
 
+def test_statements_render_as_quoted_identifiers(conn):
+    """Every name reaches Postgres quoted, including the access method."""
+    create, analyze = build_statements(
+        TABLE, {"indexes": [{"columns": ["datetime", "density_rank"], "method": "btree"}]}
+    )
+    assert create.as_string(conn) == (
+        'CREATE INDEX CONCURRENTLY IF NOT EXISTS "idx_hms_smoke_test_datetime_density_rank" '
+        'ON "public"."hms_smoke_test" USING "btree" ("datetime", "density_rank")'
+    )
+    assert analyze.as_string(conn) == 'ANALYZE "public"."hms_smoke_test"'
+
+
+def test_result_is_json_serializable_for_xcom(conn):
+    """configure_table returns this dict from an Airflow task, so it must survive XCom."""
+    result = run_statements(conn, TABLE, {"indexes": [{"columns": ["datetime"]}]})
+    assert json.loads(json.dumps(result)) == result
+    assert all(isinstance(statement, str) for statement in result["statements"])
+
+
 def test_creates_the_index_concurrently(conn):
     """The default path: CONCURRENTLY, which needs autocommit to work at all."""
     result = run_statements(conn, TABLE, {"indexes": [{"columns": ["datetime"]}]})
     assert result["status"] == "success"
-    assert f"idx_{TABLE}_datetime" in indexes_on(conn)
+    assert "idx_hms_smoke_test_datetime" in indexes_on(conn)
 
 
 def test_rerun_is_a_no_op(conn):
@@ -90,23 +120,26 @@ def test_non_concurrent_index(conn):
     run_statements(
         conn, TABLE, {"indexes": [{"columns": ["density"], "concurrently": False}]}
     )
-    assert f"idx_{TABLE}_density" in indexes_on(conn)
+    assert "idx_hms_smoke_test_density" in indexes_on(conn)
 
 
 def test_multi_column_index(conn):
     run_statements(conn, TABLE, {"indexes": [{"columns": ["datetime", "density_rank"]}]})
-    assert f"idx_{TABLE}_datetime_density_rank" in indexes_on(conn)
+    assert "idx_hms_smoke_test_datetime_density_rank" in indexes_on(conn)
 
 
 def test_gist_index_on_geometry(conn):
     run_statements(conn, TABLE, {"indexes": [{"columns": ["geom"], "method": "gist"}]})
-    assert f"idx_{TABLE}_geom_gist" in indexes_on(conn)
+    assert "idx_hms_smoke_test_geom_gist" in indexes_on(conn)
 
 
 def test_analyze_populates_planner_statistics(conn):
     """Without stats the planner will not use the index that was just built."""
     with conn.cursor() as cur:
-        cur.execute(f"DELETE FROM pg_statistic WHERE starelid = 'public.{TABLE}'::regclass")
+        cur.execute(
+            "DELETE FROM pg_statistic WHERE starelid = %s::regclass",
+            ("public.hms_smoke_test",),
+        )
     run_statements(conn, TABLE, {"indexes": [{"columns": ["datetime"]}], "analyze": True})
     with conn.cursor() as cur:
         cur.execute(
@@ -128,12 +161,11 @@ def test_several_indexes_in_one_config(conn):
             ]
         },
     )
-    created = indexes_on(conn)
     assert {
-        f"idx_{TABLE}_datetime",
-        f"idx_{TABLE}_density_rank",
-        f"idx_{TABLE}_geom_gist",
-    } <= created
+        "idx_hms_smoke_test_datetime",
+        "idx_hms_smoke_test_density_rank",
+        "idx_hms_smoke_test_geom_gist",
+    } <= indexes_on(conn)
 
 
 def test_no_invalid_indexes_after_a_clean_run(conn):
@@ -147,10 +179,10 @@ def test_invalid_index_is_detected(conn):
     run_statements(conn, TABLE, {"indexes": [{"columns": ["datetime"]}]})
     with conn.cursor() as cur:
         cur.execute(
-            "UPDATE pg_index SET indisvalid = false "
-            f"WHERE indexrelid = 'public.idx_{TABLE}_datetime'::regclass"
+            "UPDATE pg_index SET indisvalid = false WHERE indexrelid = %s::regclass",
+            ("public.idx_hms_smoke_test_datetime",),
         )
-    assert find_invalid_indexes(conn.cursor(), TABLE) == [f"idx_{TABLE}_datetime"]
+    assert find_invalid_indexes(conn.cursor(), TABLE) == ["idx_hms_smoke_test_datetime"]
 
 
 def test_empty_config_touches_nothing(conn):

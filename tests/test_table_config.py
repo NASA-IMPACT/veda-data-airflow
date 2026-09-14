@@ -1,4 +1,5 @@
 import pytest
+from psycopg2 import sql
 
 from veda_data_pipeline.utils.vector_ingest.table_config import (
     ALLOWED_INDEX_METHODS,
@@ -9,6 +10,24 @@ from veda_data_pipeline.utils.vector_ingest.table_config import (
 )
 
 
+def leaves(statement):
+    """Flatten a composed psycopg2 statement into its SQL and Identifier leaves."""
+    if isinstance(statement, sql.Composed):
+        for part in statement.seq:
+            yield from leaves(part)
+    else:
+        yield statement
+
+
+def identifiers(statement):
+    return [leaf.strings for leaf in leaves(statement) if isinstance(leaf, sql.Identifier)]
+
+
+def sql_text(statement):
+    """The statement's literal SQL, with every identifier left out."""
+    return "".join(leaf.string for leaf in leaves(statement) if isinstance(leaf, sql.SQL))
+
+
 def test_no_config_produces_no_statements():
     """Omitting table_config is how a backfill's intermediate runs skip indexing."""
     assert build_statements("hms_smoke", None) == []
@@ -16,47 +35,73 @@ def test_no_config_produces_no_statements():
 
 
 def test_single_index_and_analyze():
-    statements = build_statements(
+    create, analyze = build_statements(
         "hms_smoke", {"indexes": [{"columns": ["datetime"]}]}
     )
-    assert statements == [
-        'CREATE INDEX CONCURRENTLY IF NOT EXISTS "idx_hms_smoke_datetime" '
-        'ON "public"."hms_smoke" USING btree ("datetime")',
-        'ANALYZE "public"."hms_smoke"',
+    assert sql_text(create) == "CREATE INDEX CONCURRENTLY IF NOT EXISTS  ON  USING  ()"
+    assert identifiers(create) == [
+        ("idx_hms_smoke_datetime",),
+        ("public", "hms_smoke"),
+        ("btree",),
+        ("datetime",),
     ]
+    assert sql_text(analyze) == "ANALYZE "
+    assert identifiers(analyze) == [("public", "hms_smoke")]
+
+
+def test_no_config_value_is_formatted_into_sql_text():
+    """Every name taken from table_config reaches Postgres as a quoted identifier, never
+    as part of the SQL text itself."""
+    config = {
+        "schema": "vector",
+        "indexes": [
+            {"columns": ["datetime", "density_rank"], "method": "gist", "name": "smoke_idx"}
+        ],
+    }
+    text = "".join(sql_text(s) for s in build_statements("hms_smoke", config))
+    for value in ["vector", "hms_smoke", "datetime", "density_rank", "gist", "smoke_idx"]:
+        assert value not in text
 
 
 def test_concurrently_is_the_default():
     """A blocking build on a table the Features API serves is a visible outage."""
-    (create, _) = build_statements("t", {"indexes": [{"columns": ["a"]}]})
-    assert "CONCURRENTLY" in create
+    create, _ = build_statements("t", {"indexes": [{"columns": ["a"]}]})
+    assert "CONCURRENTLY" in sql_text(create)
 
 
 def test_concurrently_can_be_disabled():
-    (create, _) = build_statements(
+    create, _ = build_statements(
         "t", {"indexes": [{"columns": ["a"], "concurrently": False}]}
     )
-    assert "CONCURRENTLY" not in create
+    assert "CONCURRENTLY" not in sql_text(create)
 
 
 def test_if_not_exists_so_reruns_are_no_ops():
-    (create, _) = build_statements("t", {"indexes": [{"columns": ["a"]}]})
-    assert "IF NOT EXISTS" in create
+    create, _ = build_statements("t", {"indexes": [{"columns": ["a"]}]})
+    assert "IF NOT EXISTS" in sql_text(create)
 
 
 def test_multi_column_index():
-    (create, _) = build_statements(
+    create, _ = build_statements(
         "t", {"indexes": [{"columns": ["datetime", "density_rank"]}]}
     )
-    assert '("datetime", "density_rank")' in create
-    assert '"idx_t_datetime_density_rank"' in create
+    assert identifiers(create) == [
+        ("idx_t_datetime_density_rank",),
+        ("public", "t"),
+        ("btree",),
+        ("datetime",),
+        ("density_rank",),
+    ]
 
 
 def test_schema_defaults_to_public_and_is_honoured():
-    (create, _) = build_statements(
+    create, _ = build_statements("t", {"indexes": [{"columns": ["a"]}]})
+    assert ("public", "t") in identifiers(create)
+
+    create, _ = build_statements(
         "t", {"schema": "vector", "indexes": [{"columns": ["a"]}]}
     )
-    assert 'ON "vector"."t"' in create
+    assert ("vector", "t") in identifiers(create)
 
 
 def test_analyze_can_be_disabled():
@@ -64,30 +109,32 @@ def test_analyze_can_be_disabled():
         "t", {"indexes": [{"columns": ["a"]}], "analyze": False}
     )
     assert len(statements) == 1
-    assert "ANALYZE" not in statements[0]
+    assert "ANALYZE" not in sql_text(statements[0])
 
 
 def test_analyze_only_config_is_valid():
-    assert build_statements("t", {"analyze": True}) == ['ANALYZE "public"."t"']
+    (analyze,) = build_statements("t", {"analyze": True})
+    assert sql_text(analyze) == "ANALYZE "
+    assert identifiers(analyze) == [("public", "t")]
 
 
 def test_explicit_index_name_is_used():
-    (create, _) = build_statements(
+    create, _ = build_statements(
         "t", {"indexes": [{"columns": ["a"], "name": "my_index"}]}
     )
-    assert '"my_index"' in create
+    assert ("my_index",) in identifiers(create)
 
 
 @pytest.mark.parametrize("method", sorted(ALLOWED_INDEX_METHODS))
-def test_allowed_methods(method):
-    (create, _) = build_statements(
+def test_allowed_methods_are_quoted_identifiers(method):
+    create, _ = build_statements(
         "t", {"indexes": [{"columns": ["geom"], "method": method}]}
     )
-    assert f"USING {method} " in create
+    assert (method,) in identifiers(create)
 
 
 def test_unsupported_method_is_rejected():
-    """`method` reaches SQL as a bare keyword, so it must be allowlisted."""
+    """Unknown methods are reported before any statement runs."""
     with pytest.raises(InvalidTableConfig, match="unsupported index method"):
         build_statements("t", {"indexes": [{"columns": ["a"], "method": "btree; DROP TABLE x"}]})
 
@@ -109,6 +156,11 @@ def test_bad_collection_name_is_rejected():
 def test_bad_schema_is_rejected():
     with pytest.raises(InvalidTableConfig, match="invalid schema"):
         build_statements("t", {"schema": "public; DROP TABLE x", "indexes": []})
+
+
+def test_bad_explicit_index_name_is_rejected():
+    with pytest.raises(InvalidTableConfig, match="invalid index name"):
+        build_statements("t", {"indexes": [{"columns": ["a"], "name": "bad name"}]})
 
 
 def test_index_without_columns_is_rejected():
@@ -143,5 +195,5 @@ def test_several_indexes_are_all_emitted():
         },
     )
     assert len(statements) == 3  # two creates plus ANALYZE
-    assert "USING btree" in statements[0]
-    assert "USING gist" in statements[1]
+    assert ("btree",) in identifiers(statements[0])
+    assert ("gist",) in identifiers(statements[1])

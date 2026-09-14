@@ -15,29 +15,33 @@ an index on any other column. This covers the rest.
 
 import re
 
-# Postgres identifiers as produced by ogr2ogr: lower-case alphanumerics and underscores.
-# Anything else is rejected rather than escaped, so a surprising name fails loudly
-# instead of being quietly quoted into a statement.
+import psycopg2
+from psycopg2 import sql
+
+# Schema, table, column and index names accepted in table_config: letters, digits and
+# underscores, matching the lower-case names ogr2ogr produces. Names always reach Postgres
+# as quoted identifiers through psycopg2.sql; this check makes a malformed table_config
+# fail with a clear error before any statement runs, rather than partway through.
 IDENTIFIER_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 
-# Index methods worth allowing here. `method` reaches SQL as a bare keyword, so it is
-# checked against this set rather than quoted.
+# Index access methods accepted in table_config. Postgres rejects an unknown method on its
+# own; checking here reports it before any statement runs.
 ALLOWED_INDEX_METHODS = frozenset({"btree", "gist", "brin", "gin", "hash", "spgist"})
 
 MAX_IDENTIFIER_LENGTH = 63  # Postgres truncates beyond this, silently
 
 
 class InvalidTableConfig(ValueError):
-    """Raised when a table_config block cannot be turned into safe SQL."""
+    """Raised when a table_config block is malformed."""
 
 
-def _identifier(value: str, kind: str) -> str:
-    """Validate a Postgres identifier and return it double-quoted."""
+def _validate_identifier(value: str, kind: str) -> str:
+    """Return ``value`` unchanged if it is a plain identifier, otherwise raise."""
     if not isinstance(value, str) or not IDENTIFIER_RE.match(value):
         raise InvalidTableConfig(
             f"invalid {kind}: {value!r} -- expected letters, digits and underscores"
         )
-    return f'"{value}"'
+    return value
 
 
 def index_name(table: str, columns: list, method: str) -> str:
@@ -56,21 +60,23 @@ def index_name(table: str, columns: list, method: str) -> str:
 def build_statements(collection: str, table_config: dict) -> list:
     """Turn a table_config block into the SQL statements that apply it.
 
-    Kept separate from execution so the generated SQL can be tested without a database.
+    Statements are composed with psycopg2.sql, so every schema, table, column, index and
+    access-method name reaches Postgres as a quoted identifier and no table_config value is
+    ever formatted into SQL text. The returned ``sql.Composed`` objects need a connection to
+    render as strings, but building them does not, so they can be inspected without one.
     """
     if not table_config:
         return []
 
-    schema = table_config.get("schema", "public")
-    schema_sql = _identifier(schema, "schema")
-    table_sql = _identifier(collection, "collection")
-    qualified = f"{schema_sql}.{table_sql}"
+    schema = _validate_identifier(table_config.get("schema", "public"), "schema")
+    table = sql.Identifier(schema, _validate_identifier(collection, "collection"))
 
     statements = []
     for index in table_config.get("indexes", []):
         columns = index.get("columns")
         if not columns:
             raise InvalidTableConfig(f"index entry has no columns: {index!r}")
+        columns = [_validate_identifier(column, "column") for column in columns]
 
         method = index.get("method", "btree").lower()
         if method not in ALLOWED_INDEX_METHODS:
@@ -79,22 +85,31 @@ def build_statements(collection: str, table_config: dict) -> list:
                 f"expected one of {sorted(ALLOWED_INDEX_METHODS)}"
             )
 
-        columns_sql = ", ".join(_identifier(column, "column") for column in columns)
-        name = index.get("name") or index_name(collection, columns, method)
+        name = _validate_identifier(
+            index.get("name") or index_name(collection, columns, method), "index name"
+        )
 
         # CONCURRENTLY avoids the ACCESS EXCLUSIVE lock that would otherwise block reads
         # for the whole build -- on a large table being served by the features API that
         # is a visible outage, not just a slow ingest.
-        concurrently = "CONCURRENTLY " if index.get("concurrently", True) else ""
+        concurrently = sql.SQL("CONCURRENTLY " if index.get("concurrently", True) else "")
 
         statements.append(
-            f"CREATE INDEX {concurrently}IF NOT EXISTS {_identifier(name, 'index name')} "
-            f"ON {qualified} USING {method} ({columns_sql})"
+            sql.SQL(
+                "CREATE INDEX {concurrently}IF NOT EXISTS {name} "
+                "ON {table} USING {method} ({columns})"
+            ).format(
+                concurrently=concurrently,
+                name=sql.Identifier(name),
+                table=table,
+                method=sql.Identifier(method),
+                columns=sql.SQL(", ").join([sql.Identifier(column) for column in columns]),
+            )
         )
 
     if table_config.get("analyze", True):
         # Without statistics the planner will not use the indexes just created.
-        statements.append(f"ANALYZE {qualified}")
+        statements.append(sql.SQL("ANALYZE {table}").format(table=table))
 
     return statements
 
@@ -123,8 +138,10 @@ def find_invalid_indexes(cursor, collection: str, schema: str = "public") -> lis
 def run_statements(conn, collection: str, table_config: dict) -> dict:
     """Execute a table_config against an open connection.
 
-    Separated from secret lookup so this can be pointed at any Postgres -- a local
-    container, a test fixture -- without AWS.
+    Takes a connection rather than looking up credentials, so it can be pointed at any
+    Postgres -- a local container, a test fixture -- without AWS. The result reports each
+    statement as rendered text: it is returned from an Airflow task, so it has to be
+    JSON-serializable for XCom.
     """
     statements = build_statements(collection, table_config)
     if not statements:
@@ -134,10 +151,13 @@ def run_statements(conn, collection: str, table_config: dict) -> dict:
     # CREATE INDEX CONCURRENTLY cannot run inside a transaction block.
     conn.autocommit = True
 
+    rendered = []
     with conn.cursor() as cursor:
         for statement in statements:
-            print(f"Running: {statement}")
+            text = statement.as_string(conn)
+            print(f"Running: {text}")
             cursor.execute(statement)
+            rendered.append(text)
 
         invalid = find_invalid_indexes(
             cursor, collection, table_config.get("schema", "public")
@@ -148,13 +168,11 @@ def run_statements(conn, collection: str, table_config: dict) -> dict:
                 f"CONCURRENTLY build); drop and recreate them: {invalid}"
             )
 
-    return {"status": "success", "statements": statements}
+    return {"status": "success", "statements": rendered}
 
 
 def apply_table_config(collection: str, table_config: dict, vector_secret_name: str) -> dict:
     """Run the table_config statements against the features database."""
-    import psycopg2
-
     from veda_data_pipeline.utils.vector_ingest.handler import get_secret
 
     if not build_statements(collection, table_config):

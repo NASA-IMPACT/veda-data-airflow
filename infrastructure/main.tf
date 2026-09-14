@@ -143,6 +143,18 @@ module "sma-base" {
       {
         name  = "AWS_REQUEST_PAYER"
         value = var.aws_request_payer
+      },
+      {
+        name  = "VEDA_AIRFLOW_VERSION"
+        value = var.veda_airflow_version
+      },
+      {
+        name  = "GIT_SHA"
+        value = var.git_sha
+      },
+      {
+        name  = "AIRFLOW__WEBSERVER__INSTANCE_NAME"
+        value = "VEDA SM2A ${var.veda_airflow_version} (${var.git_sha})"
       }
     ],
     local.airflow_dag_variable_env_entries

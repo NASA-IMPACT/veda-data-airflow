@@ -1,6 +1,6 @@
-FROM --platform=linux/amd64 apache/airflow:slim-3.0.2-python3.12
+FROM --platform=linux/amd64 apache/airflow:slim-3.2.2-python3.12
 
-ARG AIRFLOW_VERSION=3.0.2
+ARG AIRFLOW_VERSION=3.2.2
 
 USER root
 # `apt-get autoremove` is used to remove packages that were automatically installed to satisfy

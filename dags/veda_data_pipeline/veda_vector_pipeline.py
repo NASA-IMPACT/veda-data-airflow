@@ -37,6 +37,35 @@ This DAG is supposed to be triggered by `veda_discover`. But you still can trigg
 
 }
 ```
+
+#### Table configuration
+`table_config` applies index and statistics DDL **once, after every discovered file has
+been ingested**. Omit the key entirely to skip it.
+
+```json
+{
+    "table_config": {
+        "schema": "public",
+        "indexes": [
+            {"columns": ["datetime"], "method": "btree", "concurrently": true}
+        ],
+        "analyze": true
+    }
+}
+```
+
+- Requires an explicit `collection`; with a per-file `id_template` there is no single
+  table to configure, and the step is skipped.
+- Indexes are built after load on purpose -- one bulk sort rather than per-row
+  maintenance during ingest.
+- `concurrently` defaults to true so the build does not take an `ACCESS EXCLUSIVE` lock
+  on a table the Features API is serving.
+- `-overwrite` drops and recreates the table, so any index is destroyed on each ingest
+  and rebuilt by this step.
+- **Backfilling across several DAG runs:** omit `table_config` from the intermediate runs
+  and set it only on the last, otherwise the index exists while later chunks are still
+  loading -- which is exactly what the post-ingest ordering avoids.
+
 - [Supports linking to external content](https://github.com/NASA-IMPACT/veda-data-pipelines)
 """
 
@@ -54,6 +83,15 @@ template_dag_run_conf = {
     "target_projection": "<crs>",
     "extra_flags": "<args>",
     "payload": "<s3_uri_event_payload>",
+    "table_config": Param(
+        None,
+        type=["null", "object"],
+        description=(
+            "Optional post-ingest table configuration, applied once after every file has "
+            "been ingested. Omit it entirely to skip. Example: "
+            '{"indexes": [{"columns": ["datetime"]}], "analyze": true}'
+        ),
+    ),
     "invalidate_cloudfront": Param(True, type="boolean")
 }
 dag_args = {
@@ -72,6 +110,35 @@ def ingest_vector_task(payload):
     vector_secret_name = Variable.get("VECTOR_SECRET_NAME")
     return handler(payload_src=payload, vector_secret_name=vector_secret_name,
                    assume_role_arn=read_role_arn)
+
+
+@task
+def configure_table(dag_run=None):
+    """Apply post-ingest table configuration once every mapped ingest task has finished.
+
+    Placed downstream of `ingest_vector_task.expand(...)` on purpose: Airflow runs a plain
+    task after *all* mapped instances complete, so indexes are built once on the finished
+    table rather than once per chunk. See utils/vector_ingest/table_config.py.
+    """
+    from veda_data_pipeline.utils.vector_ingest.table_config import apply_table_config
+
+    conf = dag_run.conf
+    table_config = conf.get("table_config")
+    if not table_config:
+        logging.info("No table_config provided, skipping table configuration")
+        return {"status": "skipped"}
+
+    collection = conf.get("collection")
+    if not collection:
+        # Without an explicit collection the ingest names a table per file from
+        # id_template, so there is no single table to configure.
+        logging.warning(
+            "table_config requires an explicit `collection`; skipping table configuration"
+        )
+        return {"status": "skipped"}
+
+    vector_secret_name = Variable.get("VECTOR_SECRET_NAME")
+    return apply_table_config(collection, table_config, vector_secret_name)
 
 
 @task
@@ -118,7 +185,7 @@ def get_ingest_vector_dag(id: str, event: dict):
         end = EmptyOperator(task_id="End", trigger_rule=TriggerRule.ONE_SUCCESS, dag=dag)
         discover = start >> discover_from_s3_task(event=event)
         get_files = get_files_task(payload=discover)
-        ingest_vector_task.expand(payload=get_files) >> invalidate_cloudfront() >> end
+        ingest_vector_task.expand(payload=get_files) >> configure_table() >> invalidate_cloudfront() >> end
 
         return dag
 

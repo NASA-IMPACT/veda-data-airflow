@@ -247,6 +247,7 @@ def load_to_featuresdb(
         "ogr2ogr",
         "-f",
         "PostgreSQL",
+        "--config", "PG_USE_COPY", "YES",
         connection,
         filename,
         "-nln",

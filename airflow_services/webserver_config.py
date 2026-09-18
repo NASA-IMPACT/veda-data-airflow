@@ -28,6 +28,7 @@ import logging
 from typing import Any, Union
 import os
 import jwt
+import secrets
 from cryptography.hazmat.primitives import serialization
 import requests
 
@@ -102,21 +103,21 @@ def _get_keycloak_public_key():
 
 def extract_roles_from_keycloak(userinfo: dict[str, Any], resp: dict[str, Any]) -> list[str]:
     """
-    Extract roles from Keycloak token. Possible roles: Admin, Viewer, Public, Dag_Launcher 
-    See Airflow default roles: https://airflow.apache.org/docs/apache-airflow-providers-fab/stable/auth-manager/access-control.html#default-roles 
-    
+    Extract roles from Keycloak token. Possible roles: Admin, Viewer, Public, Dag_Launcher
+    See Airflow default roles: https://airflow.apache.org/docs/apache-airflow-providers-fab/stable/auth-manager/access-control.html#default-roles
+
     Keycloak can provide roles in multiple ways:
     1. realm_access.roles - Realm-level roles
     2. resource_access.{client_id}.roles - Client-specific roles
     3. groups - User groups (if configured in Keycloak)
-    
+
     Adjust this function based on your Keycloak configuration.
     """
     roles = []
 
     log.info(f"Extracting roles from Keycloak response: {resp}")
     access_token = resp.get("access_token", "")
-    
+
     try:
         decoded = jwt.decode(access_token, _get_keycloak_public_key(), algorithms=["RS256"], options={"verify_signature": False})
         if "resource_access" in decoded and KEYCLOAK_CLIENT_ID in decoded["resource_access"]:
@@ -124,7 +125,7 @@ def extract_roles_from_keycloak(userinfo: dict[str, Any], resp: dict[str, Any]) 
         log.info(f"Decoded roles from access_token: {roles}")
     except Exception as e:
         log.warning(f"Failed to decode access_token: {e}")
-    
+
     log.info(f"Extracted roles from Keycloak: {roles}")
     return roles
 
@@ -132,7 +133,7 @@ def extract_roles_from_keycloak(userinfo: dict[str, Any], resp: dict[str, Any]) 
 class KeycloakAuthorizer(FabAirflowSecurityManagerOverride):
     """
     Custom security manager for Keycloak OAuth integration.
-    
+
     This class handles the OAuth flow with Keycloak and maps
     Keycloak roles/groups to Airflow FAB roles.
 
@@ -140,6 +141,8 @@ class KeycloakAuthorizer(FabAirflowSecurityManagerOverride):
     """
 
     role_name = "DAG Launcher"
+    service_username = "keycloak_service-account-airflow-webserver-fab"
+    service_email = "veda-data-service-account@email.notfound"
     permissions = [
         ("can_read", "My Profile"),
         ("can_create", "DAG Runs"),
@@ -168,7 +171,7 @@ class KeycloakAuthorizer(FabAirflowSecurityManagerOverride):
 
     def __init__(self, appbuilder):
         super().__init__(appbuilder)
-        
+
         role = self.find_role(self.role_name)
         if not role:
             role = self.add_role(self.role_name)
@@ -180,42 +183,61 @@ class KeycloakAuthorizer(FabAirflowSecurityManagerOverride):
                 self.add_permission_to_role(role, permission)
 
         log.info(f"Role '{self.role_name}' created with specified permissions.")
+        self._ensure_service_user(role)
 
+    def _ensure_service_user(self, role):
+        """
+        Adds service user if it doesn't exist
+        """
+        user = self.find_user(username=self.service_username)
+        if user is None:
+            created = self.add_user(
+                username=self.service_username,
+                first_name="service",
+                last_name="account",
+                email=self.service_email,
+                role=role,
+                password=secrets.token_urlsafe(32),
+            )
+            if created:
+                log.info(f"Created service user '{self.service_username}'.")
+            else:
+              log.warning(f"Could not create service user. Check if it already exists.")
 
     def get_oauth_user_info(
         self, provider: str, resp: Any
     ) -> dict[str, Union[str, list[str]]]:
         """
         Get user info from Keycloak OAuth response.
-        
+
         Args:
             provider: OAuth provider name (should be "keycloak")
             resp: OAuth response object
-            
+
         Returns:
             Dictionary containing username and role_keys for FAB
         """
         if provider != "keycloak":
             log.warning(f"Unexpected OAuth provider: {provider}")
             return {"username": "unknown", "role_keys": ["Public"]}
-        
+
         remote_app = self.appbuilder.sm.oauth_remotes[provider]
-        
+
         # Get user info from Keycloak userinfo endpoint
         endpoint = "openid-connect/userinfo"
         log.info(f"Fetching user info from Keycloak endpoint: {endpoint}")
         userinfo_response = remote_app.get(endpoint)
         userinfo = userinfo_response.json()
         log.info(f"Raw user info from Keycloak: {userinfo}")
-        
+
         # Extract username (preferred_username is standard in Keycloak)
         username = userinfo.get("preferred_username") or userinfo.get("email") or userinfo.get("sub")
-        
+
         # Extract roles from Keycloak
         keycloak_roles = extract_roles_from_keycloak(userinfo, resp)
-         
+
         log.info(f"User info from Keycloak: username={username}, roles={keycloak_roles}")
-        
+
         return {
             "username": f"keycloak_{username}",
             "first_name": userinfo.get("given_name", ""),

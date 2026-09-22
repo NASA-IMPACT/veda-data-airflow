@@ -59,7 +59,9 @@ been ingested**. Omit the key entirely to skip it.
   table per file, named from `id_template`, so there is no single table to index and this
   step is skipped.
 - With no `table_config`, the configuration task is marked **skipped** rather than
-  successful. CloudFront invalidation still runs, since the ingest itself changed the data.
+  successful. CloudFront invalidation runs whether that task succeeds, skips or fails,
+  since the ingest changed the data in every one of those cases. A failure there still
+  fails the DAG run.
 - Indexes are built after load on purpose -- one bulk sort rather than per-row
   maintenance during ingest.
 - `concurrently` defaults to true so the build does not take an `ACCESS EXCLUSIVE` lock
@@ -185,16 +187,23 @@ def get_ingest_vector_dag(id: str, event: dict):
             **dag_args
     ) as dag:
         start = EmptyOperator(task_id="Start", dag=dag)
-        end = EmptyOperator(task_id="End", trigger_rule=TriggerRule.ONE_SUCCESS, dag=dag)
+        # A DAG run takes its state from the leaf tasks, and `End` is the only leaf. Under
+        # ONE_SUCCESS it reports success as long as the invalidation succeeded, which would
+        # hide a failed table configuration.
+        end = EmptyOperator(task_id="End", trigger_rule=TriggerRule.NONE_FAILED, dag=dag)
         discover = start >> discover_from_s3_task(event=event)
         get_files = get_files_task(payload=discover)
         # `configure_table` skips when there is no table_config, and under the default
-        # trigger rule a skipped task skips everything downstream. NONE_FAILED lets the
-        # invalidation run after a skip, while still withholding it if the table
-        # configuration failed. Overridden here so the shared task keeps its own default
-        # for the other DAGs that use it.
-        cloudfront = invalidate_cloudfront.override(trigger_rule=TriggerRule.NONE_FAILED)()
-        ingest_vector_task.expand(payload=get_files) >> configure_table() >> cloudfront >> end
+        # trigger rule a skipped task skips everything downstream. ALL_DONE keeps the
+        # invalidation running whether that task succeeds, skips or fails: the ingest
+        # changed the data in every one of those cases, so the cache is stale. Overridden
+        # at the call site so the shared task keeps its own default in the other DAGs.
+        cloudfront = invalidate_cloudfront.override(trigger_rule=TriggerRule.ALL_DONE)()
+        configure = configure_table()
+        ingest_vector_task.expand(payload=get_files) >> configure >> cloudfront >> end
+        # `End` depends on the configuration task as well, so a failure there reaches a
+        # leaf and fails the run instead of being masked by a successful invalidation.
+        configure >> end
 
         return dag
 

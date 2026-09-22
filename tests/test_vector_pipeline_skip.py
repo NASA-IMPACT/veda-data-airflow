@@ -2,8 +2,13 @@
 
 Under Airflow's default `all_success` rule a skipped task skips everything downstream, so
 a skipped `configure_table` would suppress the invalidation too. `invalidate_cloudfront`
-therefore runs under `none_failed`: it survives a skip, but is still withheld when the
-table configuration fails.
+therefore runs under `all_done`: the ingest changed the data whether the configuration
+succeeded, skipped or failed, so the cache is stale in every case.
+
+`all_done` alone would hide a failure. A DAG run takes its state from the leaf tasks, and
+`End` is the only leaf, so an `End` reached solely through a successful invalidation would
+report success even when the configuration failed. `End` runs under `none_failed` and
+depends on the configuration task directly, which puts the failure on a leaf.
 """
 
 import pytest
@@ -28,11 +33,24 @@ def dag():
     return get_ingest_vector_dag(id="test_ingest_vector_skip", event={})
 
 
-def test_cloudfront_runs_after_a_skip(dag):
-    assert dag.get_task("invalidate_cloudfront").trigger_rule == TriggerRule.NONE_FAILED
+def test_cloudfront_runs_whatever_the_configuration_did(dag):
+    assert dag.get_task("invalidate_cloudfront").trigger_rule == TriggerRule.ALL_DONE
 
 
-def test_other_tasks_keep_their_defaults(dag):
+def test_end_surfaces_a_failed_configuration(dag):
+    """Without both of these, all_done lets a failed configuration report a green run."""
+    end = dag.get_task("End")
+    assert end.trigger_rule == TriggerRule.NONE_FAILED
+    assert "configure_table" in end.upstream_task_ids
+
+
+def test_end_is_the_only_leaf(dag):
+    """The DAG run's state comes from the leaves, so this is what the rules above hinge on."""
+    leaves = {t.task_id for t in dag.tasks if not t.downstream_list}
+    assert leaves == {"End"}
+
+
+def test_configure_table_keeps_the_default_rule(dag):
     assert dag.get_task("configure_table").trigger_rule == TriggerRule.ALL_SUCCESS
 
 

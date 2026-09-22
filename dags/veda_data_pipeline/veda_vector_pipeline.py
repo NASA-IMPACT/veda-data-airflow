@@ -2,6 +2,7 @@ import logging
 import pendulum
 from airflow.models.param import Param
 from airflow.decorators import task
+from airflow.exceptions import AirflowSkipException
 from airflow import DAG
 from airflow.providers.standard.operators.empty import EmptyOperator
 from airflow.utils.trigger_rule import TriggerRule
@@ -56,7 +57,11 @@ been ingested**. Omit the key entirely to skip it.
 
 - `table_config` needs `collection` set. When `collection` is empty the ingest creates one
   table per file, named from `id_template`, so there is no single table to index and this
-  step does nothing.
+  step is skipped.
+- With no `table_config`, the configuration task is marked **skipped** rather than
+  successful. CloudFront invalidation runs whether that task succeeds, skips or fails,
+  since the ingest changed the data in every one of those cases. A failure there still
+  fails the DAG run.
 - Indexes are built after load on purpose -- one bulk sort rather than per-row
   maintenance during ingest.
 - `concurrently` defaults to true so the build does not take an `ACCESS EXCLUSIVE` lock
@@ -125,17 +130,15 @@ def configure_table(dag_run=None):
     conf = dag_run.conf
     table_config = conf.get("table_config")
     if not table_config:
-        logging.info("No table_config provided, skipping table configuration")
-        return
+        raise AirflowSkipException("No table_config provided, nothing to configure")
 
     collection = conf.get("collection")
     if not collection:
         # Without an explicit collection the ingest names a table per file from
         # id_template, so there is no single table to configure.
-        logging.warning(
-            "table_config requires an explicit `collection`; skipping table configuration"
+        raise AirflowSkipException(
+            "table_config requires an explicit `collection`, nothing to configure"
         )
-        return
 
     from veda_data_pipeline.utils.vector_ingest.table_config import apply_table_config
 
@@ -184,10 +187,23 @@ def get_ingest_vector_dag(id: str, event: dict):
             **dag_args
     ) as dag:
         start = EmptyOperator(task_id="Start", dag=dag)
-        end = EmptyOperator(task_id="End", trigger_rule=TriggerRule.ONE_SUCCESS, dag=dag)
+        # A DAG run takes its state from the leaf tasks, and `End` is the only leaf. Under
+        # ONE_SUCCESS it reports success as long as the invalidation succeeded, which would
+        # hide a failed table configuration.
+        end = EmptyOperator(task_id="End", trigger_rule=TriggerRule.NONE_FAILED, dag=dag)
         discover = start >> discover_from_s3_task(event=event)
         get_files = get_files_task(payload=discover)
-        ingest_vector_task.expand(payload=get_files) >> configure_table() >> invalidate_cloudfront() >> end
+        # `configure_table` skips when there is no table_config, and under the default
+        # trigger rule a skipped task skips everything downstream. ALL_DONE keeps the
+        # invalidation running whether that task succeeds, skips or fails: the ingest
+        # changed the data in every one of those cases, so the cache is stale. Overridden
+        # at the call site so the shared task keeps its own default in the other DAGs.
+        cloudfront = invalidate_cloudfront.override(trigger_rule=TriggerRule.ALL_DONE)()
+        configure = configure_table()
+        ingest_vector_task.expand(payload=get_files) >> configure >> cloudfront >> end
+        # `End` depends on the configuration task as well, so a failure there reaches a
+        # leaf and fails the run instead of being masked by a successful invalidation.
+        configure >> end
 
         return dag
 

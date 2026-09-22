@@ -122,13 +122,11 @@ def configure_table(dag_run=None):
     task after *all* mapped instances complete, so indexes are built once on the finished
     table rather than once per chunk. See utils/vector_ingest/table_config.py.
     """
-    from veda_data_pipeline.utils.vector_ingest.table_config import apply_table_config
-
     conf = dag_run.conf
     table_config = conf.get("table_config")
     if not table_config:
         logging.info("No table_config provided, skipping table configuration")
-        return {"status": "skipped"}
+        return
 
     collection = conf.get("collection")
     if not collection:
@@ -137,7 +135,9 @@ def configure_table(dag_run=None):
         logging.warning(
             "table_config requires an explicit `collection`; skipping table configuration"
         )
-        return {"status": "skipped"}
+        return
+
+    from veda_data_pipeline.utils.vector_ingest.table_config import apply_table_config
 
     vector_secret_name = Variable.get("VECTOR_SECRET_NAME")
     return apply_table_config(collection, table_config, vector_secret_name)

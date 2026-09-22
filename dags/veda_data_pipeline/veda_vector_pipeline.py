@@ -54,14 +54,16 @@ been ingested**. Omit the key entirely to skip it.
 }
 ```
 
-- Requires an explicit `collection`; with a per-file `id_template` there is no single
-  table to configure, and the step is skipped.
+- `table_config` needs `collection` set. When `collection` is empty the ingest creates one
+  table per file, named from `id_template`, so there is no single table to index and this
+  step does nothing.
 - Indexes are built after load on purpose -- one bulk sort rather than per-row
   maintenance during ingest.
 - `concurrently` defaults to true so the build does not take an `ACCESS EXCLUSIVE` lock
   on a table the Features API is serving.
-- `-overwrite` drops and recreates the table, so any index is destroyed on each ingest
-  and rebuilt by this step.
+- **Inserting data from multiple files:** do not pass `-overwrite` in `extra_flags`. It
+  drops and recreates the table for every file, so only the last file survives and the
+  indexes this step builds are destroyed along the way. Use `-append` instead.
 - **Backfilling across several DAG runs:** omit `table_config` from the intermediate runs
   and set it only on the last, otherwise the index exists while later chunks are still
   loading -- which is exactly what the post-ingest ordering avoids.

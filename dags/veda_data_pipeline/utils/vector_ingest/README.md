@@ -63,12 +63,14 @@ ingest tasks, so it runs once on the finished table rather than once per file.
 
 **Notes**
 
-- Requires an explicit `collection`. With a per-file `id_template` there is no single
-  table to configure and the step is skipped.
+- `table_config` needs `collection` set. When `collection` is empty the ingest creates one
+  table per file, named from `id_template` (see *Creating Separate Collections for Each
+  File* above), so there is no single table to index and this step does nothing.
 - `ogr2ogr` already creates the GiST index on the geometry column and has no option for
   an index on any other column; this covers the rest.
-- `-overwrite` drops and recreates the table, destroying its indexes, so they are rebuilt
-  on each ingest.
+- **Inserting data from multiple files:** do not pass `-overwrite` in `extra_flags`. It
+  drops and recreates the table for every file, so only the last file survives and the
+  indexes this step builds are destroyed along the way. Use `-append` instead.
 - `concurrently` defaults to `true` so the build does not hold an `ACCESS EXCLUSIVE` lock
   on a table the Features API is serving — a blocking build on a large table is a visible
   outage, not just a slow ingest.

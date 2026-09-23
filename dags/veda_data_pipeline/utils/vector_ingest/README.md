@@ -34,7 +34,55 @@ Depending on how the data needs to be ingested, different approaches can be take
 
 ---
 
-### 3. Internal Processing with ogr2ogr
+### 3. Configuring the Table (Optional)
+After **every** discovered file has been ingested, an optional `table_config` block applies
+index and statistics DDL to the collection. Omit the key entirely to skip this step.
+
+```json
+{
+  "collection": "hms_smoke",
+  "table_config": {
+    "schema": "public",
+    "indexes": [
+      {"columns": ["datetime"], "method": "btree", "concurrently": true}
+    ],
+    "analyze": true
+  }
+}
+```
+
+| Field | Description |
+|-------|-------------|
+| `schema` | Table schema, default `public`. |
+| `indexes` | List of indexes. Each needs `columns`; `method` (default `btree`), `concurrently` (default `true`) and `name` are optional. |
+| `analyze` | Run `ANALYZE` afterwards, default `true`. Without statistics the planner will not use the new indexes. |
+
+**Why this runs after ingest, not before.** Building an index in one bulk sort is cheaper
+than maintaining it row by row while data loads. The task sits downstream of the mapped
+ingest tasks, so it runs once on the finished table rather than once per file.
+
+**Notes**
+
+- `table_config` needs `collection` set. When `collection` is empty the ingest creates one
+  table per file, named from `id_template` (see *Creating Separate Collections for Each
+  File* above), so there is no single table to index and this step does nothing.
+- `ogr2ogr` already creates the GiST index on the geometry column and has no option for
+  an index on any other column; this covers the rest.
+- **Inserting data from multiple files:** do not pass `-overwrite` in `extra_flags`. It
+  drops and recreates the table for every file, so only the last file survives and the
+  indexes this step builds are destroyed along the way. Use `-append` instead.
+- `concurrently` defaults to `true` so the build does not hold an `ACCESS EXCLUSIVE` lock
+  on a table the Features API is serving — a blocking build on a large table is a visible
+  outage, not just a slow ingest.
+- **Backfilling across several DAG runs:** omit `table_config` from the intermediate runs
+  and set it only on the last one. Otherwise the index is created after the first run and
+  every later chunk loads into an indexed table, which is exactly what the post-ingest
+  ordering is meant to avoid. Within a *single* run this is handled automatically, since
+  all files are ingested by mapped tasks before this step runs.
+
+---
+
+### 4. Internal Processing with ogr2ogr
 Internally, the ingestion task uses the **ogr2ogr** command, a command-line tool from the **GDAL** library, to convert and process geospatial data between various formats. The data is imported into a **PostgreSQL** database with **PostGIS** extensions for spatial data.
 
 #### **Supported Input Formats**

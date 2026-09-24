@@ -64,6 +64,18 @@ runs:
       run: |
         make sm2a-deploy ENV_FILE=${{ inputs.env-file }} SECRET_NAME=${{ inputs.env_aws_secret_name }}
 
+    - name: Post-Migration Airflow Commands
+      working-directory: ${{ inputs.dir }}
+      shell: bash
+      env:
+        AWS_DEFAULT_REGION: ${{ inputs.aws-region }}
+        AWS_REGION: ${{ inputs.aws-region }}
+      run: |
+        set -a; source ${{ inputs.env-file }}; set +a
+        python scripts/run_task.py --wait-tasks-stopped --command "fab-db migrate"
+        python scripts/run_task.py --wait-tasks-stopped --command "dags reserialize"
+
+
     - name: Output workflows API endpoint
       id: output_sm2a_workflows_endpoint
       shell: bash

@@ -81,6 +81,8 @@ module "sma-base" {
   airflow_version                = var.airflow_version
   alb_access_logs_bucket         = var.alb_access_logs_bucket
   alb_access_logs_prefix         = var.alb_access_logs_prefix
+  # Must match VISIBILITY_TIMEOUT in configuration/celery_config.py
+  celery_broker_visibility_timeout_seconds = 2400
 
   extra_airflow_task_common_environment = concat(
     [

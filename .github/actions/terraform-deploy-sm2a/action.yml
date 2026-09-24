@@ -71,6 +71,7 @@ runs:
         AWS_DEFAULT_REGION: ${{ inputs.aws-region }}
         AWS_REGION: ${{ inputs.aws-region }}
       run: |
+        set -a; source ${{ inputs.env-file }}; set +a
         python scripts/run_task.py --wait-tasks-stopped --command "fab-db migrate"
         python scripts/run_task.py --wait-tasks-stopped --command "dags reserialize"
 

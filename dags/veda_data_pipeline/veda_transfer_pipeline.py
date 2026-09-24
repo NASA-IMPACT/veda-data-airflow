@@ -1,8 +1,10 @@
 import pendulum
 from airflow import DAG
-from airflow.operators.dummy_operator import DummyOperator
+from airflow.providers.standard.operators.empty import EmptyOperator
+from airflow.models.param import Param
 from airflow.utils.trigger_rule import TriggerRule
 from veda_data_pipeline.groups.transfer_group import subdag_transfer
+from slack_notifications import slack_fail_alert
 
 dag_doc_md = """
 ### Discover files from S3
@@ -19,15 +21,16 @@ This DAG is used to transfer files that are to permanent locations for indexing 
     "collection": "collection-id",
     "cogify": false,
     "dry_run": true
-}	
+}
 ```
 - [Supports linking to external content](https://github.com/NASA-IMPACT/veda-data-pipelines)
 """
 
 dag_args = {
     "start_date": pendulum.today("UTC").add(days=-1),
-    "schedule_interval": None,
+    "schedule": None,
     "catchup": False,
+    "on_failure_callback": slack_fail_alert,
     "doc_md": dag_doc_md,
 }
 
@@ -37,13 +40,13 @@ templat_dag_run_conf = {
     "filename_regex": "<file_regex>",
     "target_bucket": "<target_bucket>",
     "collection": "<collection-id>",
-    "cogify": "true|false",
-    "dry_run": "true|false",
+    "cogify": Param(default=False, type="boolean"),
+    "dry_run": Param(default=False, type="boolean"),
 }
 
 with DAG("veda_transfer", params=templat_dag_run_conf, **dag_args) as dag:
-    start = DummyOperator(task_id="Start", dag=dag)
-    end = DummyOperator(task_id="End", trigger_rule=TriggerRule.ONE_SUCCESS, dag=dag)
+    start = EmptyOperator(task_id="Start", dag=dag)
+    end = EmptyOperator(task_id="End", trigger_rule=TriggerRule.ONE_SUCCESS, dag=dag)
 
     transfer_grp = subdag_transfer()
 

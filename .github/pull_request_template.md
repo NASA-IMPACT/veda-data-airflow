@@ -1,4 +1,4 @@
-**Summary:** Summary of changes
+**Summary:**
 
 Addresses [VEDA-XX: Develop amazing new feature](https://github.com/NASA-IMPACT/veda-data-pipelines/issues/XX)
 
@@ -9,7 +9,7 @@ Addresses [VEDA-XX: Develop amazing new feature](https://github.com/NASA-IMPACT/
 
 ## PR Checklist
 
-- [ ] Update CHANGELOG
 - [ ] Unit tests
 - [ ] Ad-hoc testing - Deploy changes and test manually
 - [ ] Integration tests
+- [ ] Infrastructure changes - test using `terraform validate` and `terraform plan`

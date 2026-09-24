@@ -10,7 +10,8 @@ pyhdf*
 # Ignore pycache
 __pycache__
 
-
+# Ignore redundant DAG
+sm2a/dags
 # Ignore Terraform
 .terraform
 .env
@@ -46,3 +47,4 @@ env.sh
 .hypothesis
 .env_sit
 terraform.tfstate
+.envs/

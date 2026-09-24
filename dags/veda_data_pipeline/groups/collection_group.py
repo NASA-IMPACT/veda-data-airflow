@@ -1,7 +1,7 @@
 import requests
-from airflow.models.variable import Variable
-from airflow.operators.python import PythonOperator
-from airflow.utils.task_group import TaskGroup
+from airflow.sdk import Variable
+from airflow.decorators import task, task_group
+
 from veda_data_pipeline.utils.collection_generation import GenerateCollection
 from veda_data_pipeline.utils.submit_stac import submission_handler
 
@@ -23,8 +23,8 @@ def check_collection_exists(endpoint: str, collection_id: str):
         else "Collection.generate_collection"
     )
 
-
-def ingest_collection_task(ti):
+@task()
+def ingest_collection_task(ti=None, collection=None):
     """
     Ingest a collection into the STAC catalog
 
@@ -32,48 +32,48 @@ def ingest_collection_task(ti):
         dataset (Dict[str, Any]): dataset dictionary (JSON)
         role_arn (str): role arn for Zarr collection generation
     """
-    collection = ti.xcom_pull(task_ids='Collection.generate_collection')
+    import json
+    if not collection:
+        collection = ti.xcom_pull(task_ids='Collection.generate_collection')
+    app_secret = Variable.get("aws_dags_variables", deserialize_json=True).get("INGEST_API_KEYCLOAK_APP_SECRET")
+    stac_ingestor_api_url = Variable.get("STAC_INGESTOR_API_URL")
 
     return submission_handler(
         event=collection,
         endpoint="/collections",
-        cognito_app_secret=Variable.get("COGNITO_APP_SECRET"),
-        stac_ingestor_api_url=Variable.get("STAC_INGESTOR_API_URL"),
+        app_secret=app_secret,
+        stac_ingestor_api_url=stac_ingestor_api_url
     )
 
 
 # NOTE unused, but useful for item ingests, since collections are a dependency for items
-def check_collection_exists_task(ti):
-    config = ti.dag_run.conf
+def check_collection_exists_task(dag_run=None):
+    config = dag_run.conf
+    stac_url = Variable.get("STAC_URL")
     return check_collection_exists(
-        endpoint=Variable.get("STAC_URL", default_var=None),
+        endpoint=stac_url,
         collection_id=config.get("collection"),
     )
 
 
-def generate_collection_task(ti):
-    config = ti.dag_run.conf
-    role_arn = Variable.get("ASSUME_ROLE_READ_ARN", default_var=None)
+@task()
+def generate_collection_task(dag_run=None):
+    config = dag_run.conf
 
-    # TODO it would be ideal if this also works with complete collections where provided - this would make the collection ingest more re-usable
+    # If a STAC Collection is provided, we don't need to generate generate a collection from the dataset config.
+    # We assume the collection being passed is a valid STAC Collection and the config is validated upstream (i.e. Ingest UI)
+    if not config.get("collection"): # Only the dataset config has a collection key
+        return config
+
+    role_arn = Variable.get("ASSUME_ROLE_READ_ARN")
+
     collection = generator.generate_stac(
         dataset_config=config, role_arn=role_arn
     )
     return collection
 
-
-
-group_kwgs = {"group_id": "Collection", "tooltip": "Collection"}
-
-
+@task_group(group_id="Collection", tooltip="Collection")
 def collection_task_group():
-    with TaskGroup(**group_kwgs) as collection_task_grp:
-        generate_collection = PythonOperator(
-            task_id="generate_collection", python_callable=generate_collection_task
-        )
-        ingest_collection = PythonOperator(
-            task_id="ingest_collection", python_callable=ingest_collection_task
-        )
-        generate_collection >> ingest_collection
+    generate_collection = generate_collection_task()
+    ingest_collection = ingest_collection_task(collection=generate_collection)
 
-        return collection_task_grp

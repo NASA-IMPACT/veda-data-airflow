@@ -8,7 +8,7 @@ from airflow.providers.celery.executors.default_celery import DEFAULT_CELERY_CON
 # Must exceed the longest task runtime, or SQS redelivers mid-run and the duplicate
 # delivery fails the task on Airflow 3. The queue's own VisibilityTimeout attribute
 # must match, since predefined_queues means kombu does not create the queue.
-VISIBILITY_TIMEOUT = 1800  # 30m; SQS allows up to 43200
+VISIBILITY_TIMEOUT = 2400  # 40m; SQS allows up to 43200
 
 CELERY_CONFIG = {
     **DEFAULT_CELERY_CONFIG,

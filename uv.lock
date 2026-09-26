@@ -3472,7 +3472,7 @@ wheels = [
 
 [[package]]
 name = "veda-data-airflow"
-version = "0.1.0"
+version = "0.23.0.dev2"
 source = { virtual = "." }
 dependencies = [
     { name = "apache-airflow" },

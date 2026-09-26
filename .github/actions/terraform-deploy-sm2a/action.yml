@@ -33,11 +33,10 @@ runs:
   using: "composite"
 
   steps:
-    - name: Set up Python
-      uses: actions/setup-python@42375524e23c412d93fb67b49958b491fce71c38 # v5.4.0
+    - name: Set up uv
+      uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
       with:
-        python-version: "3.11"
-        cache: "pip"
+        enable-cache: true
 
     - name: Setup Terraform
       uses: hashicorp/setup-terraform@ed3a0531877aca392eb870f440d9ae7aba83a6bd #v1.4.0

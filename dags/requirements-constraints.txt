@@ -653,7 +653,7 @@ xmltodict==0.13.0
 yamllint==1.29.0
 yandexcloud==0.194.0
 yarl==1.8.2
-zeep==4.2.1
+zeep==4.3.3
 zenpy==2.0.25
 zict==2.2.0
 zipp==3.11.0

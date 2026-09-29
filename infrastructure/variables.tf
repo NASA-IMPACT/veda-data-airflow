@@ -284,3 +284,9 @@ variable "alb_access_logs_prefix" {
   type        = string
   default     = null
 }
+
+variable "git_ref" {
+  description = "git ref of veda-data-airflow (VEDA_SM2A_DATA_AIRFLOW_GIT_REF)"
+  type        = string
+  default     = "unknown"
+}

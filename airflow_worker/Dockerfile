@@ -1,7 +1,7 @@
 FROM --platform=linux/amd64 ghcr.io/osgeo/gdal:ubuntu-small-3.6.4
 COPY --from=ghcr.io/astral-sh/uv:0.7.3 /uv /uvx /bin/
 
-ARG AIRFLOW_VERSION=3.0.2
+ARG AIRFLOW_VERSION=3.2.2
 ARG UNAME=airflow
 ARG UID=50000
 ARG GID=0

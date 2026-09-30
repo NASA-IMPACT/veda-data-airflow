@@ -1,4 +1,6 @@
 import logging
+from datetime import timedelta
+
 import pendulum
 from airflow.models.param import Param
 from airflow.decorators import task
@@ -33,7 +35,8 @@ This DAG is supposed to be triggered by `veda_discover`. But you still can trigg
     "extra_flags": ["-overwrite", "-lco", "OVERWRITE=YES", "-oo", "X_POSSIBLE_NAMES=latitude", "-oo", "Y_POSSIBLE_NAMES=longitude"]
     "discovered": 33,
     "payload": "s3://data-pipeline-ghgc-dev-mwaa-597746869805/events/test_layer_name2/s3_discover_output_f88257e8-ee50-4a14-ace4-5612ae6ebf38.jsonn"
-    "invalidate_cloudfront": true
+    "invalidate_cloudfront": true,
+    "refresh_catalog": true
 
 }
 ```
@@ -68,6 +71,13 @@ been ingested**. Omit the key entirely to skip it.
   and set it only on the last, otherwise the index exists while later chunks are still
   loading -- which is exactly what the post-ingest ordering avoids.
 
+#### Catalog refresh
+- After `configure_table`, the DAG calls the Features API's `/refresh` endpoint so the new
+  table is added to its cached collection catalog. Set the Airflow Variable
+  `FEATURES_API_URL` to the API's base URL to enable it; the step is optional and is skipped
+  when the Variable is unset or `refresh_catalog` is false. A failed refresh logs an error
+  and does not fail the run.
+
 - [Supports linking to external content](https://github.com/NASA-IMPACT/veda-data-pipelines)
 """
 
@@ -94,7 +104,8 @@ template_dag_run_conf = {
             '{"indexes": [{"columns": ["datetime"]}], "analyze": true}'
         ),
     ),
-    "invalidate_cloudfront": Param(True, type="boolean")
+    "invalidate_cloudfront": Param(True, type="boolean"),
+    "refresh_catalog": Param(True, type="boolean"),
 }
 dag_args = {
     "start_date": pendulum.today("UTC").add(days=-1),
@@ -143,6 +154,37 @@ def configure_table(dag_run=None):
     return apply_table_config(collection, table_config, vector_secret_name)
 
 
+@task(retries=3, retry_delay=timedelta(seconds=30))
+def refresh_features_catalog(dag_run=None, ti=None):
+    """Ask the Features API to rebuild its cached collection catalog.
+
+    Failures raise so Airflow retries; on the last try they are logged and the task
+    succeeds, because the data is already loaded and the next refresh picks it up.
+    """
+    if not dag_run.conf.get("refresh_catalog", True):
+        logging.info("Skipping features catalog refresh")
+        return
+
+    features_api_url = Variable.get("FEATURES_API_URL", default=None)
+    if not features_api_url:
+        logging.info("Skipping features catalog refresh: FEATURES_API_URL is not set")
+        return
+
+    import requests
+
+    url = f"{features_api_url.rstrip('/')}/refresh"
+    try:
+        response = requests.get(url, params={"t": dag_run.run_id}, timeout=60)
+        response.raise_for_status()
+    except Exception as e:
+        if ti is not None and ti.try_number <= ti.max_tries:
+            raise
+        logging.error(f"Features catalog refresh failed, not retrying: {e}")
+        return
+
+    logging.info(f"Features catalog refreshed: {response.text}")
+
+
 @task
 def invalidate_cloudfront(dag_run=None):
 
@@ -187,7 +229,13 @@ def get_ingest_vector_dag(id: str, event: dict):
         end = EmptyOperator(task_id="End", trigger_rule=TriggerRule.ONE_SUCCESS, dag=dag)
         discover = start >> discover_from_s3_task(event=event)
         get_files = get_files_task(payload=discover)
-        ingest_vector_task.expand(payload=get_files) >> configure_table() >> invalidate_cloudfront() >> end
+        (
+            ingest_vector_task.expand(payload=get_files)
+            >> configure_table()
+            >> refresh_features_catalog()
+            >> invalidate_cloudfront()
+            >> end
+        )
 
         return dag
 

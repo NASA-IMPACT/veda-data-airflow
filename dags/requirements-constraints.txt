@@ -642,7 +642,7 @@ urllib3==1.26.14
 userpath==1.8.0
 vertica-python==1.2.0
 vine==5.0.0
-virtualenv==20.17.1
+virtualenv==21.7.12
 volatile==2.1.0
 watchtower==2.0.1
 wcwidth==0.2.6

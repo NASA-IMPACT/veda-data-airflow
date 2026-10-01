@@ -248,7 +248,7 @@ variable "ingest_api_keycloak_client_secret" {
 
 variable "airflow_version" {
   type    = string
-  default = "3.0.2"
+  default = "3.2.2"
 }
 
 variable "rds_deletion_protection" {
@@ -283,4 +283,10 @@ variable "alb_access_logs_prefix" {
   description = "S3 key prefix for ALB access logs"
   type        = string
   default     = null
+}
+
+variable "git_ref" {
+  description = "git ref of veda-data-airflow (VEDA_SM2A_DATA_AIRFLOW_GIT_REF)"
+  type        = string
+  default     = "unknown"
 }

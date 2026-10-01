@@ -638,7 +638,7 @@ uamqp==1.6.3
 uc-micro-py==1.0.1
 unicodecsv==0.14.1
 uritemplate==3.0.1
-urllib3==1.26.14
+urllib3==2.8.0
 userpath==1.8.0
 vertica-python==1.2.0
 vine==5.0.0

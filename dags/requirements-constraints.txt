@@ -77,7 +77,7 @@ aliyun-python-sdk-kms==2.16.0
 amqp==5.1.1
 analytics-python==1.4.0
 ansiwrap==0.8.4
-anyio==3.6.2
+anyio==4.14.2
 apache-airflow-providers-airbyte==3.2.0
 apache-airflow-providers-alibaba==2.2.0
 apache-airflow-providers-amazon==7.1.0

@@ -585,7 +585,7 @@ spython==0.3.0
 sqlalchemy-bigquery==1.5.0
 sqlalchemy-drill==1.1.2
 sqlalchemy-redshift==0.8.12
-sqlparse==0.4.3
+sqlparse==0.6.0
 sshpubkeys==3.3.1
 sshtunnel==0.4.0
 stack-data==0.6.2

@@ -1,0 +1,3 @@
+"""
+Build STAC package initialization.
+"""

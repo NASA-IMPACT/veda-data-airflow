@@ -11,6 +11,8 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
+    outputs:
+      prs: ${{ steps.release-please.outputs.prs }}
     steps:
       - uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
         id: app-token
@@ -27,8 +29,18 @@ jobs:
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
 
-      - name: Set up uv
-        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+  update-lockfile:
+    runs-on: ubuntu-latest
+    needs: release-please
+    if: ${{ needs.release-please.outputs.prs != '' && needs.release-please.outputs.prs != '[]' }}
+    steps:
+      - uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        id: app-token
+        with:
+          app-id: ${{ secrets.VEDA_RELEASE_BOT_ID }}
+          private-key: ${{ secrets.VEDA_RELEASE_BOT_PRIVATE_KEY }}
+          permission-contents: write
+          permission-pull-requests: write
 
       - name: Checkout code
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -36,10 +48,12 @@ jobs:
           token: ${{ steps.app-token.outputs.token }}
           persist-credentials: true
           fetch-depth: 0
-          ref: ${{ fromJSON(steps.release-please.outputs.prs)[0].headBranchName }}
+          ref: ${{ fromJSON(needs.release-please.outputs.prs)[0].headBranchName }}
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
 
       - name: Regenerate Lockfile with New Version
-        if: ${{ steps.release-please.outputs.release_created == 'true' }}
         run: |
           uv lock --upgrade-package veda-data-airflow
           git config user.name "github-actions[bot]"

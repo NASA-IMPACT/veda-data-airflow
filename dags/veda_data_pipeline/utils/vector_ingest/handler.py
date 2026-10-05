@@ -16,7 +16,7 @@ from sqlalchemy import create_engine, MetaData, Table, Column, inspect
 import concurrent.futures
 import logging
 from sqlalchemy.dialects.postgresql import DOUBLE_PRECISION, INTEGER, VARCHAR, TIMESTAMP
-from veda_data_pipeline.utils.s3_discovery import (VedaAirflowException)
+from veda_data_pipeline.utils.s3_discovery import VedaAirflowException
 
 
 def download_file(file_uri: str, role_arn:[str, None]):
@@ -43,7 +43,6 @@ def download_file(file_uri: str, role_arn:[str, None]):
 
     s3.download_file(bucket, path, target_filepath)
 
-    # print(f"downloaded {target_filepath}")
     logging.info(f"downloaded {target_filepath}")
 
 
@@ -118,9 +117,6 @@ def ensure_table_exists(
     existing_column_names = [col["name"] for col in existing_columns]
     for column in gdf_schema:
         if column.name not in existing_column_names:
-            # raise ValueError(
-            #     f"your .gpkg seems to have a column={column.name} that does not exist in the existing table columns={existing_column_names}"
-            # )
             raise VedaAirflowException(
                 "ensure_table_exists", f"your .gpkg seems to have a column={column.name} that does not exist in the existing table columns={existing_column_names}"
             )
@@ -248,7 +244,6 @@ def load_to_featuresdb(
     con_secrets = get_secret(secret_name)
     connection = get_connection_string(con_secrets)
 
-    # print(f"running ogr2ogr import for collection: {collection}")
     logging.info(f"running ogr2ogr import for collection: {collection}")
     options = [
         "ogr2ogr",
@@ -272,7 +267,6 @@ def load_to_featuresdb(
 
     if out.stderr:
         error_description = f"Error: {out.stderr}"
-        # print(error_description)
 
         # warnings and successes will return status code 0, failures will return a 1
         # https://gdal.org/en/stable/programs/ogr2ogr.html#return-status-code
@@ -362,7 +356,6 @@ def handler(payload_src: dict, vector_secret_name: str, assume_role_arn: [str, N
     source_projection = payload_event.get("source_projection", 'EPSG:4326')
     target_projection = payload_event.get("target_projection", 'EPSG:4326')
     extra_flags = payload_event.get("extra_flags", ["-overwrite", "-progress"])
-    # collection_not_provided = payload_event["collection"] == ""
 
     with smart_open.open(s3_event, "r") as _file:
         s3_event_read = _file.read()
@@ -379,15 +372,9 @@ def handler(payload_src: dict, vector_secret_name: str, assume_role_arn: [str, N
         s3_object_prefix = event_received["prefix"]
         if s3_object_prefix.startswith("EIS/"):
             collection = Path(href).stem
-            # print(f"Load new EIS fire features from {href=} using {collection=} {downloaded_filepath=}")
             logging.info(f"Load new EIS fire features from {href=} using {collection=} {downloaded_filepath=}")
             coll_status = load_to_featuresdb_eis(downloaded_filepath, collection, vector_secret_name)
         else:
-            # Get the filename
-            # filename = href.split("/")[-1].split(".")[0]
-            # Use id template with filename when collection is not provided in the conf
-            # if collection_not_provided:
-            #     collection = payload_event.get("id_template", "{}").format(filename)
             coll_status = load_to_featuresdb(downloaded_filepath, collection, vector_secret_name, source_projection, target_projection, extra_flags)
 
         status.append(coll_status)
@@ -398,7 +385,6 @@ def handler(payload_src: dict, vector_secret_name: str, assume_role_arn: [str, N
             alter_datetime_add_indexes_eis(collection, vector_secret_name)
         elif coll_status["status"] != "success":
             # bubble exception so Airflow shows it as a failure
-            # raise Exception(coll_status["reason"])
             raise VedaAirflowException("handler", coll_status["reason"])
     return status
 

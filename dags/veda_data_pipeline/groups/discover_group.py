@@ -5,9 +5,6 @@ import logging
 from airflow.sdk import Variable
 from airflow.decorators import task
 from airflow.exceptions import AirflowSkipException
-# from veda_data_pipeline.utils.s3_discovery import (
-#     s3_discovery_handler, EmptyFileListError
-# )
 from veda_data_pipeline.utils.s3_discovery import (
     s3_discovery_handler, VedaAirflowException
 )
@@ -46,12 +43,9 @@ def discover_from_s3_task(event: dict={}, dag_run=None, payload: dict={}, prev_s
             chunk_size=chunk_size
         )
     except VedaAirflowException as e:
-        # print(f"Received an exception {ex}")
         if (e.action == "skip"):
             logging.warning(e)
             raise AirflowSkipException(str(e)) from e
-        # # TODO test continued short circuit operator behavior (no files -> skip remaining tasks)
-        # return {}
         logging.error(e)
         raise
 

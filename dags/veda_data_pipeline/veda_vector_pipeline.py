@@ -20,7 +20,7 @@ This DAG is supposed to be triggered by `veda_discover`. But you still can trigg
 - This DAG can run with the following configuration <br>
 ```json
 {
-    "collection": "",
+    "collection": "nist-urban-testbed",
     "prefix": "transformed_csv/",
     "bucket": "ghgc-data-store-develop",
     "filename_regex": ".*.csv$",

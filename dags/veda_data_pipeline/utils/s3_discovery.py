@@ -14,15 +14,8 @@ from smart_open import open as smrt_open
 
 from airflow.sdk import Variable
 
-
-# # Adding a custom exception for empty list
-# class EmptyFileListError(Exception):
-#     def __init__(self, error_message):
-#         self.error_message = error_message
-#         super().__init__(self.error_message)
-
 # Creating a custom universal exception class for better logging
-# @TODO: Move to a shared utils file which looks like it needs to be created
+# @TODO: Move to a shared utils file which looks like it needs to be created !!!
 class VedaAirflowException(Exception):
     def __init__(self, function_name: str, message: str, action: Literal["skip", "raise"] = "raise",):
         self.function_name = function_name
@@ -256,7 +249,6 @@ def s3_discovery_handler(event, chunk_size=2800, role_arn=None, bucket_output=No
     ]
 
     if len(file_uris) == 0:
-        # raise EmptyFileListError(f"No files discovered at bucket: {bucket}, prefix: {prefix}")
         raise VedaAirflowException("s3_discovery_handler", f"No files discovered at bucket: {bucket}, prefix: {prefix}, filename_regex: {filename_regex}", "skip")
 
     # group only if more than 1 assets
@@ -268,9 +260,6 @@ def s3_discovery_handler(event, chunk_size=2800, role_arn=None, bucket_output=No
         items_with_assets = construct_single_asset_items(file_uris, assets)
 
     if len(items_with_assets) == 0:
-        # raise EmptyFileListError(
-        #     f"No items could be constructed for files at bucket: {bucket}, prefix: {prefix}"
-        # )
         raise VedaAirflowException("s3_discovery_handler", f"No items could be constructed for files at bucket: {bucket}, prefix: {prefix}", "skip")
     # Update IDs using id_template
     for item in items_with_assets:

@@ -5,6 +5,7 @@ import re
 from typing import List
 from uuid import uuid4
 from pathlib import Path
+from typing import Literal
 
 from datetime import datetime
 from dateutil.tz import tzlocal
@@ -13,12 +14,16 @@ from smart_open import open as smrt_open
 
 from airflow.sdk import Variable
 
+# Creating a custom universal exception class for better logging
+# @TODO: Move to a shared utils file which looks like it needs to be created !!!
+class VedaAirflowException(Exception):
+    def __init__(self, function_name: str, message: str, action: Literal["skip", "raise"] = "raise",):
+        self.function_name = function_name
+        self.action = action # "skip" with successful mark or "raise" with failure?
+        self.message = message
 
-# Adding a custom exception for empty list
-class EmptyFileListError(Exception):
-    def __init__(self, error_message):
-        self.error_message = error_message
-        super().__init__(self.error_message)
+        exception_message = f"Error raised in function {self.function_name}: {message}"
+        super().__init__(exception_message)
 
 
 def assume_role(role_arn, session_name="veda-data-pipelines_s3-discovery"):
@@ -244,7 +249,7 @@ def s3_discovery_handler(event, chunk_size=2800, role_arn=None, bucket_output=No
     ]
 
     if len(file_uris) == 0:
-        raise EmptyFileListError(f"No files discovered at bucket: {bucket}, prefix: {prefix}")
+        raise VedaAirflowException("s3_discovery_handler", f"No files discovered at bucket: {bucket}, prefix: {prefix}, filename_regex: {filename_regex}", "skip")
 
     # group only if more than 1 assets
     if assets and len(assets.keys()) > 1:
@@ -255,10 +260,7 @@ def s3_discovery_handler(event, chunk_size=2800, role_arn=None, bucket_output=No
         items_with_assets = construct_single_asset_items(file_uris, assets)
 
     if len(items_with_assets) == 0:
-        raise EmptyFileListError(
-            f"No items could be constructed for files at bucket: {bucket}, prefix: {prefix}"
-        )
-
+        raise VedaAirflowException("s3_discovery_handler", f"No items could be constructed for files at bucket: {bucket}, prefix: {prefix}", "skip")
     # Update IDs using id_template
     for item in items_with_assets:
         item["item_id"] = id_template.format(item["item_id"])
@@ -302,4 +304,6 @@ def s3_discovery_handler(event, chunk_size=2800, role_arn=None, bucket_output=No
         del event["assets"]
     except KeyError:
         pass
+    except Exception as e:
+        raise VedaAirflowException("s3_discovery_handler", e)
     return {**event, "payload": out_keys, "discovered": discovered}

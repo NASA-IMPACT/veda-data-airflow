@@ -1,4 +1,5 @@
 import logging
+import re
 import pendulum
 from airflow.models.param import Param
 from airflow.decorators import task
@@ -8,6 +9,7 @@ from airflow.utils.trigger_rule import TriggerRule
 from airflow.sdk import Variable
 from slack_notifications import slack_fail_alert
 from veda_data_pipeline.groups.discover_group import discover_from_s3_task, get_files_task
+from veda_data_pipeline.utils.s3_discovery import VedaAirflowException
 
 dag_doc_md = """
 ### Build and submit stac
@@ -105,6 +107,36 @@ dag_args = {
 
 
 @task
+def validate_config(dag_run=None):
+    """Validate the config before ingest executes"""
+    def validate_collection_key():
+        collection = dag_run.conf.get("collection")
+        if not collection or not collection.strip():
+            raise VedaAirflowException(
+                "validate_config", "`collection` is required and must not be empty", "raise"
+            )
+        
+        # ogr2ogr would launder the collection name to fit this but lets require user to input correctly for no disconnect
+        anti_rules = [
+            {
+                "pattern": r"[^\w\s]",
+                "message": "collection cannot include hyphens or special characters, please replace with underscores",
+            },
+            {
+                "pattern": r"[A-Z]",
+                "message": "collection should not include uppercase letters, make sure they are all lowercase",
+            }
+        ]
+
+        for anti_rule in anti_rules:
+            if re.search(anti_rule["pattern"], collection):
+                raise VedaAirflowException("validate_config", anti_rule["message"], "raise")
+
+    validate_collection_key()
+    return
+
+
+@task
 def ingest_vector_task(payload):
     from veda_data_pipeline.utils.vector_ingest.handler import handler
 
@@ -185,7 +217,7 @@ def get_ingest_vector_dag(id: str, event: dict):
     ) as dag:
         start = EmptyOperator(task_id="Start", dag=dag)
         end = EmptyOperator(task_id="End", trigger_rule=TriggerRule.ONE_SUCCESS, dag=dag)
-        discover = start >> discover_from_s3_task(event=event)
+        discover = start >> validate_config() >> discover_from_s3_task(event=event)
         get_files = get_files_task(payload=discover)
         ingest_vector_task.expand(payload=get_files) >> configure_table() >> invalidate_cloudfront() >> end
 

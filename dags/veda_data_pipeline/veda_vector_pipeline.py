@@ -113,7 +113,7 @@ def validate_config(dag_run=None):
         collection = dag_run.conf.get("collection")
         if not collection or not collection.strip():
             raise VedaAirflowException(
-                "validate_config", "`collection` is required and must not be empty", "raise"
+                "validate_config", "`collection` is required and must not be empty"
             )
         
         # ogr2ogr would launder the collection name to fit this but lets require user to input correctly for no disconnect
@@ -130,7 +130,7 @@ def validate_config(dag_run=None):
 
         for anti_rule in anti_rules:
             if re.search(anti_rule["pattern"], collection):
-                raise VedaAirflowException("validate_config", anti_rule["message"], "raise")
+                raise VedaAirflowException("validate_config", anti_rule["message"])
 
     validate_collection_key()
     return

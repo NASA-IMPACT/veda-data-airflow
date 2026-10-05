@@ -21,7 +21,7 @@ DAG manually or through an API
 - This DAG can run with the following configuration <br>
 ```json
 {
-    "collection": "",
+    "collection": "nist-urban-testbed",
     "prefix": "transformed_csv/",
     "bucket": "ghgc-data-store-develop",
     "filename_regex": ".*.csv$",

@@ -1,6 +1,7 @@
 import importlib
 import json
 import os
+import re
 import tempfile
 
 import boto3
@@ -9,6 +10,14 @@ import rasterio
 import requests
 import s3fs
 import shutil
+
+# Plugins are exec'd on the worker, so only fetch them from the GHGC docs repo
+# at main, staging, or a pinned commit.
+PLUGIN_URL_PATTERN = re.compile(
+    r"https://raw\.githubusercontent\.com/US-GHG-Center/ghgc-docs/"
+    r"(?:refs/heads/(?:main|staging)|[0-9a-f]{40})/"
+    r"data_transformation_plugins/[A-Za-z0-9][A-Za-z0-9_-]*_transformation\.py"
+)
 
 
 def get_all_s3_keys(bucket, s3_prefix, ext) -> list:
@@ -38,29 +47,6 @@ def get_all_s3_keys(bucket, s3_prefix, ext) -> list:
     return keys
 
 
-def download_python_file_from_s3(bucket_name, s3_key, temp_file_path):
-    """
-    Downloads a Python file from an S3 bucket and returns a temporary file path.
-
-    Parameters:
-    - bucket_name (str): The name of the S3 bucket.
-    - s3_key (str): The key (path) to the file in the S3 bucket.
-
-    Returns:
-    - str: Path to the temporary file.
-    """
-
-    s3 = boto3.client("s3")
-
-    # Download the S3 file to the temporary file location
-    s3.download_file(bucket_name, s3_key, temp_file_path)
-    print(
-        f"Downloaded {s3_key} from bucket {bucket_name} to temporary file {temp_file_path}"
-    )
-
-    return temp_file_path
-
-
 def download_python_file(uri: str):
     # Extract the file name from the URL
     file_name = os.path.basename(uri)
@@ -70,13 +56,6 @@ def download_python_file(uri: str):
     temp_file_path = os.path.join(temp_dir, file_name)
     # Write the content to the temporary file
 
-    if uri.startswith("s3://"):
-        # Remove the 's3://' prefix
-        s3_path = uri[5:]
-        # Split into bucket and key
-        parts = s3_path.split("/", 1)
-        bucket_name, key = parts
-        return download_python_file_from_s3(bucket_name=bucket_name, s3_key=key, temp_file_path=temp_file_path)
     return download_python_file_from_github(url=uri, temp_file_path=temp_file_path)
 
 
@@ -89,9 +68,12 @@ def check_file_exists(url):
     Returns:
         request response if exist and raise exception if not
     """
+    if not PLUGIN_URL_PATTERN.fullmatch(url):
+        raise ValueError(f"Plugin URL is not in the allowlist: {url}")
     try:
-        response = requests.get(url)
-        response.raise_for_status()  # Raise an error for HTTP errors
+        response = requests.get(url, allow_redirects=False, timeout=30)
+        if response.status_code != 200:
+            raise requests.exceptions.HTTPError(f"{response.status_code} for {url}")
     except requests.exceptions.RequestException as e:
         raise Exception(f"Error requesting the file: {e}")
     return response.content

@@ -18,9 +18,11 @@ dag_run_config = {
     "data_acquisition_method": Param(
         "s3", enum=["s3"]
     ),  # To add Other protocols (HTTP, SFTP...)
+    # Only the GHGC docs repo at main, staging, or a pinned commit SHA
     "plugins_uri": Param(
         "https://raw.githubusercontent.com/US-GHG-Center/ghgc-docs/refs/heads/main/",
         type="string",
+        pattern="^https://raw\\.githubusercontent\\.com/US-GHG-Center/ghgc-docs/(refs/heads/(main|staging)|[0-9a-f]{40})/?$",
     ),
     "raw_data_bucket": "ghgc-data-store-develop",
     "raw_data_prefix": Param(
@@ -32,7 +34,7 @@ dag_run_config = {
     "raw_data_filter_regex": Param(".*.nc$", type="string"),
     "dest_data_bucket": "ghgc-data-store-develop",
     "data_prefix": Param("transformed_cogs", type="string", pattern="^[^/].*[^/]$"),
-    "collection_name": Param("gpw", type="string"),
+    "collection_name": Param("gpw", type="string", pattern="^[A-Za-z0-9][A-Za-z0-9_-]*$"),
     "nodata": Param(-9999, type="number"),
     "ext": Param(".nc", type="string", pattern="^\\..*$"),
     "max_parallel_processing": Param(10, type="integer"),

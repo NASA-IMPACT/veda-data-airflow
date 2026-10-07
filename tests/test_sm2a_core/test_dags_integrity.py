@@ -30,7 +30,9 @@ def test_dags_have_failure_callback():
     """
     dag_bag = get_dag_bag()
     for dag_id, dag in dag_bag.dags.items():
-        assert hasattr(dag, "on_failure_callback"), f"DAG {dag_id} is missing on_failure_callback"
+        assert hasattr(dag, "on_failure_callback"), (
+            f"DAG {dag_id} is missing on_failure_callback"
+        )
         assert dag.on_failure_callback == slack_fail_alert, (
             f"DAG {dag_id} does not have slack_fail_alert set as on_failure_callback"
         )

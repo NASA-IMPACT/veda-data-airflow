@@ -1,18 +1,17 @@
 from datetime import timedelta
-from slack_notifications import slack_fail_alert
 
 import boto3
 import pendulum
-
-from airflow import DAG
 from airflow.exceptions import AirflowException
-from airflow.models.param import Param
-from airflow.providers.standard.operators.empty import EmptyOperator
-from airflow.providers.standard.operators.python import PythonOperator
 from airflow.providers.amazon.aws.operators.glue_crawler import GlueCrawlerOperator
 from airflow.providers.amazon.aws.operators.rds import RdsStartExportTaskOperator
 from airflow.providers.amazon.aws.sensors.rds import RdsExportTaskExistenceSensor
+from airflow.providers.standard.operators.empty import EmptyOperator
+from airflow.providers.standard.operators.python import PythonOperator
+from airflow.sdk import DAG
+from airflow.sdk.definitions.param import Param
 from botocore.exceptions import BotoCoreError, ClientError
+from slack_notifications import slack_fail_alert
 
 # Define default arguments
 default_args = {"retries": 0}
@@ -35,10 +34,14 @@ default_params = {
 def generate_crawl_config(dag_run=None):
     """
     This task is created in case we need
-    to perform any business logic on the configuration before submitting the configuration to AWS Crawler.
+    to perform any business logic on the configuration before submitting the
+    configuration to AWS Crawler.
     """
     config = dag_run.conf
-    s3_path = f"{config['bucket_name']}/{config['s3_prefix']}/{config['export_task_identifier']}"
+    s3_path = (
+        f"{config['bucket_name']}/{config['s3_prefix']}/"
+        f"{config['export_task_identifier']}"
+    )
     return {
         "Name": config["export_task_identifier"],
         "Role": config["glue_role_arn"],
@@ -56,7 +59,7 @@ def delete_glue_database_task(dag_run=None):
     # If the user didn't want to delete Glue database
     # Default to True
     if not conf.get("delete_glue_database", True):
-        return
+        return None
 
     try:
         response = client.delete_database(Name=database_id)
@@ -71,24 +74,25 @@ def delete_glue_database_task(dag_run=None):
     except (ClientError, BotoCoreError) as e:
         # Handle other boto3-specific exceptions
         print(f"Failed to delete Glue database {database_id}: {e}")
-        raise AirflowException(f"Error deleting Glue database {database_id}: {e}")
+        raise AirflowException(
+            f"Error deleting Glue database {database_id}: {e}"
+        ) from e
 
     except KeyError as e:
         # Handle missing db_id in conf
         print(f"Database ID not found in DAG run configuration: {e}")
-        raise AirflowException(f"Database ID missing in DAG configuration: {e}")
+        raise AirflowException(f"Database ID missing in DAG configuration: {e}") from e
 
     except Exception as e:
         # Catch-all for any other exceptions
         print(f"An unexpected error occurred: {e}")
-        raise AirflowException(f"Unexpected error: {e}")
+        raise AirflowException(f"Unexpected error: {e}") from e
 
 
 def get_export_only_list_task(dag_run=None):
     conf = dag_run.conf
     export_only = conf["export_only"]
-    export_only = export_only if export_only != ["null"] else []
-    return export_only
+    return export_only if export_only != ["null"] else []
 
 
 # Airflow DAG definition with doc_md documentation
@@ -105,14 +109,18 @@ with DAG(
     render_template_as_native_obj=True,
     doc_md=f"""
         ### RDS to S3 Snapshot Export and S3 Data Crawling
-        This DAG exports an RDS snapshot to S3 and uses AWS Glue to crawl the exported data,
-        making it accessible for querying. The process involves:
+        This DAG exports an RDS snapshot to S3 and uses AWS Glue to crawl the exported
+        data, making it accessible for querying. The process involves:
 
         ## Workflow
-        1. **Export RDS Snapshot**: Initiates an export of the snapshot from RDS to S3 using `RdsStartExportTaskOperator`.
-        2. **Monitor Export Completion**: Uses `RdsExportTaskExistenceSensor` to monitor export completion.
-        3. **Delete Glue Database**: Deletes any existing Glue database before recreating it.
-        4. **Run Glue Crawler**: Initiates a Glue Crawler on the exported S3 data for indexing.
+        1. **Export RDS Snapshot**: Initiates an export of the snapshot from RDS to S3
+            using `RdsStartExportTaskOperator`.
+        2. **Monitor Export Completion**: Uses `RdsExportTaskExistenceSensor` to monitor
+            export completion.
+        3. **Delete Glue Database**: Deletes any existing Glue database before
+            recreating it.
+        4. **Run Glue Crawler**: Initiates a Glue Crawler on the exported S3 data
+            for indexing.
 
         **Parameters**:
         ```json
@@ -131,7 +139,7 @@ with DAG(
     )
 
     # Task to start export of RDS snapshot to S3
-    start_s3_export = RdsStartExportTaskOperator(
+    start_export = RdsStartExportTaskOperator(
         task_id="start_export",
         export_task_identifier="{{ dag_run.conf['export_task_identifier'] }}",
         source_arn="{{ dag_run.conf['snapshot_arn'] }}",
@@ -154,12 +162,12 @@ with DAG(
     delete_glue_database = PythonOperator(
         task_id="delete_glue_database", python_callable=delete_glue_database_task
     )
-    generate_crawl_config_task = PythonOperator(
+    generate_crawl_config = PythonOperator(
         task_id="generate_crawl_config", python_callable=generate_crawl_config
     )
 
     # Task to initiate AWS Glue Crawler on the exported S3 data
-    run_crawl_s3 = GlueCrawlerOperator(
+    crawl_s3 = GlueCrawlerOperator(
         task_id="crawl_s3",
         config="{{ ti.xcom_pull('generate_crawl_config') }}",
     )
@@ -168,10 +176,10 @@ with DAG(
     (
         start
         >> get_export_only
-        >> start_s3_export
+        >> start_export
         >> export_sensor
         >> delete_glue_database
-        >> generate_crawl_config_task
-        >> run_crawl_s3
+        >> generate_crawl_config
+        >> crawl_s3
         >> end
     )

@@ -18,7 +18,7 @@ COPY --chown=airflow:airflow airflow_services/requirements-in.txt "${AIRFLOW_HOM
 
 USER airflow
 
-RUN uv pip install virtualenv\ 
+RUN uv pip install virtualenv\
   && uv pip install --no-cache-dir -r requirements.txt -c "https://raw.githubusercontent.com/apache/airflow/constraints-${AIRFLOW_VERSION}/constraints-3.12.txt"\
   && uv pip install --no-cache-dir -r requirements-in.txt apache-airflow==${AIRFLOW_VERSION}
 

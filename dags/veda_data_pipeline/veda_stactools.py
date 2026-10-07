@@ -1,18 +1,15 @@
-from typing import List
-import pendulum
 from importlib import import_module
 
-from airflow.decorators import task
-from slack_notifications import slack_fail_alert
-
-from airflow import DAG
+import pendulum
 from airflow.providers.standard.operators.empty import EmptyOperator
+from airflow.sdk import DAG, task
 from airflow.utils.trigger_rule import TriggerRule
+from slack_notifications import slack_fail_alert
 from stactools.core import use_fsspec
-
-from veda_data_pipeline.groups.processing_tasks import submit_to_stac_ingestor_task_direct
 from veda_data_pipeline.groups.collection_group import ingest_collection_task
-
+from veda_data_pipeline.groups.processing_tasks import (
+    submit_to_stac_ingestor_task_direct,
+)
 
 dag_doc_md = """
 Stactools ingestion POC
@@ -24,22 +21,18 @@ dag_args = {
     "doc_md": dag_doc_md,
     "on_failure_callback": slack_fail_alert,
     "is_paused_upon_creation": False,
-    "schedule": None,
 }
 
 template_dag_run_conf = {
     "stactools_package_name": "cop_dem",
     "collection_id": "my_veda_cop_dem_collection",
-    "collection_params": {
-        "product": "glo-30"
-    },
-    "item_params": {
-        "host": "AWS"
-    },
+    "collection_params": {"product": "glo-30"},
+    "item_params": {"host": "AWS"},
     "granules": [
         "s3://copernicus-dem-30m/Copernicus_DSM_COG_10_S84_00_E062_00_DEM/Copernicus_DSM_COG_10_S84_00_E062_00_DEM.tif"
-    ]
+    ],
 }
+
 
 @task
 def upsert_stactools_collection(dag_run=None):
@@ -51,19 +44,23 @@ def upsert_stactools_collection(dag_run=None):
 
     collection_params = body.get("collection_params")
     try:
-        collection = stactools.create_collection(
-                    **collection_params
-                )
-    except AttributeError:
-        # TODO  we should support a default collection creation process here, following a similar pattern to stactools
-        # ref - sentinel2 doesn't provide create_collection, but landsat and other packages do
-        raise AttributeError(f"Collection creation is not supported for {stactools_package_name}")
-    collection.id = body.get("collection_id") # override collection id in case it is not set/supported in collection_params
-    coll_dict = collection.to_dict()
-    return coll_dict
+        collection = stactools.create_collection(**collection_params)
+    except AttributeError as e:
+        # TODO  we should support a default collection creation process here,
+        # following a similar pattern to stactools
+        # ref - sentinel2 doesn't provide create_collection,
+        # but landsat and other packages do
+        raise AttributeError(
+            f"Collection creation is not supported for {stactools_package_name}"
+        ) from e
+    collection.id = body.get(
+        "collection_id"
+    )  # override collection id in case it is not set/supported in collection_params
+    return collection.to_dict()
+
 
 @task
-def build_items_from_granules(dag_run=None) -> List[str]:
+def build_items_from_granules(dag_run=None) -> list[str]:
     body = {
         **dag_run.conf,
     }
@@ -73,40 +70,42 @@ def build_items_from_granules(dag_run=None) -> List[str]:
     stactools = import_module(f".{stactools_package_name}.stac", "stactools")
 
     output = []
-    granule_list = body.get('granules')
+    granule_list = body.get("granules")
     item_params = body.get("item_params")
     for granule in granule_list:
         try:
             stac = stactools.create_item(granule, **item_params)
-        except AttributeError:
-            # TODO we should support a default item creation process here, following a similar pattern to stactools
-            # this is lower priority to support than collection creation - create_item() is more universal
-            raise AttributeError(f"Item creation is not supported for {stactools_package_name}")
-        stac.collection_id = body['collection_id']
+        except AttributeError as e:
+            # TODO we should support a default item creation process here,
+            # following a similar pattern to stactools. This is lower priority to
+            # support than collection creation - create_item() is more universal
+            raise AttributeError(
+                f"Item creation is not supported for {stactools_package_name}"
+            ) from e
+        stac.collection_id = body["collection_id"]
         # convert to dict if not already (pystac `Item` is common)
         if not isinstance(stac, dict):
             stac = stac.to_dict()
         output.append(stac)
     return output
 
+
 params_dag_run_conf = template_dag_run_conf
 with DAG(
-    "veda_stactools",
-    params=params_dag_run_conf,
-    **dag_args
+    "veda_stactools", params=params_dag_run_conf, schedule=None, **dag_args
 ) as dag:
     # ECS dependency variable
-    start = EmptyOperator(task_id="Start", dag=dag)
-    end = EmptyOperator(
-        task_id="End", trigger_rule=TriggerRule.ONE_SUCCESS, dag=dag
-    )
+    start = EmptyOperator(task_id="start", dag=dag)
+    end = EmptyOperator(task_id="end", trigger_rule=TriggerRule.ONE_SUCCESS, dag=dag)
     # define DAG using taskflow notation
 
     stactools_collection = upsert_stactools_collection()
     ingest_collection = ingest_collection_task(collection=stactools_collection)
 
     get_items_from_granules = build_items_from_granules()
-    submit_stac = submit_to_stac_ingestor_task_direct.expand(stac_items=get_items_from_granules)
+    submit_stac = submit_to_stac_ingestor_task_direct.expand(
+        stac_items=get_items_from_granules
+    )
     ingest_collection >> submit_stac
     start >> [get_items_from_granules, stactools_collection]
     submit_stac >> end

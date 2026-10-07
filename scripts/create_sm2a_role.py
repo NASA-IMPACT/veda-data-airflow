@@ -31,7 +31,7 @@ def create_dag_launcher_role():
             ("can_edit", "DAG:veda_dataset_pipeline"),
             ("can_read", "DAG:veda_dataset_pipeline"),
             ("can_edit", "DAG:veda_collection_pipeline"),
-            ("can_read", "DAG:veda_collection_pipeline")
+            ("can_read", "DAG:veda_collection_pipeline"),
         ]
 
         # Check if the role exists, create it if not

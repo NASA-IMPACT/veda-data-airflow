@@ -1,23 +1,14 @@
 import json
 import logging
-import math
-import os
-import sys
 from dataclasses import dataclass
-
-if sys.version_info >= (3, 8):
-    from typing import TypedDict
-else:
-    from typing_extensions import TypedDict
-
-from typing import Any, Dict, Optional, Union
+from typing import Any, TypedDict
 
 import boto3
 import requests
 
 
 class InputBase(TypedDict):
-    dry_run: Optional[Any]
+    dry_run: Any | None
 
 
 class S3LinkInput(InputBase):
@@ -25,7 +16,7 @@ class S3LinkInput(InputBase):
 
 
 class StacItemInput(InputBase):
-    stac_item: Dict[str, Any]
+    stac_item: dict[str, Any]
 
 
 class Secret(TypedDict):
@@ -68,30 +59,33 @@ class IngestionApi:
             token_url,
             headers={
                 "Content-Type": "application/x-www-form-urlencoded",
-                "Accept": "application/json"
+                "Accept": "application/json",
             },
             data={
                 "client_id": id,
                 "client_secret": secret,
                 "grant_type": "client_credentials",
-                "scope": "stac:item:create stac:item:update stac:collection:create stac:collection:update"
+                "scope": (
+                    "stac:item:create stac:item:update "
+                    "stac:collection:create stac:collection:update"
+                ),
             },
         )
         try:
             response.raise_for_status()
         except Exception as ex:
             print(response.text)
-            raise f"Error, {ex}"
+            raise f"Error, {ex}" from ex
         return response.json()
 
-    def submit(self, event: Dict[str, Any], endpoint: str) -> Dict[str, Any]:
+    def submit(self, event: dict[str, Any], endpoint: str) -> dict[str, Any]:
         headers = {
             "Authorization": f"Bearer {self.token}",
             "Content-Type": "application/json",
         }
 
         # Extract filename/item_id from the event for error reporting
-        item_id = event.get("id", None)
+        item_id = event.get("id")
         filename = None
         if "assets" in event:
             assets = event.get("assets", {})
@@ -108,30 +102,32 @@ class IngestionApi:
             )
             response.raise_for_status()
         except Exception as e:
-            logging.error(f"Failed to submit STAC item. Item ID: {item_id}, Filename: {filename}, Error: {type(e).__name__}: {e}")
+            logging.error(
+                f"Failed to submit STAC item. Item ID: {item_id}, Filename: {filename}"
+                f", Error: {type(e).__name__}: {e}"
+            )
             # Log response text if it's an HTTP error
-            if hasattr(e, 'response'):
-                resp = getattr(e, 'response')
-                if hasattr(resp, 'text'):
+            if hasattr(e, "response"):
+                resp = e.response
+                if hasattr(resp, "text"):
                     logging.error(f"Response: {resp.text}")
             raise
         return response.json()
 
 
 def submission_handler(
-        event: Union[S3LinkInput, StacItemInput, Dict[str, Any]],
-        endpoint: str = "/ingestions",
-        app_secret=None,
-        stac_ingestor_api_url=None,
-        context=None,  # Needed for lambda
-
+    event: S3LinkInput | StacItemInput | dict[str, Any],
+    endpoint: str = "/ingestions",
+    app_secret=None,
+    stac_ingestor_api_url=None,
+    context=None,  # Needed for lambda
 ) -> None | dict:
     stac_item = event
 
     if stac_item.get("dry_run"):
         print("Dry run, not inserting, would have inserted:")
         print(json.dumps(stac_item, indent=2))
-        return
+        return None
 
     ingestor = IngestionApi.from_veda_auth_secret(
         secret_id=app_secret,

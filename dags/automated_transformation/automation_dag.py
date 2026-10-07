@@ -1,13 +1,12 @@
 from __future__ import annotations
 
-from airflow import DAG
-from airflow.decorators import task
-from airflow.models.param import Param
-from airflow.providers.standard.operators.empty import EmptyOperator
-from slack_notifications import slack_fail_alert
-from airflow.models.variable import Variable
-from veda_data_pipeline.utils.xcom_to_s3 import write_xcom_to_s3,read_xcom_from_s3
 import re
+
+from airflow.providers.standard.operators.empty import EmptyOperator
+from airflow.sdk import DAG, Variable, task
+from airflow.sdk.definitions.param import Param
+from slack_notifications import slack_fail_alert
+from veda_data_pipeline.utils.xcom_to_s3 import read_xcom_from_s3, write_xcom_to_s3
 
 DAG_ID = "automate-cog-transformation"
 
@@ -35,14 +34,15 @@ dag_run_config = {
     "collection_name": Param("gpw", type="string"),
     "nodata": Param(-9999, type="number"),
     "ext": Param(".nc", type="string", pattern="^\\..*$"),
-    "max_parallel_processing": Param(10, type="integer"),
-    "chunk_limit": Param(100, type="integer")
+    "chunk_limit": Param(100, type="integer"),
 }
 dag_doc_md = """
 
 ### Automate COG Transformation
 
-This DAG automates the transformation of raw geospatial data into Cloud-Optimized GeoTIFFs (COGs). It fetches transformation plugins, discovers files, processes them, and generates a report.
+This DAG automates the transformation of raw geospatial data into Cloud-Optimized
+GeoTIFFs (COGs). It fetches transformation plugins, discovers files, processes them,
+and generates a report.
 
 #### DAG Configuration
 
@@ -63,18 +63,17 @@ This DAG automates the transformation of raw geospatial data into Cloud-Optimize
 """
 
 with DAG(
-        dag_id=DAG_ID,
-        schedule=None,
-        catchup=False,
-        tags=["Transformation", "Report"],
-        params=dag_run_config,
-        doc_md=dag_doc_md,
-        on_failure_callback=slack_fail_alert,
-        max_active_runs = 1 # Ensure only one DAG at a time to avoid memory issues (code -9)
+    dag_id=DAG_ID,
+    schedule=None,
+    catchup=False,
+    tags=["Transformation", "Report"],
+    params=dag_run_config,
+    doc_md=dag_doc_md,
+    on_failure_callback=slack_fail_alert,
+    max_active_runs=1,  # Ensure only one DAG at a time to avoid memory issues (code -9)
 ) as dag:
     start = EmptyOperator(task_id="start", dag=dag)
     end = EmptyOperator(task_id="end", dag=dag)
-
 
     @task
     def check_function_exists(dag_run=None):
@@ -84,26 +83,13 @@ with DAG(
 
         config = dag_run.conf
         folder_name = "data_transformation_plugins"
-        file_name = f'{config.get("collection_name")}_transformation.py'
+        file_name = f"{config.get('collection_name')}_transformation.py"
         try:
             plugin_url = f"{config['plugins_uri'].strip('/')}/{folder_name}/{file_name}"
             check_file_exists(url=plugin_url)
             return f"The {file_name} exists in {folder_name} in this URL {plugin_url}."
         except Exception as e:
-            raise Exception(f"Error checking file existence: {e}")
-
-    @task()
-    def set_max_active_processing(**kwargs):
-        from time import sleep
-        dag_run = kwargs.get("dag_run")
-        config = dag_run.conf.copy()
-        max_parallel_value_stored = Variable.get("max_parallel_processing", default_var=10)
-        max_parallel_value_configured = config.get("max_parallel_processing", 10)
-        if max_parallel_value_stored != max_parallel_value_configured:
-            Variable.set("max_parallel_processing", max_parallel_value_configured)
-            # Give time for the scheduler to catch up
-            sleep(15)
-        return max_parallel_value_configured
+            raise Exception(f"Error checking file existence: {e}") from e
 
     @task
     def discover_files(dag_run=None):
@@ -122,9 +108,7 @@ with DAG(
 
         # Filter by raw data regex
         pattern = rf"{raw_data_prefix}/{raw_data_regex}"
-        filtered_files = [
-            f for f in generated_list if re.match(pattern, f)
-        ]
+        filtered_files = [f for f in generated_list if re.match(pattern, f)]
         print(f"[ FILTERED BY PATTERN {pattern} : {len(filtered_files)}]")
 
         # Write this to s3
@@ -134,13 +118,12 @@ with DAG(
         chunk_limit = min(int(config.get("chunk_limit", 100)), 900)
         chunk_size = int(len(filtered_files) / chunk_limit) + 1
         for indx, i in enumerate(range(0, len(filtered_files), chunk_size)):
-            tmp = filtered_files[i: i + chunk_size]
+            tmp = filtered_files[i : i + chunk_size]
             output_key = write_xcom_to_s3(f"{key}/chunk_{indx}", tmp)
             chunks_xcom.append(output_key)
         return chunks_xcom
 
-
-    @task(max_active_tis_per_dag=int(Variable.get("max_parallel_processing", default_var=10)))
+    @task(max_active_tis_per_dag=10)
     def process_files(s3_url, **kwargs):
         dag_run = kwargs.get("dag_run")
         from dags.automated_transformation.transformation_pipeline import transform_cog
@@ -158,8 +141,8 @@ with DAG(
         # Get the files url from the s3 location
         file_url_list = read_xcom_from_s3(s3_url)
 
-        print("Total files to process in this task :  ",len(file_url_list))
-        file_status = transform_cog(
+        print("Total files to process in this task :  ", len(file_url_list))
+        return transform_cog(
             file_url_list,
             plugin_url=plugin_url,
             nodata=nodata,
@@ -168,8 +151,6 @@ with DAG(
             data_prefix=data_prefix,
             collection_name=collection_name,
         )
-        return file_status
-
 
     @task
     def generate_report(reports, **kwargs):
@@ -184,11 +165,14 @@ with DAG(
                 count += 1
 
         if failed_files:
-            raise Exception(f"Error generating {len(failed_files)} COG files. Top 5 failed files : {failed_files[:5]}")
+            raise Exception(
+                f"Error generating {len(failed_files)} COG files. Top 5 failed files : "
+                f"{failed_files[:5]}"
+            )
         summary = {
             "collection": collection_name,
             "successes": count,
-            "failures": len(failed_files)
+            "failures": len(failed_files),
         }
         print(summary)
 
@@ -201,8 +185,7 @@ with DAG(
     #         print(f"Top 10 failed file: {all_failures[:10]}")
     #         raise  Exception(f"Detected {len(all_failures)} errors")
 
-
-    s3_urls = start >> check_function_exists() >> set_max_active_processing()>> discover_files()
+    s3_urls = start >> check_function_exists() >> discover_files()
     report_data = process_files.expand(s3_url=s3_urls)
     statuses = generate_report(reports=report_data)
-    #report_failure(statuses=statuses) >> end
+    # report_failure(statuses=statuses) >> end

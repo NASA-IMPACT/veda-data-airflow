@@ -16,23 +16,25 @@
 # specific language governing permissions and limitations
 # under the License.
 """Keycloak OAuth configuration for the Airflow webserver."""
+
 from __future__ import annotations
+
+import logging
+import os
+import secrets
 from base64 import b64decode
+from pathlib import Path
+from typing import Any
 
-from flask_appbuilder.security.manager import AUTH_OAUTH
-
+import jwt
+import requests
 from airflow.providers.fab.auth_manager.security_manager.override import (
     FabAirflowSecurityManagerOverride,
 )
-import logging
-from typing import Any, Union
-import os
-import jwt
-import secrets
 from cryptography.hazmat.primitives import serialization
-import requests
+from flask_appbuilder.security.manager import AUTH_OAUTH
 
-basedir = os.path.abspath(os.path.dirname(__file__))
+basedir = str(Path(__file__).resolve().parent)
 
 # Flask-WTF flag for CSRF
 WTF_CSRF_ENABLED = True
@@ -72,14 +74,20 @@ OAUTH_PROVIDERS = [
         "remote_app": {
             "client_id": KEYCLOAK_CLIENT_ID,
             "client_secret": KEYCLOAK_CLIENT_SECRET,
-            "api_base_url": f"{KEYCLOAK_BASE_URL}/realms/{KEYCLOAK_REALM}/protocol/openid-connect",
-            "client_kwargs": {
-                "scope": "openid email profile"
-            },
-            "access_token_url": f"{KEYCLOAK_BASE_URL}/realms/{KEYCLOAK_REALM}/protocol/openid-connect/token",
-            "authorize_url": f"{KEYCLOAK_BASE_URL}/realms/{KEYCLOAK_REALM}/protocol/openid-connect/auth",
+            "api_base_url": (
+                f"{KEYCLOAK_BASE_URL}/realms/{KEYCLOAK_REALM}/protocol/openid-connect",
+            ),
+            "client_kwargs": {"scope": "openid email profile"},
+            "access_token_url": (
+                f"{KEYCLOAK_BASE_URL}/realms/{KEYCLOAK_REALM}/protocol/openid-connect/token",
+            ),
+            "authorize_url": (
+                f"{KEYCLOAK_BASE_URL}/realms/{KEYCLOAK_REALM}/protocol/openid-connect/auth",
+            ),
             "request_token_url": None,
-            "jwks_uri": f"{KEYCLOAK_BASE_URL}/realms/{KEYCLOAK_REALM}/protocol/openid-connect/certs",
+            "jwks_uri": (
+                f"{KEYCLOAK_BASE_URL}/realms/{KEYCLOAK_REALM}/protocol/openid-connect/certs",
+            ),
         },
     },
 ]
@@ -101,9 +109,12 @@ def _get_keycloak_public_key():
     return _keycloak_public_key
 
 
-def extract_roles_from_keycloak(userinfo: dict[str, Any], resp: dict[str, Any]) -> list[str]:
+def extract_roles_from_keycloak(
+    userinfo: dict[str, Any], resp: dict[str, Any]
+) -> list[str]:
     """
-    Extract roles from Keycloak token. Possible roles: Admin, Viewer, Public, Dag_Launcher
+    Extract roles from Keycloak token.
+    Possible roles: Admin, Viewer, Public, Dag_Launcher
     See Airflow default roles: https://airflow.apache.org/docs/apache-airflow-providers-fab/stable/auth-manager/access-control.html#default-roles
 
     Keycloak can provide roles in multiple ways:
@@ -119,9 +130,19 @@ def extract_roles_from_keycloak(userinfo: dict[str, Any], resp: dict[str, Any]) 
     access_token = resp.get("access_token", "")
 
     try:
-        decoded = jwt.decode(access_token, _get_keycloak_public_key(), algorithms=["RS256"], options={"verify_signature": False})
-        if "resource_access" in decoded and KEYCLOAK_CLIENT_ID in decoded["resource_access"]:
-            roles.extend(decoded["resource_access"][KEYCLOAK_CLIENT_ID].get("roles", []))
+        decoded = jwt.decode(
+            access_token,
+            _get_keycloak_public_key(),
+            algorithms=["RS256"],
+            options={"verify_signature": False},
+        )
+        if (
+            "resource_access" in decoded
+            and KEYCLOAK_CLIENT_ID in decoded["resource_access"]
+        ):
+            roles.extend(
+                decoded["resource_access"][KEYCLOAK_CLIENT_ID].get("roles", [])
+            )
         log.info(f"Decoded roles from access_token: {roles}")
     except Exception as e:
         log.warning(f"Failed to decode access_token: {e}")
@@ -137,7 +158,7 @@ class KeycloakAuthorizer(FabAirflowSecurityManagerOverride):
     This class handles the OAuth flow with Keycloak and maps
     Keycloak roles/groups to Airflow FAB roles.
 
-    On initialization, ensures the DAG Launcher role exists with the correct permissions.
+    On initialization, ensures the DAG Launcher role exists with the correct permissions
     """
 
     role_name = "DAG Launcher"
@@ -172,9 +193,7 @@ class KeycloakAuthorizer(FabAirflowSecurityManagerOverride):
     def __init__(self, appbuilder):
         super().__init__(appbuilder)
 
-        role = self.find_role(self.role_name)
-        if not role:
-            role = self.add_role(self.role_name)
+        role = self.find_role(self.role_name) or self.add_role(self.role_name)
 
         for perm_name, view_menu_name in self.permissions:
             self.add_permissions_menu(view_menu_name)
@@ -206,7 +225,7 @@ class KeycloakAuthorizer(FabAirflowSecurityManagerOverride):
 
     def get_oauth_user_info(
         self, provider: str, resp: Any
-    ) -> dict[str, Union[str, list[str]]]:
+    ) -> dict[str, str | list[str]]:
         """
         Get user info from Keycloak OAuth response.
 
@@ -231,12 +250,18 @@ class KeycloakAuthorizer(FabAirflowSecurityManagerOverride):
         log.info(f"Raw user info from Keycloak: {userinfo}")
 
         # Extract username (preferred_username is standard in Keycloak)
-        username = userinfo.get("preferred_username") or userinfo.get("email") or userinfo.get("sub")
+        username = (
+            userinfo.get("preferred_username")
+            or userinfo.get("email")
+            or userinfo.get("sub")
+        )
 
         # Extract roles from Keycloak
         keycloak_roles = extract_roles_from_keycloak(userinfo, resp)
 
-        log.info(f"User info from Keycloak: username={username}, roles={keycloak_roles}")
+        log.info(
+            f"User info from Keycloak: username={username}, roles={keycloak_roles}"
+        )
 
         return {
             "username": f"keycloak_{username}",

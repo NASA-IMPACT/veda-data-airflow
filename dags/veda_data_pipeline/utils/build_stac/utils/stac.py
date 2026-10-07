@@ -1,11 +1,10 @@
 import pystac
 import rasterio
+from airflow.sdk import Variable
 from pystac.utils import datetime_to_str
 from rasterio.session import AWSSession
-from airflow.sdk import Variable
 from rio_stac import stac
 from rio_stac.stac import PROJECTION_EXT_VERSION, RASTER_EXT_VERSION
-
 from veda_data_pipeline.utils.build_stac.utils import events, regex, role
 
 
@@ -17,7 +16,7 @@ def get_sts_session():
             aws_secret_access_key=creds["SecretAccessKey"],
             aws_session_token=creds["SessionToken"],
         )
-    return
+    return None
 
 
 def create_item(
@@ -74,7 +73,7 @@ def generate_stac(event: events.RegexEvent) -> pystac.Item:
         single_datetime = single_datetime
     else:
         # Having multiple assets, we try against all filenames.
-        for asset_name, asset in event.assets.items():
+        for _asset_name, asset in event.assets.items():
             try:
                 filename = asset["href"].split("/")[-1]
                 start_datetime, end_datetime, single_datetime = regex.extract_dates(
@@ -94,8 +93,7 @@ def generate_stac(event: events.RegexEvent) -> pystac.Item:
         single_datetime = None
     assets = {}
 
-    rasterio_kwargs = {}
-    rasterio_kwargs["session"] = get_sts_session()
+    rasterio_kwargs = {"session": get_sts_session()}
     with rasterio.Env(
         session=rasterio_kwargs.get("session"),
         options={**rasterio_kwargs},
@@ -114,7 +112,8 @@ def generate_stac(event: events.RegexEvent) -> pystac.Item:
                 }
                 raster_info = {"raster:bands": stac.get_raster_info(src, max_size=1024)}
 
-            # The default asset name for cogs is "cog_default", so we need to intercept 'default'
+            # The default asset name for cogs is "cog_default",
+            # so we need to intercept 'default'
             if asset_name == "default":
                 asset_name = "cog_default"
             assets[asset_name] = pystac.Asset(
@@ -126,10 +125,10 @@ def generate_stac(event: events.RegexEvent) -> pystac.Item:
                 extra_fields={**proj_info, **raster_info},
             )
 
-        minx, miny, maxx, maxy = zip(*bboxes)
+        minx, miny, maxx, maxy = zip(*bboxes, strict=False)
         bbox = [min(minx), min(miny), max(maxx), max(maxy)]
 
-        create_item_response = create_item(
+        return create_item(
             item_id=event.item_id,
             bbox=bbox,
             properties=properties,
@@ -137,4 +136,3 @@ def generate_stac(event: events.RegexEvent) -> pystac.Item:
             collection=event.collection,
             assets=assets,
         )
-        return create_item_response

@@ -6,7 +6,9 @@ permissions:
 on:
   pull_request:
     branches:
+      - main
       - dev
+      - production
     types: [ opened, reopened, edited, synchronize ]
 
 jobs:

@@ -7,12 +7,11 @@ STAC extensions.
 """
 
 import logging
-from typing import Union
 
 import pystac
 
 
-def validate_collection(collection: Union[dict, pystac.Collection]) -> dict:
+def validate_collection(collection: dict | pystac.Collection) -> dict:
     """
     Validates a STAC collection using PySTAC's native validation.
 
@@ -47,7 +46,7 @@ def validate_collection(collection: Union[dict, pystac.Collection]) -> dict:
         ...     "stac_extensions": [
         ...         "https://stac-extensions.github.io/web-map-links/v1.2.0/schema.json"
         ...     ],
-        ...     "links": [...]
+        ...     "links": [...],
         ... }
         >>> validated = validate_collection(collection_dict)
         >>> print("Collection is valid!")
@@ -56,17 +55,17 @@ def validate_collection(collection: Union[dict, pystac.Collection]) -> dict:
 
     # Determine if we need to convert from dict to pystac.Collection
     collection_obj = None
-    is_dict_input = False
 
     if isinstance(collection, dict):
-        is_dict_input = True
-        collection_id = collection.get('id', 'unknown')
+        collection_id = collection.get("id", "unknown")
         logger.info(f"Validating collection '{collection_id}' from dictionary")
 
         try:
             collection_obj = pystac.Collection.from_dict(collection)
         except Exception as e:
-            error_msg = f"Failed to convert collection dictionary to pystac.Collection: {str(e)}"
+            error_msg = (
+                f"Failed to convert collection dict to pystac.Collection: {str(e)}"
+            )
             raise ValueError(error_msg) from e
 
     elif isinstance(collection, pystac.Collection):
@@ -74,16 +73,22 @@ def validate_collection(collection: Union[dict, pystac.Collection]) -> dict:
         collection_id = collection.id
 
     else:
-        error_msg = f"Invalid input type: expected dict or pystac.Collection, got {type(collection).__name__}"
+        error_msg = (
+            f"Invalid input type: expected dict or pystac.Collection, "
+            f"got {type(collection).__name__}"
+        )
         raise TypeError(error_msg)
 
     # Validate the collection using pystac's native validation
-    # This automatically validates against all stac_extensions declared in the collection
+    # This automatically validates against all stac_extensions
+    # declared in the collection
     try:
-        num_extensions = len(collection_obj.stac_extensions) if collection_obj.stac_extensions else 0
+        num_extensions = (
+            len(collection_obj.stac_extensions) if collection_obj.stac_extensions else 0
+        )
 
         # Get STAC version from the collection dict representation
-        stac_version = collection_obj.to_dict().get('stac_version', 'unknown')
+        stac_version = collection_obj.to_dict().get("stac_version", "unknown")
 
         logger.debug(
             f"Validating collection '{collection_id}' against STAC {stac_version} "
@@ -95,7 +100,8 @@ def validate_collection(collection: Union[dict, pystac.Collection]) -> dict:
 
         logger.info(
             f"Collection '{collection_id}' is valid according to STAC {stac_version} "
-            f"specification" + (f" and {num_extensions} extension(s)" if num_extensions > 0 else "")
+            f"specification"
+            + (f" and {num_extensions} extension(s)" if num_extensions > 0 else "")
         )
 
     except pystac.STACValidationError as e:
@@ -105,11 +111,11 @@ def validate_collection(collection: Union[dict, pystac.Collection]) -> dict:
         raise ValueError(error_msg) from e
 
     except Exception as e:
-        error_msg = f"Unexpected error during validation of collection '{collection_id}': {str(e)}"
+        error_msg = (
+            f"Unexpected error during validation of collection '{collection_id}': "
+            f"{str(e)}"
+        )
         logger.error(error_msg)
         raise ValueError(error_msg) from e
 
-    # Return as dictionary for consistency with existing codebase patterns
-    validated_dict = collection_obj.to_dict()
-
-    return validated_dict
+    return collection_obj.to_dict()

@@ -1,20 +1,18 @@
 import hashlib
 import json
-import pendulum
-
-from datetime import datetime, timedelta, timezone
-from typing import Dict, List, Optional
+from datetime import UTC, datetime, timedelta
 
 import boto3
-from airflow import DAG
+import pendulum
+from airflow.api.common.trigger_dag import trigger_dag
 from airflow.exceptions import AirflowException
-from airflow.sdk import Variable
-from airflow.models.param import Param
 from airflow.providers.standard.operators.empty import EmptyOperator
 from airflow.providers.standard.operators.python import PythonOperator
-from airflow.api.common.trigger_dag import trigger_dag
+from airflow.sdk import DAG, Variable
+from airflow.sdk.definitions.param import Param
 from botocore.exceptions import BotoCoreError, ClientError
 from slack_notifications import slack_fail_alert
+
 
 def generate_hash(input_string: str) -> str:
     """
@@ -36,8 +34,7 @@ def generate_hash(input_string: str) -> str:
 
 def notify_missing_snapshots_task(ti):
     get_rds_snapshots_xcom = ti.xcom_pull("get_rds_snapshots")
-    missing_snapshots = get_rds_snapshots_xcom.get("missing_snapshots")
-    if missing_snapshots:
+    if missing_snapshots := get_rds_snapshots_xcom.get("missing_snapshots"):
         raise AirflowException(f"Missing Snapshots for RDS: {missing_snapshots}")
     return True
 
@@ -45,8 +42,9 @@ def notify_missing_snapshots_task(ti):
 doc_get_snapshots_dag_md_DAG = """
 ### RDS Snapshot Retrieval and Export
 #### Overview
-This DAG retrieves the most recent automated snapshots for specified Amazon RDS databases, including both instances and
-clusters. For each snapshot found, the DAG prepares necessary metadata and configuration for exporting the snapshot to
+This DAG retrieves the most recent automated snapshots for specified Amazon RDS
+databases, including both instances and clusters. For each snapshot found, the DAG
+prepares necessary metadata and configuration for exporting the snapshot to
 an S3 bucket. This process supports disaster recovery and backup requirements.
 
 #### Workflow
@@ -55,19 +53,26 @@ an S3 bucket. This process supports disaster recovery and backup requirements.
 3. **Trigger Export DAG**: Initiates the downstream DAG to export snapshots to S3.
 
 #### Configuration Parameters
-- **Cluster Databases**: Databases specified in `cluster_databases` (Aurora clusters) will have their recent snapshots
+- **Cluster Databases**: Databases specified in `cluster_databases` (Aurora clusters)
+    will have their recent snapshots
  processed.
-- **Instance Databases**: Databases specified in `instance_databases` (RDS instances) will have their recent snapshots
+- **Instance Databases**: Databases specified in `instance_databases` (RDS instances)
+    will have their recent snapshots
  processed.
 
 #### Example Configuration
 ```json
-{"cluster_databases": ['smallsat-uah-staging-aurora-rds'], "instance_databases": ['dms-test-vishal'],
- "paths_excluded": ["**/_SUCCESS"], "export_only": ["database.schema.table"]}
+{
+    "cluster_databases": ['smallsat-uah-staging-aurora-rds'],
+    "instance_databases": ['dms-test-vishal'],
+    "paths_excluded": ["**/_SUCCESS"],
+    "export_only": ["database.schema.table"]
+}
 ```
 
-This DAG is intended to be used as part of a disaster recovery strategy to ensure regular backups of key RDS
-databases are available in S3."""
+This DAG is intended to be used as part of a disaster recovery strategy to ensure
+regular backups of key RDS databases are available in S3.
+"""
 
 dag_params = {
     "snapshots_age_in_hours": Param(24, type="integer", title="Snapshot age in hours"),
@@ -91,8 +96,8 @@ def get_snapshots(
     current_time: datetime,
     instance_type: str,
     snapshots_age_in_hours: int = 24,
-    paths_excluded: Optional[List[str]] = None,
-    export_only: Optional[Dict | None] = None,
+    paths_excluded: list[str] | None = None,
+    export_only: dict | None = None,
 ) -> dict:
     """
     Fetches the most recent snapshots for a specified database instance or cluster.
@@ -104,7 +109,8 @@ def get_snapshots(
         instance_type (str): Type of the instance ('instance' or 'cluster').
         snapshots_age_in_hours (int): Snapshot created on the last 24 hours
         paths_excluded: Exclude the following list of paths from the crawler
-        export_only: Decide what you want to export from RDS. If empty list mean export everything
+        export_only: Decide what you want to export from RDS. If empty list,
+            then export everything
 
     Returns:
         dict: discovered snapshots and missing snapshots
@@ -159,7 +165,7 @@ def get_snapshots_task(ti=None, dag_run=None):
     Retrieves RDS snapshots information for clusters and instances as configured.
 
     Returns:
-        dict: Snapshot configuration with relevant metadata and AWS resource identifiers.
+        dict: Snapshot configuration with relevant metadata and AWS resource identifiers
     """
     config = dag_run.conf
 
@@ -170,7 +176,8 @@ def get_snapshots_task(ti=None, dag_run=None):
         return {"existing_snapshots": [], "missing_snapshots": []}
 
     # Retrieve database names depending on how the DAG was triggered.
-    # Airflow 3 removed DagRun.external_trigger; a manual/API trigger is run_type "manual".
+    # Airflow 3 removed DagRun.external_trigger
+    #   a manual/API trigger is run_type "manual".
     if dag_run.run_type == "manual":
         snapshots_age_in_hours = int(config.get("snapshots_age_in_hours", 24))
         cluster_databases = config.get("cluster_databases", [])
@@ -189,7 +196,7 @@ def get_snapshots_task(ti=None, dag_run=None):
     cluster_databases = [db for db in cluster_databases if db and db != "null"]
     instance_databases = [db for db in instance_databases if db and db != "null"]
 
-    current_time = datetime.now(timezone.utc)
+    current_time = datetime.now(UTC)
     snapshots = []
     missing_snapshots = []
     common_kwargs = {
@@ -270,8 +277,11 @@ def trigger_s3_export_dag_task(**kwargs) -> list:
 
 
 # Define default arguments
-default_args = {"retries": 0, "start_date": pendulum.today("UTC").add(days=-1), "catchup": False}
-
+default_args = {
+    "retries": 0,
+    "start_date": pendulum.today("UTC").add(days=-1),
+    "catchup": False,
+}
 
 
 def delete_glue_database_task(dag_run=None):
@@ -281,7 +291,7 @@ def delete_glue_database_task(dag_run=None):
     # If the user didn't want to delete Glue database
     # Default to True
     if not conf.get("eager_delete_glue_catalog", True):
-        return
+        return None
 
     try:
         response = client.delete_database(Name=database_id)
@@ -296,22 +306,26 @@ def delete_glue_database_task(dag_run=None):
     except (ClientError, BotoCoreError) as e:
         # Handle other boto3-specific exceptions
         print(f"Failed to delete Glue database {database_id}: {e}")
-        raise AirflowException(f"Error deleting Glue database {database_id}: {e}")
+        raise AirflowException(
+            f"Error deleting Glue database {database_id}: {e}"
+        ) from e
 
     except KeyError as e:
         # Handle missing db_id in conf
         print(f"Database ID not found in DAG run configuration: {e}")
-        raise AirflowException(f"Database ID missing in DAG configuration: {e}")
+        raise AirflowException(f"Database ID missing in DAG configuration: {e}") from e
 
     except Exception as e:
         # Catch-all for any other exceptions
         print(f"An unexpected error occurred: {e}")
-        raise AirflowException(f"Unexpected error: {e}")
+        raise AirflowException(f"Unexpected error: {e}") from e
 
 
 with DAG(
     dag_id="get_rds_snapshots",
-    schedule=None,  # We can run it manually and as needed #"0 0 L * *",  # Run on the last day of each month
+    # We can run it manually and as needed #"0 0 L * *"
+    # # Run on the last day of each month
+    schedule=None,
     doc_md=doc_get_snapshots_dag_md_DAG,
     params=dag_params,
     default_args=default_args,
@@ -331,9 +345,9 @@ with DAG(
     #     trigger_dag_id="rds_s3_export_snapshots",
     #     python_callable=trigger_s3_export_dag_task,
     # )
-    trigger_s3_export_dags = PythonOperator(
-      task_id="trigger_multi_s3_export_dag",
-      python_callable=trigger_s3_export_dag_task,
+    trigger_multi_s3_export_dag = PythonOperator(
+        task_id="trigger_multi_s3_export_dag",
+        python_callable=trigger_s3_export_dag_task,
     )
 
     # Task to eagerly delete Glue database
@@ -351,7 +365,7 @@ with DAG(
         start
         >> get_rds_snapshots
         >> eager_delete_glue_database
-        >> trigger_s3_export_dags
+        >> trigger_multi_s3_export_dag
         >> notify_missing_snapshots
         >> end
     )

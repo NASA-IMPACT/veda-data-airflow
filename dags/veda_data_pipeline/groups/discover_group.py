@@ -1,22 +1,33 @@
-from datetime import timedelta
 import uuid
+from datetime import timedelta
 
-from airflow.sdk import Variable
-from airflow.decorators import task
-from veda_data_pipeline.utils.s3_discovery import (
-    s3_discovery_handler, EmptyFileListError
-)
+from airflow.sdk import Variable, task
 from deprecated import deprecated
+from veda_data_pipeline.utils.s3_discovery import (
+    EmptyFileListError,
+    s3_discovery_handler,
+)
 
 group_kwgs = {"group_id": "Discover", "tooltip": "Discover"}
 
 
 @task(retries=1, retry_delay=timedelta(minutes=1))
-def discover_from_s3_task(event: dict={}, dag_run=None, payload: dict={}, prev_start_date_success: str=None):
-    """Discover grouped assets/files from S3 in batches of 2800. Produce a list of such files stored on S3 to process.
-    This task is used as part of the discover_group subdag and outputs data to EVENT_BUCKET.
+def discover_from_s3_task(
+    event: dict = None,
+    dag_run=None,
+    payload: dict = None,
+    prev_start_date_success: str = None,
+):
+    """
+    Discover grouped assets/files from S3 in batches of 2800. Produce a list of such
+    files stored on S3 to process. This task is used as part of the discover_group
+    subdag and outputs data to EVENT_BUCKET.
     """
 
+    if event is None:
+        event = {}
+    if payload is None:
+        payload = {}
     payload = payload or dag_run.conf
     config = {
         **event,
@@ -29,7 +40,7 @@ def discover_from_s3_task(event: dict={}, dag_run=None, payload: dict={}, prev_s
 
     event_bucket = Variable.get("EVENT_BUCKET")
     read_assume_arn = Variable.get("ASSUME_ROLE_READ_ARN")
-    
+
     # Making the chunk size small, this helped us process large data faster than
     # passing a large chunk of 500
     chunk_size = config.get("chunk_size", 500)
@@ -38,11 +49,12 @@ def discover_from_s3_task(event: dict={}, dag_run=None, payload: dict={}, prev_s
             event=config,
             role_arn=read_assume_arn,
             bucket_output=event_bucket,
-            chunk_size=chunk_size
+            chunk_size=chunk_size,
         )
     except EmptyFileListError as ex:
         print(f"Received an exception {ex}")
-        # TODO test continued short circuit operator behavior (no files -> skip remaining tasks)
+        # TODO test continued short circuit operator behavior
+        # (no files -> skip remaining tasks)
         return {}
 
 
@@ -65,37 +77,58 @@ def get_files_task(payload, dag_run=None):
         payloads_xcom = item.pop("payload", [])
         base_payload = item
 
-        for indx, payload_xcom in enumerate(payloads_xcom):
-            results.append({
+        results.extend(
+            {
                 "run_id": f"{dag_run_id}_{uuid.uuid4()}_{indx}",
                 **base_payload,
                 "payload": payload_xcom,
-            })
-
+            }
+            for indx, payload_xcom in enumerate(payloads_xcom)
+        )
     return results
 
+
 @task
-@deprecated(reason="Please use get_files_task function that handles both files and dataset files use cases")
+@deprecated(
+    reason=(
+        "Please use get_files_task function that handles "
+        "both files and dataset files use cases"
+    )
+)
 def get_files_to_process(payload, dag_run=None):
-    """Get files from S3 produced by the discovery task.
-    Used as part of both the parallel_run_process_rasters and parallel_run_process_vectors tasks.
     """
-    if not isinstance(payload, dict):  # dynamic task mapping returns a lazy XCom sequence
+    Get files from S3 produced by the discovery task.
+    Used as part of both the parallel_run_process_rasters and
+    parallel_run_process_vectors tasks.
+    """
+    if not isinstance(
+        payload, dict
+    ):  # dynamic task mapping returns a lazy XCom sequence
         payload = payload[0]
     payloads_xcom = payload.pop("payload", [])
     dag_run_id = dag_run.run_id
-    return [{
-        "run_id": f"{dag_run_id}_{uuid.uuid4()}_{indx}",
-        **payload,
-        "payload": payload_xcom,
-    } for indx, payload_xcom in enumerate(payloads_xcom)]
+    return [
+        {
+            "run_id": f"{dag_run_id}_{uuid.uuid4()}_{indx}",
+            **payload,
+            "payload": payload_xcom,
+        }
+        for indx, payload_xcom in enumerate(payloads_xcom)
+    ]
 
 
 @task
-@deprecated(reason="Please use get_files_task airflow task instead. This will be removed in the new release")
+@deprecated(
+    reason=(
+        "Please use get_files_task airflow task instead. "
+        "This will be removed in the new release"
+    )
+)
 def get_dataset_files_to_process(payload, dag_run=None):
-    """Get files from S3 produced by the dataset task.
-    This is different from the get_files_to_process task as it produces a combined structure from repeated mappings.
+    """
+    Get files from S3 produced by the dataset task.
+    This is different from the get_files_to_process task as it produces a combined
+    structure from repeated mappings.
     """
     dag_run_id = dag_run.run_id
 
@@ -105,10 +138,12 @@ def get_dataset_files_to_process(payload, dag_run=None):
             x = x[0]
         payloads_xcom = x.pop("payload", [])
         payload_0 = x
-        for indx, payload_xcom in enumerate(payloads_xcom):
-            result.append({
+        result.extend(
+            {
                 "run_id": f"{dag_run_id}_{uuid.uuid4()}_{indx}",
                 **payload_0,
                 "payload": payload_xcom,
-            })
+            }
+            for indx, payload_xcom in enumerate(payloads_xcom)
+        )
     return result

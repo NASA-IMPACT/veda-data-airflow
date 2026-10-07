@@ -1,9 +1,9 @@
 import pendulum
-from airflow import DAG
 from airflow.providers.standard.operators.empty import EmptyOperator
+from airflow.sdk import DAG
 from airflow.utils.trigger_rule import TriggerRule
-from veda_data_pipeline.groups.collection_group import collection_task_group
 from slack_notifications import slack_fail_alert
+from veda_data_pipeline.groups.collection_group import collection_task_group
 
 dag_doc_md = """
 ### Collection Creation and Ingestion
@@ -25,7 +25,6 @@ Generates a collection based on the Dataset model and ingests into the catalog
 
 dag_args = {
     "start_date": pendulum.today("UTC").add(days=-1),
-    "schedule": None,
     "catchup": False,
     "doc_md": dag_doc_md,
     "on_failure_callback": slack_fail_alert,
@@ -39,12 +38,16 @@ template_dag_run_conf = {
     "is_periodic": "<true|false>",
     "license": "<collection-LICENSE>",
     "time_density": "<time-density>",
-    "title": "<collection-title>"
+    "title": "<collection-title>",
 }
 
-with DAG("veda_collection_pipeline", params=template_dag_run_conf, **dag_args) as dag:
+with DAG(
+    "veda_collection_pipeline", schedule=None, params=template_dag_run_conf, **dag_args
+) as dag:
     start = EmptyOperator(task_id="start", dag=dag)
-    end = EmptyOperator(task_id="end", trigger_rule=TriggerRule.NONE_FAILED_MIN_ONE_SUCCESS, dag=dag)
+    end = EmptyOperator(
+        task_id="end", trigger_rule=TriggerRule.NONE_FAILED_MIN_ONE_SUCCESS, dag=dag
+    )
 
     collection_grp = collection_task_group()
 

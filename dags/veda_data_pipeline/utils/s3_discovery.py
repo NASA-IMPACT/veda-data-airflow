@@ -1,17 +1,16 @@
+import contextlib
 import itertools
 import json
 import os
 import re
-from typing import List
-from uuid import uuid4
-from pathlib import Path
-
 from datetime import datetime
-from dateutil.tz import tzlocal
-import boto3
-from smart_open import open as smrt_open
+from pathlib import Path
+from uuid import uuid4
 
+import boto3
 from airflow.sdk import Variable
+from dateutil.tz import tzlocal
+from smart_open import open as smrt_open
 
 
 # Adding a custom exception for empty list
@@ -35,44 +34,51 @@ def assume_role(role_arn, session_name="veda-data-pipelines_s3-discovery"):
     }
 
 
-def get_s3_resp_iterator(bucket_name, prefix, s3_client, page_size=1000, aws_request_payer=None):
+def get_s3_resp_iterator(
+    bucket_name, prefix, s3_client, page_size=1000, aws_request_payer=None
+):
     """
     Returns an s3 paginator.
     :param bucket_name: The bucket.
     :param prefix: The path for the s3 granules.
     :param s3_client: Initialized boto3 S3 client
     :param page_size: Number of records returned
-    :param aws_request_payer: Use 'requester' to confirm charge for the request on bucket with Requester Pays enabled
+    :param aws_request_payer: Use 'requester' to confirm charge for the request
+        on bucket with Requester Pays enabled
     """
     s3_paginator = s3_client.get_paginator("list_objects")
-    
-    paginator_args = dict(
-        Bucket=bucket_name, 
-        Prefix=prefix, 
-        PaginationConfig={"page_size": page_size}
-    )
+
+    paginator_args = {
+        "Bucket": bucket_name,
+        "Prefix": prefix,
+        "PaginationConfig": {"page_size": page_size},
+    }
     aws_request_payer = Variable.get("AWS_REQUEST_PAYER")
     if aws_request_payer:
         paginator_args["RequestPayer"] = aws_request_payer
 
-    print(f"Getting S3 response iterator for {bucket_name}, prefix: {prefix}, {aws_request_payer=}")
-    return s3_paginator.paginate(
-        **paginator_args
+    print(
+        f"Getting S3 response iterator for {bucket_name}, "
+        f"prefix: {prefix}, {aws_request_payer=}"
     )
+    return s3_paginator.paginate(**paginator_args)
 
 
 def discover_from_s3(
-        response_iterator, filename_regex: str, last_execution: datetime
+    response_iterator, filename_regex: str, last_execution: datetime
 ) -> dict:
     """Iterate through pages of S3 objects returned by a ListObjectsV2 operation.
-    The discover_from_s3 function takes in an iterator over the pages of S3 objects returned
-    by a ListObjectsV2 operation. It iterates through the pages and yields each S3 object in the page as a dictionary.
-    This function can be used to iterate through a large number of S3 objects returned by a ListObjectsV2 operation
+    The discover_from_s3 function takes in an iterator over the pages of S3 objects
+    returned by a ListObjectsV2 operation. It iterates through the pages and yields
+    each S3 object in the page as a dictionary. This function can be used to iterate
+    through a large number of S3 objects returned by a ListObjectsV2 operation
     without having to load all the objects into memory at once.
 
     Parameters:
-    response_iterator (iter): An iterator over the pages of S3 objects returned by a ListObjectsV2 operation.
-    filename_regex (str): A regular expression used to filter the S3 objects returned by the ListObjectsV2 operation.
+    response_iterator (iter):
+        An iterator over the pages of S3 objects returned by a ListObjectsV2 operation
+    filename_regex (str):
+        A regular expression used to filter the S3 objects returned by the ListObjectsV2
 
     Yields:
     dict: A dictionary representing an S3 object.
@@ -88,7 +94,7 @@ def discover_from_s3(
                 yield s3_object
 
 
-def group_by_item(discovered_files: List[str], id_regex: str, assets: dict) -> dict:
+def group_by_item(discovered_files: list[str], id_regex: str, assets: dict) -> dict:
     """Group assets by matching regex patterns against discovered files."""
     grouped_files = []
     for uri in discovered_files:
@@ -97,7 +103,8 @@ def group_by_item(discovered_files: List[str], id_regex: str, assets: dict) -> d
         prefix = "/".join(uri.split("/")[:-1])
         asset_type = None
         if match := re.match(id_regex, filename):
-            # At least one match; can use the match here to construct an ID (match groups separated by '-')
+            # At least one match; can use the match here to construct an ID
+            # (match groups separated by '-')
             item_id = "-".join(match.groups())
             for asset_name, asset_definition in assets.items():
                 regex = asset_definition["regex"]
@@ -122,7 +129,8 @@ def group_by_item(discovered_files: List[str], id_regex: str, assets: dict) -> d
         for key, group in itertools.groupby(sorted_list, key=lambda x: x["item_id"])
     ]
     items_with_assets = []
-    # Produce a dictionary in which each record is keyed by an item ID and contains a list of associated asset hrefs
+    # Produce a dictionary in which each record is keyed by an item ID
+    # and contains a list of associated asset hrefs
     for group in grouped_data:
         item = {"item_id": group["item_id"], "assets": {}}
         for file in group["data"]:
@@ -136,7 +144,9 @@ def group_by_item(discovered_files: List[str], id_regex: str, assets: dict) -> d
     return items_with_assets
 
 
-def construct_single_asset_items(discovered_files: List[str], assets: dict|None) -> dict:
+def construct_single_asset_items(
+    discovered_files: list[str], assets: dict | None
+) -> dict:
     items_with_assets = []
     asset_key = "default"
     asset_value = {}
@@ -155,7 +165,7 @@ def construct_single_asset_items(discovered_files: List[str], assets: dict|None)
                     "title": "Default COG Layer",
                     "description": "Cloud optimized default layer to display on map",
                     "href": f"{prefix}/{filename}",
-                    **asset_value
+                    **asset_value,
                 }
             },
         }
@@ -166,11 +176,11 @@ def construct_single_asset_items(discovered_files: List[str], assets: dict|None)
 def generate_payload(s3_prefix_key: str, payload: dict):
     """Generate a payload and write it to an S3 file.
     This function takes in a prefix for an S3 key and a dictionary containing a payload.
-    The function then writes the payload to an S3 file using the provided prefix and a randomly
-    generated UUID as the key. The key of the output file is then returned.
+    The function then writes the payload to an S3 file using the provided prefix and a
+    randomly generated UUID as the key. The key of the output file is then returned.
     Parameters:
-    s3_prefix_key (str): The prefix for the S3 key where the output file will be written.
-    payload (dict): A dictionary containing the payload to be written to the output file.
+    s3_prefix_key (str): The prefix for the S3 key where the output file will be written
+    payload (dict): A dictionary containing the payload to be written to the output file
 
     Returns:
     str: The S3 key of the output file.
@@ -184,7 +194,8 @@ def generate_payload(s3_prefix_key: str, payload: dict):
 def propagate_forward_datetime_args(event):
     """
     This function extracts datetime-related arguments from the input event dictionary.
-    The purpose is to forward these datetime arguments to other functions that may require them.
+    The purpose is to forward these datetime arguments to other functions that may
+    require them.
 
     The function looks for the keys "single_datetime", "start_datetime", "end_datetime",
     and "datetime_range" in the event dictionary. If any of these keys are present,
@@ -202,7 +213,9 @@ def propagate_forward_datetime_args(event):
     return {key: event[key] for key in keys if key in event}
 
 
-def s3_discovery_handler(event, chunk_size=2800, role_arn=None, bucket_output=None, aws_request_payer=None):
+def s3_discovery_handler(
+    event, chunk_size=2800, role_arn=None, bucket_output=None, aws_request_payer=None
+):
     bucket = event["bucket"]
     prefix = event["prefix"]
     filename_regex = event.get("filename_regex", None)
@@ -244,7 +257,9 @@ def s3_discovery_handler(event, chunk_size=2800, role_arn=None, bucket_output=No
     ]
 
     if len(file_uris) == 0:
-        raise EmptyFileListError(f"No files discovered at bucket: {bucket}, prefix: {prefix}")
+        raise EmptyFileListError(
+            f"No files discovered at bucket: {bucket}, prefix: {prefix}"
+        )
 
     # group only if more than 1 assets
     if assets and len(assets.keys()) > 1:
@@ -256,7 +271,8 @@ def s3_discovery_handler(event, chunk_size=2800, role_arn=None, bucket_output=No
 
     if len(items_with_assets) == 0:
         raise EmptyFileListError(
-            f"No items could be constructed for files at bucket: {bucket}, prefix: {prefix}"
+            "No items could be constructed for files at bucket: "
+            f"{bucket}, prefix: {prefix}"
         )
 
     # Update IDs using id_template
@@ -271,7 +287,7 @@ def s3_discovery_handler(event, chunk_size=2800, role_arn=None, bucket_output=No
             if item_count < slice[0]:  # Skip until we reach the start of the slice
                 continue
             if (
-                    item_count >= slice[1]
+                item_count >= slice[1]
             ):  # Stop once we reach the end of the slice, while saving progress
                 break
         file_obj = {
@@ -298,8 +314,6 @@ def s3_discovery_handler(event, chunk_size=2800, role_arn=None, bucket_output=No
         out_keys.append(generate_payload(s3_prefix_key=key, payload=payload))
         discovered.append(len(payload["objects"]))
     # We need to make sure the payload isn't too large for ECS overrides
-    try:
+    with contextlib.suppress(KeyError):
         del event["assets"]
-    except KeyError:
-        pass
     return {**event, "payload": out_keys, "discovered": discovered}

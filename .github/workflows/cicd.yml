@@ -4,29 +4,14 @@ permissions:
   contents: read
 
 on:
-  push:
-    branches:
-      - dev
   pull_request:
     branches:
-      - main
       - dev
-      - production
     types: [ opened, reopened, edited, synchronize ]
 
 jobs:
-  gitflow-enforcer:
-    name: GitFlow Enforcer 👮‍
-    runs-on: ubuntu-latest
-    steps:
-      - name: Check branch
-        if: github.base_ref == 'main' && github.head_ref != 'dev' || github.base_ref == 'production' && github.head_ref != 'main'
-        run: |
-          echo "ERROR: You can only merge to main from dev and to production from main"
-          exit 1
   test-dags:
     name: Test Airflow DAGs 🧪
-    needs: gitflow-enforcer
     runs-on: ubuntu-latest
     steps:
       - name: Check out Git repository
@@ -48,26 +33,29 @@ jobs:
 
   define-environment:
     name: Set ✨ environment ✨
-    needs: [gitflow-enforcer, test-dags]
+    needs: [test-dags]
     runs-on: ubuntu-latest
+    outputs:
+      env_name: ${{ steps.define_environment.outputs.env_name }}
     steps:
       - name: Set the environment based on the branch
         id: define_environment
+        shell: bash
         run: |
-          if [ "${{ github.ref }}" = "refs/heads/dev" ]; then
-            echo "env_name=development" >> $GITHUB_OUTPUT
+          env_name=""
+          if [[ "${GITHUB_REF}" == "refs/heads/dev" || "${GITHUB_HEAD_REF}" == "dev" ]]; then
+            env_name="development"
           fi
+          echo "env_name=${env_name}" >> "$GITHUB_OUTPUT"
+
       - name: Print the environment
         run: echo "The environment is ${{ steps.define_environment.outputs.env_name }}"
-
-    outputs:
-      env_name: ${{ steps.define_environment.outputs.env_name }}
 
   plan:
     name: 'Run `terraform plan` against development environment'
     runs-on: ubuntu-latest
     if: ${{ !needs.define-environment.outputs.env_name }}
-    needs: [gitflow-enforcer, define-environment]
+    needs: [define-environment]
     environment: development
     concurrency: development
     permissions:
@@ -84,7 +72,7 @@ jobs:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@e6de054238d6b7531b4efff3b6587d9aade6a06c #v6.2.3
         with:
-          role-to-assume: ${{ secrets.DEPLOYMENT_ROLE_ARN }}
+          role-to-assume: ${{ vars.DEPLOYMENT_ROLE_ARN }}
           role-session-name: "veda-airflow-github-development-planner"
           aws-region: us-west-2
 
@@ -96,38 +84,3 @@ jobs:
           env-file: .env
           aws-region: us-west-2
           run_command: plan
-
-  deploy:
-    name: Deploy to ${{ needs.define-environment.outputs.env_name }} 🚀
-    runs-on: ubuntu-latest
-    if: ${{ needs.define-environment.outputs.env_name }}
-    needs: [gitflow-enforcer, define-environment]
-    environment: ${{ needs.define-environment.outputs.env_name }}
-    concurrency: ${{ needs.define-environment.outputs.env_name }}
-    permissions:
-      id-token: write # Required to request OIDC token for use with AWS
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
-        with:
-          lfs: "true"
-          submodules: "recursive"
-          persist-credentials: false
-
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@e6de054238d6b7531b4efff3b6587d9aade6a06c #v6.2.3
-        with:
-          role-to-assume: ${{ secrets.DEPLOYMENT_ROLE_ARN }}
-          role-session-name: "veda-airflow-github-${{ needs.define-environment.outputs.env_name }}-deployment"
-          aws-region: us-west-2
-
-      - name: Run SM2A deployment
-        # Flag to deploy SM2A
-        if: ${{ vars.DEPLOY_SM2A }} = "true"
-        uses: "./.github/actions/terraform-deploy-sm2a"
-        with:
-          dir: .
-          env_aws_secret_name: ${{ vars.SM2A_ENVS_DEPLOYMENT_SECRET_NAME }}
-          env-file: .env
-          aws-region: us-west-2

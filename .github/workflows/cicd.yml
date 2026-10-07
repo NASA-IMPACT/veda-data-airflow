@@ -31,31 +31,10 @@ jobs:
           uv run airflow db migrate
           uv run pytest
 
-  define-environment:
-    name: Set ✨ environment ✨
-    needs: [test-dags]
-    runs-on: ubuntu-latest
-    outputs:
-      env_name: ${{ steps.define_environment.outputs.env_name }}
-    steps:
-      - name: Set the environment based on the branch
-        id: define_environment
-        shell: bash
-        run: |
-          env_name=""
-          if [[ "${GITHUB_REF}" == "refs/heads/dev" || "${GITHUB_HEAD_REF}" == "dev" ]]; then
-            env_name="development"
-          fi
-          echo "env_name=${env_name}" >> "$GITHUB_OUTPUT"
-
-      - name: Print the environment
-        run: echo "The environment is ${{ steps.define_environment.outputs.env_name }}"
-
   plan:
     name: 'Run `terraform plan` against development environment'
     runs-on: ubuntu-latest
-    if: ${{ !needs.define-environment.outputs.env_name }}
-    needs: [define-environment]
+    needs: [test-dags]
     environment: development
     concurrency: development
     permissions:

@@ -145,6 +145,10 @@ module "sma-base" {
       {
         name  = "AWS_REQUEST_PAYER"
         value = var.aws_request_payer
+      },
+      {
+        name  = "AIRFLOW__WEBSERVER__INSTANCE_NAME"
+        value = var.git_ref == "unknown" ? "VEDA-SM2A-Airflow untagged" : "VEDA-SM2A-Airflow ${var.git_ref}"
       }
     ],
     local.airflow_dag_variable_env_entries

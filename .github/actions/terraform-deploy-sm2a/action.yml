@@ -21,6 +21,10 @@ inputs:
     type: string
   auth_stack_name:
     type: string
+  git_ref:
+    required: false
+    type: string
+    default: "unknown"
   run_command:
     default: 'apply'
     type: choice
@@ -50,6 +54,7 @@ runs:
       env:
         AWS_DEFAULT_REGION: ${{ inputs.aws-region }}
         AWS_REGION: ${{ inputs.aws-region }}
+        TF_VAR_git_ref: ${{ inputs.git_ref || 'unknown' }}
       run: |
         make sm2a-plan ENV_FILE=${{ inputs.env-file }} SECRET_NAME=${{ inputs.env_aws_secret_name }}
 
@@ -60,6 +65,7 @@ runs:
       env:
         AWS_DEFAULT_REGION: ${{ inputs.aws-region }}
         AWS_REGION: ${{ inputs.aws-region }}
+        TF_VAR_git_ref: ${{ inputs.git_ref || 'unknown' }}
       run: |
         make sm2a-deploy ENV_FILE=${{ inputs.env-file }} SECRET_NAME=${{ inputs.env_aws_secret_name }}
 

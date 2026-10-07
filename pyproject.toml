@@ -15,7 +15,7 @@ dev = [
     "pre-commit==4.6.2"
 ]
 deploy = [
-    "boto3==1.37.0",
+    "boto3==1.43.105",
     "requests==2.31.0"
 ]
 test = [
@@ -33,7 +33,7 @@ test = [
     "virtualenv",
 ]
 airflow-worker = [
-    "apache-airflow-providers-amazon==9.8.0",
+    "apache-airflow-providers-amazon==9.37.0",
     "botocore",
     "cryptography",
     "pycurl",
@@ -58,8 +58,8 @@ airflow-worker = [
     "rasterio",
     "rio_stac",
     "GeoAlchemy2",
-    "geopandas==0.14.4",
-    "fiona==1.9.6",
+    "geopandas==1.1.4",
+    "fiona==1.10.1",
     "h5netcdf",
     "rioxarray",
     "apache-airflow-providers-slack",
@@ -68,7 +68,7 @@ airflow-worker = [
     "stactools-noaa-hrrr"
 ]
 airflow-service = [
-    "apache-airflow-providers-amazon==9.8.0",
+    "apache-airflow-providers-amazon==9.37.0",
     "botocore",
     "cryptography",
     "pycurl",

@@ -74,12 +74,12 @@ OAUTH_PROVIDERS = [
         "remote_app": {
             "client_id": KEYCLOAK_CLIENT_ID,
             "client_secret": KEYCLOAK_CLIENT_SECRET,
-            "api_base_url": f"{KEYCLOAK_BASE_URL}/realms/{KEYCLOAK_REALM}/protocol/openid-connect", # noqa: E501
+            "api_base_url": f"{KEYCLOAK_BASE_URL}/realms/{KEYCLOAK_REALM}/protocol/openid-connect",  # noqa: E501
             "client_kwargs": {"scope": "openid email profile"},
-            "access_token_url": f"{KEYCLOAK_BASE_URL}/realms/{KEYCLOAK_REALM}/protocol/openid-connect/token", # noqa: E501
-            "authorize_url": f"{KEYCLOAK_BASE_URL}/realms/{KEYCLOAK_REALM}/protocol/openid-connect/auth", # noqa: E501
+            "access_token_url": f"{KEYCLOAK_BASE_URL}/realms/{KEYCLOAK_REALM}/protocol/openid-connect/token",  # noqa: E501
+            "authorize_url": f"{KEYCLOAK_BASE_URL}/realms/{KEYCLOAK_REALM}/protocol/openid-connect/auth",  # noqa: E501
             "request_token_url": None,
-            "jwks_uri": f"{KEYCLOAK_BASE_URL}/realms/{KEYCLOAK_REALM}/protocol/openid-connect/certs", # noqa: E501
+            "jwks_uri": f"{KEYCLOAK_BASE_URL}/realms/{KEYCLOAK_REALM}/protocol/openid-connect/certs",  # noqa: E501
         },
     },
 ]
@@ -213,7 +213,9 @@ class KeycloakAuthorizer(FabAirflowSecurityManagerOverride):
             if created:
                 log.info(f"Created service user '{self.service_username}'.")
             else:
-              log.warning(f"Could not create service user. Check if it already exists.")
+                log.warning(
+                    "Could not create service user. Check if it already exists."
+                )
 
     def get_oauth_user_info(
         self, provider: str, resp: Any

@@ -9,13 +9,13 @@ Skipped unless TEST_DATABASE_URL is set, so the default test run stays offline.
     TEST_DATABASE_URL=postgresql://postgres:postgres@localhost:55432/postgres \
         pytest tests/test_table_config_integration.py -v
 
-The postgis image restarts its server once after initialising extensions, so a connection
-made in the first few seconds after `docker run` can be refused even when `pg_isready`
-already reports ready.
+The postgis image restarts its server once after initialising extensions, so a
+connection made in the first few seconds after `docker run` can be refused even when
+`pg_isready` already reports ready.
 
-These cover what the unit tests cannot: the exact SQL each statement renders to, that the
-generated DDL is valid Postgres, that CREATE INDEX CONCURRENTLY works under the autocommit
-handling, and that the invalid-index query returns what it claims to.
+These cover what the unit tests cannot: the exact SQL each statement renders to, that
+the generated DDL is valid Postgres, that CREATE INDEX CONCURRENTLY works under the
+autocommit handling, and that the invalid-index query returns what it claims to.
 """
 
 import json
@@ -24,7 +24,6 @@ import os
 import psycopg2
 import pytest
 from psycopg2 import sql
-
 from veda_data_pipeline.utils.vector_ingest.table_config import (
     build_statements,
     find_invalid_indexes,
@@ -75,7 +74,7 @@ def conn():
 def indexes_on(conn, table=TABLE):
     with conn.cursor() as cur:
         cur.execute(
-            "SELECT indexname FROM pg_indexes WHERE schemaname='public' AND tablename=%s",
+            "SELECT indexname FROM pg_indexes WHERE schemaname='public' AND tablename=%s",  # noqa: E501
             (table,),
         )
         return {row[0] for row in cur.fetchall()}
@@ -84,17 +83,18 @@ def indexes_on(conn, table=TABLE):
 def test_statements_render_as_quoted_identifiers(conn):
     """Every name reaches Postgres quoted, including the access method."""
     create, analyze = build_statements(
-        TABLE, {"indexes": [{"columns": ["datetime", "density_rank"], "method": "btree"}]}
+        TABLE,
+        {"indexes": [{"columns": ["datetime", "density_rank"], "method": "btree"}]},
     )
     assert create.as_string(conn) == (
-        'CREATE INDEX CONCURRENTLY IF NOT EXISTS "idx_hms_smoke_test_datetime_density_rank" '
+        'CREATE INDEX CONCURRENTLY IF NOT EXISTS "idx_hms_smoke_test_datetime_density_rank" '  # noqa: E501
         'ON "public"."hms_smoke_test" USING "btree" ("datetime", "density_rank")'
     )
     assert analyze.as_string(conn) == 'ANALYZE "public"."hms_smoke_test"'
 
 
 def test_result_is_json_serializable_for_xcom(conn):
-    """configure_table returns this dict from an Airflow task, so it must survive XCom."""
+    """configure_table returns this dict from Airflow task, so it must survive XCom."""
     result = run_statements(conn, TABLE, {"indexes": [{"columns": ["datetime"]}]})
     assert json.loads(json.dumps(result)) == result
     assert all(isinstance(statement, str) for statement in result["statements"])
@@ -124,7 +124,9 @@ def test_non_concurrent_index(conn):
 
 
 def test_multi_column_index(conn):
-    run_statements(conn, TABLE, {"indexes": [{"columns": ["datetime", "density_rank"]}]})
+    run_statements(
+        conn, TABLE, {"indexes": [{"columns": ["datetime", "density_rank"]}]}
+    )
     assert "idx_hms_smoke_test_datetime_density_rank" in indexes_on(conn)
 
 
@@ -140,7 +142,9 @@ def test_analyze_populates_planner_statistics(conn):
             "DELETE FROM pg_statistic WHERE starelid = %s::regclass",
             ("public.hms_smoke_test",),
         )
-    run_statements(conn, TABLE, {"indexes": [{"columns": ["datetime"]}], "analyze": True})
+    run_statements(
+        conn, TABLE, {"indexes": [{"columns": ["datetime"]}], "analyze": True}
+    )
     with conn.cursor() as cur:
         cur.execute(
             "SELECT count(*) FROM pg_stats WHERE schemaname='public' AND tablename=%s",
@@ -174,8 +178,10 @@ def test_no_invalid_indexes_after_a_clean_run(conn):
 
 
 def test_invalid_index_is_detected(conn):
-    """An interrupted CONCURRENTLY build leaves an INVALID index that IF NOT EXISTS
-    considers present, so it would never be repaired. Simulated by marking it invalid."""
+    """
+    An interrupted CONCURRENTLY build leaves an INVALID index that IF NOT EXISTS
+    considers present, so it would never be repaired. Simulated by marking it invalid.
+    """
     run_statements(conn, TABLE, {"indexes": [{"columns": ["datetime"]}]})
     with conn.cursor() as cur:
         cur.execute(

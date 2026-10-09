@@ -9,7 +9,7 @@ URL_KEYS = { "api_base_url", "access_token_url", "authorize_url", "jwks_uri" }
 
 def test_keycloak_oauth_urls_are_not_tuples():
     tree = ast.parse(CONFIG.read_text())
-    bad = [
+    bad_urls = [
         key.value
         for node in ast.walk(tree)
         if isinstance(node, ast.Dict)
@@ -17,4 +17,4 @@ def test_keycloak_oauth_urls_are_not_tuples():
         if isinstance(key, ast.Constant) and key.value in URL_KEYS
         and isinstance(value, ast.Tuple)
     ]
-    assert not bad, f"{bad} are tuples. Remove the trailing comma inside parentheses to fix it"
+    assert not bad_urls, f"{bad_urls} - A tuple has been found! Remove the trailing comma inside parentheses to fix it"

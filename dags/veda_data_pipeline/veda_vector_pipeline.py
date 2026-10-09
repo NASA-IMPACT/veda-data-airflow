@@ -65,9 +65,9 @@ been ingested**. Omit the key entirely to skip it.
 }
 ```
 
-- `table_config` needs `collection` set. When `collection` is empty the ingest creates one
-  table per file, named from `id_template`, so there is no single table to index and this
-  step does nothing.
+- `table_config` needs `collection` set. When `collection` is empty the ingest creates
+  one table per file, named from `id_template`, so there is no single table to index and
+  this step does nothing.
 - Indexes are built after load on purpose -- one bulk sort rather than per-row
   maintenance during ingest.
 - `concurrently` defaults to true so the build does not take an `ACCESS EXCLUSIVE` lock
@@ -75,9 +75,9 @@ been ingested**. Omit the key entirely to skip it.
 - **Inserting data from multiple files:** do not pass `-overwrite` in `extra_flags`. It
   drops and recreates the table for every file, so only the last file survives and the
   indexes this step builds are destroyed along the way. Use `-append` instead.
-- **Backfilling across several DAG runs:** omit `table_config` from the intermediate runs
-  and set it only on the last, otherwise the index exists while later chunks are still
-  loading -- which is exactly what the post-ingest ordering avoids.
+- **Backfilling across several DAG runs:** omit `table_config` from the intermediate
+  runs and set it only on the last, otherwise the index exists while later chunks are
+  still loading -- which is exactly what the post-ingest ordering avoids.
 
 - [Supports linking to external content](https://github.com/NASA-IMPACT/veda-data-pipelines)
 """
@@ -107,12 +107,12 @@ template_dag_run_conf = {
         None,
         type=["null", "object"],
         description=(
-            "Optional post-ingest table configuration, applied once after every file has "
-            "been ingested. Omit it entirely to skip. Example: "
+            "Optional post-ingest table configuration, applied once after every file "
+            "has been ingested. Omit it entirely to skip. Example: "
             '{"indexes": [{"columns": ["datetime"]}], "analyze": true}'
         ),
     ),
-    "invalidate_cloudfront": Param(True, type="boolean")
+    "invalidate_cloudfront": Param(True, type="boolean"),
 }
 dag_args = {
     "start_date": pendulum.today("UTC").add(days=-1),
@@ -139,24 +139,25 @@ def ingest_vector_task(payload):
 def configure_table(dag_run=None):
     """Apply post-ingest table configuration once every mapped ingest task has finished.
 
-    Placed downstream of `ingest_vector_task.expand(...)` on purpose: Airflow runs a plain
-    task after *all* mapped instances complete, so indexes are built once on the finished
-    table rather than once per chunk. See utils/vector_ingest/table_config.py.
+    Placed downstream of `ingest_vector_task.expand(...)` on purpose: Airflow runs a
+    plain task after *all* mapped instances complete, so indexes are built once on the
+    finished table rather than once per chunk. See utils/vector_ingest/table_config.py.
     """
     conf = dag_run.conf
     table_config = conf.get("table_config")
     if not table_config:
         logging.info("No table_config provided, skipping table configuration")
-        return
+        return None
 
     collection = conf.get("collection")
     if not collection:
         # Without an explicit collection the ingest names a table per file from
         # id_template, so there is no single table to configure.
         logging.warning(
-            "table_config requires an explicit `collection`; skipping table configuration"
+            "table_config requires an explicit `collection`;"
+            " skipping table configuration"
         )
-        return
+        return None
 
     from veda_data_pipeline.utils.vector_ingest.table_config import apply_table_config
 
@@ -209,7 +210,12 @@ def get_ingest_vector_dag(id: str, event: dict):
         )
         discover = start >> discover_from_s3_task(event=event)
         get_files = get_files_task(payload=discover)
-        ingest_vector_task.expand(payload=get_files) >> configure_table() >> invalidate_cloudfront() >> end
+        (
+            ingest_vector_task.expand(payload=get_files)
+            >> configure_table()
+            >> invalidate_cloudfront()
+            >> end
+        )
 
         return dag
 

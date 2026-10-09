@@ -213,7 +213,9 @@ class KeycloakAuthorizer(FabAirflowSecurityManagerOverride):
             if created:
                 log.info(f"Created service user '{self.service_username}'.")
             else:
-              log.warning(f"Could not create service user. Check if it already exists.")
+                log.warning(
+                    "Could not create service user. Check if it already exists."
+                )
 
     def get_oauth_user_info(
         self, provider: str, resp: Any

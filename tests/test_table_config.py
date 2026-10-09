@@ -1,6 +1,5 @@
 import pytest
 from psycopg2 import sql
-
 from veda_data_pipeline.utils.vector_ingest.table_config import (
     ALLOWED_INDEX_METHODS,
     MAX_IDENTIFIER_LENGTH,
@@ -20,12 +19,16 @@ def leaves(statement):
 
 
 def identifiers(statement):
-    return [leaf.strings for leaf in leaves(statement) if isinstance(leaf, sql.Identifier)]
+    return [
+        leaf.strings for leaf in leaves(statement) if isinstance(leaf, sql.Identifier)
+    ]
 
 
 def sql_text(statement):
     """The statement's literal SQL, with every identifier left out."""
-    return "".join(leaf.string for leaf in leaves(statement) if isinstance(leaf, sql.SQL))
+    return "".join(
+        leaf.string for leaf in leaves(statement) if isinstance(leaf, sql.SQL)
+    )
 
 
 def test_no_config_produces_no_statements():
@@ -55,11 +58,22 @@ def test_no_config_value_is_formatted_into_sql_text():
     config = {
         "schema": "vector",
         "indexes": [
-            {"columns": ["datetime", "density_rank"], "method": "gist", "name": "smoke_idx"}
+            {
+                "columns": ["datetime", "density_rank"],
+                "method": "gist",
+                "name": "smoke_idx",
+            }
         ],
     }
     text = "".join(sql_text(s) for s in build_statements("hms_smoke", config))
-    for value in ["vector", "hms_smoke", "datetime", "density_rank", "gist", "smoke_idx"]:
+    for value in [
+        "vector",
+        "hms_smoke",
+        "datetime",
+        "density_rank",
+        "gist",
+        "smoke_idx",
+    ]:
         assert value not in text
 
 
@@ -136,7 +150,9 @@ def test_allowed_methods_are_quoted_identifiers(method):
 def test_unsupported_method_is_rejected():
     """Unknown methods are reported before any statement runs."""
     with pytest.raises(InvalidTableConfig, match="unsupported index method"):
-        build_statements("t", {"indexes": [{"columns": ["a"], "method": "btree; DROP TABLE x"}]})
+        build_statements(
+            "t", {"indexes": [{"columns": ["a"], "method": "btree; DROP TABLE x"}]}
+        )
 
 
 @pytest.mark.parametrize(

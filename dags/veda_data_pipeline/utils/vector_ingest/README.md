@@ -42,6 +42,7 @@ Depending on how the data needs to be ingested, different approaches can be take
 ---
 
 ### 3. Configuring the Table (Optional)
+
 After **every** discovered file has been ingested, an optional `table_config` block applies
 index and statistics DDL to the collection. Omit the key entirely to skip this step.
 
@@ -59,7 +60,7 @@ index and statistics DDL to the collection. Omit the key entirely to skip this s
 ```
 
 | Field | Description |
-|-------|-------------|
+| ------- | ------------- |
 | `schema` | Table schema, default `public`. |
 | `indexes` | List of indexes. Each needs `columns`; `method` (default `btree`), `concurrently` (default `true`) and `name` are optional. |
 | `analyze` | Run `ANALYZE` afterwards, default `true`. Without statistics the planner will not use the new indexes. |
@@ -68,7 +69,7 @@ index and statistics DDL to the collection. Omit the key entirely to skip this s
 than maintaining it row by row while data loads. The task sits downstream of the mapped
 ingest tasks, so it runs once on the finished table rather than once per file.
 
-**Notes**
+#### Notes
 
 - `table_config` needs `collection` set. When `collection` is empty the ingest creates one
   table per file, named from `id_template` (see *Creating Separate Collections for Each
@@ -90,6 +91,7 @@ ingest tasks, so it runs once on the finished table rather than once per file.
 ---
 
 ### 4. Internal Processing with ogr2ogr
+
 Internally, the ingestion task uses the **ogr2ogr** command, a command-line tool from the **GDAL** library, to convert and process geospatial data between various formats. The data is imported into a **PostgreSQL** database with **PostGIS** extensions for spatial data.
 
 #### **Supported Input Formats**

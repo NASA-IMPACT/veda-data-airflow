@@ -5,8 +5,10 @@
       "include-v-in-tag": true,
       "include-v-in-release-name": true,
       "release-type": "python",
+      "versioning": "prerelease",
       "prerelease": true,
-      "prerelease-id": "dev",
+      "prerelease-type": "dev",
+      "include-component-in-tag": false,
       "changelog-sections": [
         { "type": "feat", "section": "Features" },
         { "type": "fix", "section": "Bug Fixes" },

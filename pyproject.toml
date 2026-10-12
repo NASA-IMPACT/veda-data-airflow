@@ -1,6 +1,6 @@
 [project]
 name = "veda-data-airflow"
-version = "v0.23.0.dev2"
+version = "v0.23.0-dev.2"
 description = "Function and deployment code for producing cloud-optimized data products and STAC metadata for interfaces such as https://github.com/NASA-IMPACT/veda-ui."
 readme = "README.md"
 requires-python = ">=3.12, <3.13"
@@ -16,7 +16,7 @@ dev = [
 ]
 deploy = [
     "boto3==1.37.0",
-    "requests==2.31.0"
+    "requests~=2.32.0"
 ]
 test = [
     "coverage",

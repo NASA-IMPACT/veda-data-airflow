@@ -1,13 +1,11 @@
 import logging
-import pendulum
 from airflow.models.param import Param
 from airflow.decorators import task
 from airflow import DAG
 from airflow.providers.standard.operators.empty import EmptyOperator
 from airflow.utils.trigger_rule import TriggerRule
 from airflow.sdk import Variable
-from slack_notifications import slack_fail_alert
-from veda_data_pipeline.groups.discover_group import discover_from_s3_task, get_files_task
+
 
 dag_doc_md = """
 ### Build and submit stac
@@ -97,9 +95,7 @@ template_dag_run_conf = {
     "invalidate_cloudfront": Param(True, type="boolean")
 }
 dag_args = {
-    "start_date": pendulum.today("UTC").add(days=-1),
     "catchup": False,
-    "on_failure_callback": slack_fail_alert,
     "doc_md": dag_doc_md,
 }
 
@@ -177,10 +173,16 @@ def invalidate_cloudfront(dag_run=None):
 
 
 def get_ingest_vector_dag(id: str, event: dict):
+    import pendulum
+    from slack_notifications import slack_fail_alert
+    from veda_data_pipeline.groups.discover_group import discover_from_s3_task, get_files_task
+
     with DAG(
             id,
             schedule=event.get("schedule", None),
             params=template_dag_run_conf,
+            start_date=pendulum.today("UTC").add(days=-1),
+            on_failure_callback=slack_fail_alert,
             **dag_args
     ) as dag:
         start = EmptyOperator(task_id="Start", dag=dag)

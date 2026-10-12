@@ -1,11 +1,7 @@
-import pendulum
 from airflow import DAG
 from airflow.providers.standard.operators.empty import EmptyOperator
 from airflow.models.param import Param
-from veda_data_pipeline.groups.discover_group import discover_from_s3_task, get_files_task
-from slack_notifications import slack_fail_alert
 
-from veda_data_pipeline.groups.processing_tasks import submit_to_stac_ingestor_task, build_stac_task
 
 dag_doc_md = """
 ### Discover files from S3
@@ -43,10 +39,8 @@ The DAG `veda_ingest` will run in parallel processing (2800 files per each DAG)
 """
 
 dag_args = {
-    "start_date": pendulum.today("UTC").add(days=-1),
     "catchup": False,
     "doc_md": dag_doc_md,
-    "on_failure_callback": slack_fail_alert,
     "is_paused_upon_creation": False,
 }
 
@@ -73,11 +67,17 @@ template_dag_run_conf = {
 }
 
 def get_discover_dag(id: str, event: dict):
+    import pendulum
+    from slack_notifications import slack_fail_alert
+    from veda_data_pipeline.groups.discover_group import discover_from_s3_task, get_files_task
+    from veda_data_pipeline.groups.processing_tasks import submit_to_stac_ingestor_task, build_stac_task
 
     with DAG(
             id,
             schedule=event.get("schedule"),
             params=template_dag_run_conf,
+            start_date=pendulum.today("UTC").add(days=-1),
+            on_failure_callback=slack_fail_alert,
             **dag_args
     ) as dag:
         start = EmptyOperator(task_id="Start", dag=dag)

@@ -1,10 +1,12 @@
 import uuid
+import logging
 from datetime import timedelta
 
 from airflow.sdk import Variable, task
+from airflow.exceptions import AirflowSkipException
 from deprecated import deprecated
 from veda_data_pipeline.utils.s3_discovery import (
-    EmptyFileListError,
+    VedaAirflowException,
     s3_discovery_handler,
 )
 
@@ -51,11 +53,12 @@ def discover_from_s3_task(
             bucket_output=event_bucket,
             chunk_size=chunk_size,
         )
-    except EmptyFileListError as ex:
-        print(f"Received an exception {ex}")
-        # TODO test continued short circuit operator behavior
-        # (no files -> skip remaining tasks)
-        return {}
+    except VedaAirflowException as e:
+        if (e.action == "skip"):
+            logging.warning(e)
+            raise AirflowSkipException(str(e)) from e
+        logging.error(e)
+        raise
 
 
 @task

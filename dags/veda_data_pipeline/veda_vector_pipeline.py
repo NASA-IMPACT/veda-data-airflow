@@ -1,5 +1,5 @@
 import logging
-
+import re
 import pendulum
 from airflow.providers.standard.operators.empty import EmptyOperator
 from airflow.sdk import DAG, Variable, task
@@ -10,6 +10,7 @@ from veda_data_pipeline.groups.discover_group import (
     discover_from_s3_task,
     get_files_task,
 )
+from veda_data_pipeline.utils.s3_discovery import VedaAirflowException
 
 dag_doc_md = """
 ### Build and submit stac
@@ -21,7 +22,7 @@ DAG manually or through an API
 - This DAG can run with the following configuration <br>
 ```json
 {
-    "collection": "nist-urban-testbed",
+    "collection": "nist_urban_testbed",
     "prefix": "transformed_csv/",
     "bucket": "ghgc-data-store-develop",
     "filename_regex": ".*.csv$",
@@ -121,6 +122,22 @@ dag_args = {
     "doc_md": dag_doc_md,
 }
 
+@task
+def validate_config(dag_run=None):
+    """Validate the config before ingest executes"""
+    def validate_collection_key():
+        collection = dag_run.conf.get("collection")
+        if not collection or not collection.strip():
+            raise VedaAirflowException(
+                "validate_config", "`collection` is required and must not be empty"
+            )
+            # ogr2ogr would launder the collection name to fit this but lets require user to input correctly for no disconnect
+        if re.search(r"[^a-z0-9_]", collection):
+            raise VedaAirflowException("validate_config", "collections cannot include hyphens or special characters, and must be all lowercase")
+
+    validate_collection_key()
+    return
+
 
 @task
 def ingest_vector_task(payload):
@@ -208,7 +225,7 @@ def get_ingest_vector_dag(id: str, event: dict):
         end = EmptyOperator(
             task_id="end", trigger_rule=TriggerRule.ONE_SUCCESS, dag=dag
         )
-        discover = start >> discover_from_s3_task(event=event)
+        discover = start >> validate_config() >> discover_from_s3_task(event=event)
         get_files = get_files_task(payload=discover)
         (
             ingest_vector_task.expand(payload=get_files)

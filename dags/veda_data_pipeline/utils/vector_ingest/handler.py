@@ -1,8 +1,8 @@
 import base64
 import concurrent.futures
 import json
-import subprocess
 import logging
+import subprocess
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -121,7 +121,9 @@ def ensure_table_exists(
     for column in gdf_schema:
         if column.name not in existing_column_names:
             raise VedaAirflowException(
-                "ensure_table_exists", f"your .gpkg seems to have a column={column.name} that does not exist in the existing table columns={existing_column_names}"
+                "ensure_table_exists",
+                f"your .gpkg seems to have a column={column.name} that does not "
+                f"exist in the existing table columns={existing_column_names}",
             )
 
 
@@ -371,7 +373,6 @@ def handler(payload_src: dict, vector_secret_name: str, assume_role_arn: str | N
     source_projection = payload_event.get("source_projection", "EPSG:4326")
     target_projection = payload_event.get("target_projection", "EPSG:4326")
     extra_flags = payload_event.get("extra_flags", ["-overwrite", "-progress"])
-    collection_not_provided = payload_event["collection"] == ""
 
     with smart_open.open(s3_event, "r") as _file:
         s3_event_read = _file.read()

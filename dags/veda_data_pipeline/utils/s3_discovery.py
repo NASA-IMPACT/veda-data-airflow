@@ -17,9 +17,14 @@ from smart_open import open as smrt_open
 # Creating a custom universal exception class for better logging
 # @TODO: Move to a shared utils file which looks like it needs to be created !!!
 class VedaAirflowException(Exception):
-    def __init__(self, function_name: str, message: str, action: Literal["skip", "raise"] = "raise",):
+    def __init__(
+        self,
+        function_name: str,
+        message: str,
+        action: Literal["skip", "raise"] = "raise",
+    ):
         self.function_name = function_name
-        self.action = action # "skip" with successful mark or "raise" with failure?
+        self.action = action  # "skip" with successful mark or "raise" with failure?
         self.message = message
 
         exception_message = f"Error raised in function {self.function_name}: {message}"
@@ -263,7 +268,12 @@ def s3_discovery_handler(
     ]
 
     if len(file_uris) == 0:
-        raise VedaAirflowException("s3_discovery_handler", f"No files discovered at bucket: {bucket}, prefix: {prefix}, filename_regex: {filename_regex}", "skip")
+        raise VedaAirflowException(
+            "s3_discovery_handler",
+            f"No files discovered at bucket: {bucket}, prefix: {prefix}, "
+            f"filename_regex: {filename_regex}",
+            "skip",
+        )
     # group only if more than 1 assets
     if assets and len(assets.keys()) > 1:
         items_with_assets = group_by_item(file_uris, id_regex, assets)
@@ -273,7 +283,12 @@ def s3_discovery_handler(
         items_with_assets = construct_single_asset_items(file_uris, assets)
 
     if len(items_with_assets) == 0:
-        raise VedaAirflowException("s3_discovery_handler", f"No items could be constructed for files at bucket: {bucket}, prefix: {prefix}", "skip")
+        raise VedaAirflowException(
+            "s3_discovery_handler",
+            f"No items could be constructed for files at bucket: {bucket}, "
+            f"prefix: {prefix}",
+            "skip",
+        )
 
     # Update IDs using id_template
     for item in items_with_assets:

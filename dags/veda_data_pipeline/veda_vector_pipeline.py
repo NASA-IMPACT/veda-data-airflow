@@ -1,5 +1,6 @@
 import logging
 import re
+
 import pendulum
 from airflow.providers.standard.operators.empty import EmptyOperator
 from airflow.sdk import DAG, Variable, task
@@ -122,18 +123,25 @@ dag_args = {
     "doc_md": dag_doc_md,
 }
 
+
 @task
 def validate_config(dag_run=None):
     """Validate the config before ingest executes"""
+
     def validate_collection_key():
         collection = dag_run.conf.get("collection")
         if not collection or not collection.strip():
             raise VedaAirflowException(
                 "validate_config", "`collection` is required and must not be empty"
             )
-            # ogr2ogr would launder the collection name to fit this but lets require user to input correctly for no disconnect
+            # ogr2ogr would launder the collection name to fit this but lets
+            # require user to input correctly for no disconnect
         if re.search(r"[^a-z0-9_]", collection):
-            raise VedaAirflowException("validate_config", "collections cannot include hyphens or special characters, and must be all lowercase")
+            raise VedaAirflowException(
+                "validate_config",
+                "collections cannot include hyphens or special characters, "
+                "and must be all lowercase",
+            )
 
     validate_collection_key()
     return

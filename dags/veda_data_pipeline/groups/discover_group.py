@@ -1,9 +1,9 @@
-import uuid
 import logging
+import uuid
 from datetime import timedelta
 
-from airflow.sdk import Variable, task
 from airflow.exceptions import AirflowSkipException
+from airflow.sdk import Variable, task
 from deprecated import deprecated
 from veda_data_pipeline.utils.s3_discovery import (
     VedaAirflowException,
@@ -54,7 +54,7 @@ def discover_from_s3_task(
             chunk_size=chunk_size,
         )
     except VedaAirflowException as e:
-        if (e.action == "skip"):
+        if e.action == "skip":
             logging.warning(e)
             raise AirflowSkipException(str(e)) from e
         logging.error(e)

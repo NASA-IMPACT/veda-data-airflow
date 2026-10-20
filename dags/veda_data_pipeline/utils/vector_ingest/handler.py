@@ -1,6 +1,7 @@
 import base64
 import concurrent.futures
 import json
+import logging
 import subprocess
 from pathlib import Path
 from urllib.parse import urlparse
@@ -14,6 +15,7 @@ from geoalchemy2 import Geometry
 from shapely import wkb
 from sqlalchemy import Column, MetaData, Table, create_engine, inspect
 from sqlalchemy.dialects.postgresql import DOUBLE_PRECISION, INTEGER, TIMESTAMP, VARCHAR
+from veda_data_pipeline.utils.s3_discovery import VedaAirflowException
 
 
 def download_file(file_uri: str, role_arn: str | None):
@@ -40,7 +42,7 @@ def download_file(file_uri: str, role_arn: str | None):
 
     s3.download_file(bucket, path, target_filepath)
 
-    print(f"downloaded {target_filepath}")
+    logging.info(f"downloaded {target_filepath}")
 
     return target_filepath
 
@@ -118,9 +120,10 @@ def ensure_table_exists(
     existing_column_names = [col["name"] for col in existing_columns]
     for column in gdf_schema:
         if column.name not in existing_column_names:
-            raise ValueError(
-                f"your .gpkg seems to have a column={column.name} that does not exist "
-                f"in the existing table columns={existing_column_names}"
+            raise VedaAirflowException(
+                "ensure_table_exists",
+                f"your .gpkg seems to have a column={column.name} that does not "
+                f"exist in the existing table columns={existing_column_names}",
             )
 
 
@@ -140,7 +143,7 @@ def delete_region(
             )
             conn.execute(delete_sql, {"region_name": region_name})
     else:
-        print(f"'region' column not found in {gpkg_path}. No records deleted.")
+        logging.info(f"'region' column not found in {gpkg_path}. No records deleted.")
 
 
 def upsert_to_postgis(
@@ -249,7 +252,7 @@ def load_to_featuresdb(
     con_secrets = get_secret(secret_name)
     connection = get_connection_string(con_secrets)
 
-    print(f"running ogr2ogr import for collection: {collection}")
+    logging.info(f"running ogr2ogr import for collection: {collection}")
     options = [
         "ogr2ogr",
         "-f",
@@ -272,7 +275,6 @@ def load_to_featuresdb(
 
     if out.stderr:
         error_description = f"Error: {out.stderr}"
-        print(error_description)
 
         # warnings and successes will return status code 0, failures will return a 1
         # https://gdal.org/en/stable/programs/ogr2ogr.html#return-status-code
@@ -371,7 +373,6 @@ def handler(payload_src: dict, vector_secret_name: str, assume_role_arn: str | N
     source_projection = payload_event.get("source_projection", "EPSG:4326")
     target_projection = payload_event.get("target_projection", "EPSG:4326")
     extra_flags = payload_event.get("extra_flags", ["-overwrite", "-progress"])
-    collection_not_provided = payload_event["collection"] == ""
 
     with smart_open.open(s3_event, "r") as _file:
         s3_event_read = _file.read()
@@ -390,7 +391,7 @@ def handler(payload_src: dict, vector_secret_name: str, assume_role_arn: str | N
         s3_object_prefix = event_received["prefix"]
         if s3_object_prefix.startswith("EIS/"):
             collection = Path(href).stem
-            print(
+            logging.info(
                 f"Load new EIS fire features from {href=} "
                 f"using {collection=} {downloaded_filepath=}"
             )
@@ -398,11 +399,6 @@ def handler(payload_src: dict, vector_secret_name: str, assume_role_arn: str | N
                 downloaded_filepath, collection, vector_secret_name
             )
         else:
-            # Get the filename
-            filename = href.split("/")[-1].split(".")[0]
-            # Use id template with filename when collection is not provided in the conf
-            if collection_not_provided:
-                collection = payload_event.get("id_template", "{}").format(filename)
             coll_status = load_to_featuresdb(
                 downloaded_filepath,
                 collection,
@@ -420,5 +416,5 @@ def handler(payload_src: dict, vector_secret_name: str, assume_role_arn: str | N
             alter_datetime_add_indexes_eis(collection, vector_secret_name)
         elif coll_status["status"] != "success":
             # bubble exception so Airflow shows it as a failure
-            raise Exception(coll_status["reason"])
+            raise VedaAirflowException("handler", coll_status["reason"])
     return status

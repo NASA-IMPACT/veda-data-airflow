@@ -1,5 +1,5 @@
 version = 1
-revision = 3
+revision = 5
 requires-python = "==3.12.*"
 
 [[package]]
@@ -2760,7 +2760,7 @@ wheels = [
 
 [[package]]
 name = "redshift-connector"
-version = "2.1.5"
+version = "2.1.11"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "beautifulsoup4" },
@@ -2774,7 +2774,7 @@ dependencies = [
     { name = "setuptools" },
 ]
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/7b/44/ed8aab83154db0d73d9d12c44d9d3487ba649501139e88e4a29df103cef0/redshift_connector-2.1.5-py3-none-any.whl", hash = "sha256:a90e5644a1d8f58f9d6d62c6ee000bb7788dcbfb9c9b3b4e114d66ccbfc82478", size = 138297, upload-time = "2024-12-24T06:34:11.943Z" },
+    { url = "https://files.pythonhosted.org/packages/f4/27/192a7bf58577dca8fb4e2e40130aacdf9a9e9d6ec5af0c5b150596704013/redshift_connector-2.1.11-py3-none-any.whl", hash = "sha256:25e03ec006e43ef809c5ceb42344ce9f8b6c6c5dd5ee594a8f2848171689bec0", size = 152834, upload-time = "2026-01-27T06:26:29.84Z" },
 ]
 
 [[package]]
@@ -3455,6 +3455,7 @@ wheels = [
 name = "veda-data-airflow"
 version = "0.23.0.dev2"
 source = { virtual = "." }
+default-groups = ["deploy", "dev", "test"]
 dependencies = [
     { name = "apache-airflow" },
     { name = "apache-airflow-providers-standard" },

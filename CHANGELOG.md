@@ -10,13 +10,7 @@
 
 ### Bug Fixes
 
-* add better unified logging for vector ingest and config validation ([8d31f68](https://github.com/NASA-IMPACT/veda-data-airflow/commit/8d31f68fcbc8310b0b017074ddc7f15db183e4e1))
-* add ignore to individual lines instead ([04fd6cd](https://github.com/NASA-IMPACT/veda-data-airflow/commit/04fd6cd949be6cfee926816491fae9e264f67e03))
-* add tests to check webserver config ([d7f86bf](https://github.com/NASA-IMPACT/veda-data-airflow/commit/d7f86bf943e6e25ae1fb651ddecb79bfee465ed8))
-* remove obsolete workflow logic ([#544](https://github.com/NASA-IMPACT/veda-data-airflow/issues/544)) ([f0bac50](https://github.com/NASA-IMPACT/veda-data-airflow/commit/f0bac50880460b474bd0a3d9ea3112f67cfdd8ef))
-* spacing ([16173b8](https://github.com/NASA-IMPACT/veda-data-airflow/commit/16173b8f8f116fb983dd5a78d798660e5dd560bb))
-* update variable name for clarity ([9b84efe](https://github.com/NASA-IMPACT/veda-data-airflow/commit/9b84efebe4b1a8d20c0e5a82e9428e80d3da4a10))
-* webserver config oauth urls ([83eab6e](https://github.com/NASA-IMPACT/veda-data-airflow/commit/83eab6ee034728bedeee83e76964cde4db955537))
+* add better unified logging for vector ingest and config validation ([#534](https://github.com/NASA-IMPACT/veda-data-airflow/pull/534))([8d31f68](https://github.com/NASA-IMPACT/veda-data-airflow/commit/8d31f68fcbc8310b0b017074ddc7f15db183e4e1))
 * webserver config oauth urls ([6941e05](https://github.com/NASA-IMPACT/veda-data-airflow/commit/6941e0515d458fe14d272e8953ff2b032a1826d2))
 
 

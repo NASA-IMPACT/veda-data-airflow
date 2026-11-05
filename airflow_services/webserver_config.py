@@ -180,6 +180,8 @@ class KeycloakAuthorizer(FabAirflowSecurityManagerOverride):
         ("can_read", "DAG:veda_dataset_pipeline"),
         ("can_edit", "DAG:veda_collection_pipeline"),
         ("can_read", "DAG:veda_collection_pipeline"),
+        ("can_edit", "DAG:veda_promotion_pipeline"),
+        ("can_read", "DAG:veda_promotion_pipeline"),
     ]
 
     def __init__(self, appbuilder):
